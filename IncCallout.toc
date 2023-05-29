@@ -2,10 +2,11 @@
 ## Title: IncCallout
 ## Author: Sharpedge_Gaming
 ## Version: v.1.0
-## Notes: Yells- INC BatteGround
+## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
-## IconTexture: 132310
+## IconTexture: 975742
 ## SavedVariables: IncCalloutDB 
+## SavedVariables: IncDB
 
 
 Libs\LibStub\LibStub.lua
@@ -16,6 +17,9 @@ Libs\AceDB-3.0\AceDB-3.0.lua
 Libs\AceConfig-3.0\AceConfig-3.0.lua
 Libs\AceConfigDialog-3.0\AceConfigDialog-3.0.lua
 Libs\AceGUI-3.0\AceGUI-3.0.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+
 
 
 

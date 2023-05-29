@@ -1,8 +1,11 @@
 local addonName = "IncCallout"
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
+local icon = LibStub("LibDBIcon-1.0")
+local LDB = LibStub("LibDataBroker-1.1")
 
 local playerFaction
+
 local buttonMessageIndices = {
     sendMore = 1,
     inc = 1,
@@ -16,36 +19,41 @@ local battlegroundLocations = {
     "The Broken Temple", "Cauldron of Flames", "Central Bridge", "The Chilled Quagemire",
     "Eastern Bridge", "Flamewatch Tower", "The Forest of Shadows", "Glacial Falls", "The Steppe of Life",
     "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress",
-		"Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep",
-		"Hangar", "Refinery", "Quarry", "Wildhammer Stronghold", "Dragonmaw Stronghold",
-		"Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
-		"The Restless Front", "Wellson Shipyard", "Largo's Overlook", "Farson Hold",
-		"Forgotten Hill", "Hellscream's Grasp","Stormpike Graveyard", "Irondeep Mine", "Dun Baldar",
-	"Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard", 
-	"Iceblood Garrison", "Tower Point", "Coldtooth Mine", "Dun Baldar Pass", "Icewing Bunker",
-	"Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
-	"Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
-	"Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu", "Deepwind Gorge", "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley", "Ashran"
-    
+    "Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep",
+    "Hangar", "Refinery", "Quarry", "Wildhammer Stronghold", "Dragonmaw Stronghold",
+    "Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
+    "The Restless Front", "Wellson Shipyard", "Largo's Overlook", "Farson Hold",
+    "Forgotten Hill", "Hellscream's Grasp","Stormpike Graveyard", "Irondeep Mine", "Dun Baldar",
+    "Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard", 
+    "Iceblood Garrison", "Tower Point", "Coldtooth Mine", "Dun Baldar Pass", "Icewing Bunker",
+    "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
+    "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
+    "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu", "Deepwind Gorge", "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley", "Ashran"
 }
 
 local buttonMessages = {
     sendMore = {
-        "We need more peeps at",
-        "Need help at",
-        "We are outnumbered at",
+        "We need more peeps",
+        "Need help",
+        "We are outnumbered",
+		"Need a few more",
+		"Need more",
         -- Add more custom messages if needed...
     },
     inc = {
-        "Incoming at",
-        "INC INC INC at",
-        "INC at",
+        "Incoming",
+        "INC INC INC",
+        "INC",
+		"Gotta INC",
+		"BIG INC",
         -- Add more custom messages if needed...
     },
     allClear = {
-        "We are all clear at",
-        "All clear at",
-        "Looks like a ghost town at",
+        "We are all clear",
+        "All clear",
+        "Looks like a ghost town",
+		"All good",
+		"Looking good",
         -- Add more custom messages if needed...
     },
 }
@@ -112,28 +120,6 @@ end
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
 IncCallout:SetSize(160, 155)
 IncCallout:SetPoint("CENTER")
-
--- Create a background texture for the main frame
-local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
-bgTexture:SetColorTexture(0.1, 0.1, 0.1)
-bgTexture:SetAllPoints(IncCallout)
-
--- Create a border frame
-local BorderFrame = CreateFrame("Frame", nil, IncCallout, "BackdropTemplate")
-BorderFrame:SetFrameLevel(IncCallout:GetFrameLevel() - 1) -- Ensure it's behind the main frame
-BorderFrame:SetSize(IncCallout:GetWidth() + 4, IncCallout:GetHeight() + 4) -- Adjust these values for border thickness
-BorderFrame:SetPoint("CENTER", IncCallout, "CENTER")
-
--- Create a border texture for the border frame
-local borderTexture = BorderFrame:CreateTexture(nil, "OVERLAY")
-borderTexture:SetColorTexture(1, 1, 1)
-borderTexture:SetAllPoints(BorderFrame)
-
-IncCallout:SetMovable(true)
-IncCallout:EnableMouse(true)
-IncCallout:RegisterForDrag("LeftButton")
-IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
-IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
 
 -- Function to get the player's faction
 local function GetPlayerFaction()
@@ -226,6 +212,81 @@ exitButton:SetText("Exit")
 exitButton:SetPoint("TOP", allClearButton, "BOTTOM", 0, -5)
 exitButton:SetScript("OnClick", function() IncCallout:Hide() end)
 
+-- Create a background texture for the main frame
+local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
+bgTexture:SetColorTexture(0.1, 0.1, 0.1)
+bgTexture:SetAllPoints(IncCallout)
+
+-- Create a border frame
+local BorderFrame = CreateFrame("Frame", nil, IncCallout, "BackdropTemplate")
+BorderFrame:SetFrameLevel(IncCallout:GetFrameLevel() - 1) -- Ensure it's behind the main frame
+BorderFrame:SetSize(IncCallout:GetWidth() + 4, IncCallout:GetHeight() + 4) -- Adjust these values for border thickness
+BorderFrame:SetPoint("CENTER", IncCallout, "CENTER")
+
+-- Create a border texture for the border frame
+local borderTexture = BorderFrame:CreateTexture(nil, "OVERLAY")
+borderTexture:SetColorTexture(1, 1, 1)
+borderTexture:SetAllPoints(BorderFrame)
+
+IncCallout:SetMovable(true)
+IncCallout:EnableMouse(true)
+IncCallout:RegisterForDrag("LeftButton")
+IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
+IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
+
+-- Initialize IncDB if it's not already initialized
+if not IncDB then
+    IncDB = {}
+end
+
+-- Initialize IncDB.minimap if it's not already initialized
+if not IncDB.minimap then
+    IncDB.minimap = {
+        hide = false,
+        minimapPos = 45, -- Default position angle (in degrees)
+    }
+end
+
+-- Now that IncCallout is defined, you can create IncCalloutLDB
+local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
+    type = "data source",
+    text = "IncCallout",
+    icon = "Interface\\AddOns\\IncCallout\\Icon\\INC.png",
+    OnClick = function(_, button)
+        if button == "LeftButton" then
+            if IncCallout:IsShown() then
+                IncCallout:Hide()
+            else
+                IncCallout:Show()
+            end
+        else
+            InterfaceOptionsFrame_OpenToCategory("IncCallout")
+            InterfaceOptionsFrame_OpenToCategory("IncCallout") -- Call it twice to ensure the correct category is selected
+        end
+    end,
+    OnMouseDown = function(self, button)
+        if button == "LeftButton" then
+            IncCallout:StartMoving()
+        end
+    end,
+    OnMouseUp = function(self, button)
+        if button == "LeftButton" then
+            IncCallout:StopMovingOrSizing()
+            local point, _, _, x, y = IncCallout:GetPoint()
+            local centerX, centerY = Minimap:GetCenter()
+            local scale = Minimap:GetEffectiveScale()
+            x, y = (x - centerX) / scale, (y - centerY) / scale
+            IncDB.minimap.minimapPos = math.deg(math.atan2(y, x)) % 360
+        end
+    end,
+    OnTooltipShow = function(tooltip)
+        tooltip:AddLine("|cffff0000IncCallout|r")
+        tooltip:AddLine("Left Click: GUI")
+        tooltip:AddLine("Right Click: Options")
+        tooltip:Show()
+    end,
+})
+
 -- Function to check if the player is in a battleground
 local function IsPlayerInBattleground()
     return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
@@ -249,9 +310,28 @@ local function OnPlayerLogin()
     end
 end
 
+-- Function to handle player login and logout
+local function OnEvent(self, event, ...)
+    if event == "PLAYER_LOGIN" then
+        -- Load saved button messages indices
+        buttonMessageIndices.sendMore = IncDB.sendMoreIndex or 1
+        buttonMessageIndices.inc = IncDB.incIndex or 1
+        buttonMessageIndices.allClear = IncDB.allClearIndex or 1
+
+        -- Load the minimap icon settings
+        icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
+    elseif event == "PLAYER_LOGOUT" then
+        -- Save button messages indices
+        IncDB.sendMoreIndex = buttonMessageIndices.sendMore
+        IncDB.incIndex = buttonMessageIndices.inc
+        IncDB.allClearIndex = buttonMessageIndices.allClear
+    end
+end
+
 -- Register the events
 IncCallout:RegisterEvent("PLAYER_LOGIN")
-IncCallout:SetScript("OnEvent", OnPlayerLogin)
+IncCallout:RegisterEvent("PLAYER_LOGOUT")
+IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
@@ -307,6 +387,15 @@ SlashCmdList["INC"] = function()
         IncCallout:Show()
     end
 end
+
+
+
+
+
+
+
+
+
 
 
 

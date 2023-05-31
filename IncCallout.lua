@@ -1,4 +1,7 @@
-local addonName = "IncCallout"
+local addonName, addonNamespace = ...
+
+-- Load embedded libraries
+local LibStub = LibStub or _G.LibStub
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local icon = LibStub("LibDBIcon-1.0")
@@ -11,6 +14,51 @@ local buttonMessageIndices = {
     inc = 1,
     allClear = 1
 }
+
+-- Function to check if the player is in a battleground
+local function IsPlayerInBattleground()
+    return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
+end
+
+-- Function to get the current subzone text (location)
+local function GetCurrentLocation()
+    return GetSubZoneText()
+end
+
+-- Function to get the player's faction
+local function GetPlayerFaction()
+    return UnitFactionGroup("player")
+end
+
+-- Function to get the player's faction
+local function GetPlayerFaction()
+    return UnitFactionGroup("player")
+end
+
+-- Function to check if the player is in a battleground
+local function IsPlayerInBattleground()
+    return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
+end
+
+-- Function to get the current subzone text (location)
+local function GetCurrentLocation()
+    return GetSubZoneText()
+end
+
+-- Register an event listener for when the player enters the world
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+f:SetScript("OnEvent", function(self, event, ...)
+    if event == "PLAYER_ENTERING_WORLD" then
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+            print("Player is in a battleground or arena")
+        else
+            print("Player is not in a battleground or arena")
+        end
+    end
+end)
 
 -- Define the battleground locations
 local battlegroundLocations = {
@@ -28,7 +76,7 @@ local battlegroundLocations = {
     "Iceblood Garrison", "Tower Point", "Coldtooth Mine", "Dun Baldar Pass", "Icewing Bunker",
     "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
     "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
-    "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu", "Deepwind Gorge", "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley", "Ashran"
+    "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu",  "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley", "Ashran" 
 }
 
 local buttonMessages = {
@@ -116,11 +164,6 @@ configPanel.default = function()
     buttonMessageIndices.allClear = 1
 end
 
--- Create the main frame
-local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 155)
-IncCallout:SetPoint("CENTER")
-
 -- Function to get the player's faction
 local function GetPlayerFaction()
     return UnitFactionGroup("player")
@@ -155,6 +198,11 @@ local function ButtonOnClick(self)
     local message = self:GetText() .. " " .. enemyFaction .. " coming in fast at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
+
+-- Create the main frame
+local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
+IncCallout:SetSize(160, 155)
+IncCallout:SetPoint("CENTER")
 
 -- Create buttons and assign the button click event handlers
 local button1 = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate")

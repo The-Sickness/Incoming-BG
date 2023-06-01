@@ -15,35 +15,37 @@ local buttonMessageIndices = {
     allClear = 1
 }
 
+-- Object for IncCallout
+IncCallout = {}
+
 -- Function to check if the player is in a battleground
-local function IsPlayerInBattleground()
+function IncCallout:IsPlayerInBattleground()
     return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
 end
 
 -- Function to get the current subzone text (location)
-local function GetCurrentLocation()
+function IncCallout:GetCurrentLocation()
     return GetSubZoneText()
 end
 
 -- Function to get the player's faction
-local function GetPlayerFaction()
+function IncCallout:GetPlayerFaction()
     return UnitFactionGroup("player")
 end
 
--- Function to get the player's faction
-local function GetPlayerFaction()
-    return UnitFactionGroup("player")
+-- Function to check if player is in a valid zone
+function IncCallout:player_in_valid_zone()
+  local is_found = true -- Bughandle: Force Location Check to true
+  local player_location = self:GetCurrentLocation()
+  for index, valid_location in pairs(self.valid_zones) do
+    if(valid_location == player_location) then
+      is_found = true
+    end
+  end
+  return is_found
 end
 
--- Function to check if the player is in a battleground
-local function IsPlayerInBattleground()
-    return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
-end
 
--- Function to get the current subzone text (location)
-local function GetCurrentLocation()
-    return GetSubZoneText()
-end
 
 -- Register an event listener for when the player enters the world
 local f = CreateFrame("Frame")

@@ -45,8 +45,6 @@ function IncCallout:player_in_valid_zone()
   return is_found
 end
 
-
-
 -- Register an event listener for when the player enters the world
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -55,9 +53,9 @@ f:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-            print("Player is in a battleground or arena")
+            print("Don't forget to call INC's")
         else
-            print("Player is not in a battleground or arena")
+            print("You need to que up for PVP")
         end
     end
 end)
@@ -166,25 +164,15 @@ configPanel.default = function()
     buttonMessageIndices.allClear = 1
 end
 
--- Function to get the player's faction
-local function GetPlayerFaction()
-    return UnitFactionGroup("player")
-end
-
--- Function to check if the player is in a battleground
-local function IsPlayerInBattleground()
-    return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
+-- Create a table to map each location to itself
+local locationTable = {}
+for _, location in ipairs(battlegroundLocations) do
+    locationTable[location] = location
 end
 
 -- Function to get the current subzone text (location)
 local function GetCurrentLocation()
     return GetSubZoneText()
-end
-
--- Create a table to map each location to itself
-local locationTable = {}
-for _, location in ipairs(battlegroundLocations) do
-    locationTable[location] = location
 end
 
 local function ButtonOnClick(self)
@@ -336,29 +324,6 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
         tooltip:Show()
     end,
 })
-
--- Function to check if the player is in a battleground
-local function IsPlayerInBattleground()
-    return GetZonePVPInfo() == "combat" or GetZonePVPInfo() == "arena"
-end
-
--- Function to get the current subzone text (location)
-local function GetCurrentLocation()
-    return GetSubZoneText()
-end
-
--- Function to get the player's faction
-local function GetPlayerFaction()
-    return UnitFactionGroup("player")
-end
-
--- Function to show the main frame when the player logs in
-local function OnPlayerLogin()
-    playerFaction = GetPlayerFaction()
-    if IsPlayerInBattleground() then
-        IncCallout:Show()
-    end
-end
 
 -- Function to handle player login and logout
 local function OnEvent(self, event, ...)

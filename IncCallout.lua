@@ -156,6 +156,7 @@ local function ButtonOnClick(self)
         return
     end
 
+
     local enemyFaction = playerFaction == "Hordie" and "Alliance" or "Hordie"
     local message = self:GetText() .. " " .. enemyFaction .. " coming in fast at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")

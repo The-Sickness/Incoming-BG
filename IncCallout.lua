@@ -24,8 +24,10 @@ f:SetScript("OnEvent", function(self, event, ...)
         local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
             print("Don't forget to call INC's")
+            IncCallout:Show()  -- Show the GUI
         else
             print("You need to que up for PVP")
+            IncCallout:Hide()  -- Hide the GUI
         end
     end
 end)
@@ -37,7 +39,7 @@ local battlegroundLocations = {
     "The Broken Temple", "Cauldron of Flames", "Central Bridge", "The Chilled Quagemire",
     "Eastern Bridge", "Flamewatch Tower", "The Forest of Shadows", "Glacial Falls", "The Steppe of Life",
     "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress",
-    "Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep",
+    "Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep", "Market",
     "Hangar", "Refinery", "Quarry", "Wildhammer Stronghold", "Dragonmaw Stronghold",
     "Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
     "The Restless Front", "Wellson Shipyard", "Largo's Overlook", "Farson Hold",
@@ -57,6 +59,11 @@ local buttonMessages = {
         "We are outnumbered",
 		"Need a few more",
 		"Need more",
+		"Backup required",
+		"We could use some help",
+		"Calling for backup",
+		"Could use some backup",
+		"Reinforcements needed",
         -- Add more custom messages if needed...
     },
     inc = {
@@ -65,6 +72,11 @@ local buttonMessages = {
         "INC",
 		"Gotta INC",
 		"BIG INC",
+		"Incoming enemy forces",
+		"Incoming threat",
+		"Enemy push incoming",
+		"Enemy blitz incoming",
+		"Enemy strike team inbound",
         -- Add more custom messages if needed...
     },
     allClear = {
@@ -73,6 +85,11 @@ local buttonMessages = {
         "Looks like a ghost town",
 		"All good",
 		"Looking good",
+		"Area secure",
+		"All quiet on the front",
+		"Situation is under control",
+		"All quiet here",
+		"Situation is under control",
         -- Add more custom messages if needed...
     },
 }
@@ -161,6 +178,23 @@ local function ButtonOnClick(self)
     local message = self:GetText() .. " " .. enemyFaction .. " coming in fast at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
+
+-- Register an event listener for when the player enters a new zone or subzone
+local f = CreateFrame("Frame")
+f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+
+f:SetScript("OnEvent", function(self, event, ...)
+    if event == "ZONE_CHANGED_NEW_AREA" then
+        local currentLocation = GetCurrentLocation()
+        local location = locationTable[currentLocation]
+        -- Check if location is in the defined battleground locations
+        if location then
+            IncCallout:Show()  -- Show the GUI
+        else
+            IncCallout:Hide()  -- Hide the GUI
+        end
+    end
+end)
 
 -- Create the main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")

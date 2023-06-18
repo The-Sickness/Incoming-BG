@@ -8,6 +8,7 @@ local icon = LibStub("LibDBIcon-1.0")
 local LDB = LibStub("LibDataBroker-1.1")
 
 local playerFaction
+playerFaction = UnitFactionGroup("player")
 
 local buttonMessageIndices = {
     sendMore = 1,
@@ -38,7 +39,7 @@ local battlegroundLocations = {
     "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins", 
     "The Broken Temple", "Cauldron of Flames", "Central Bridge", "The Chilled Quagemire",
     "Eastern Bridge", "Flamewatch Tower", "The Forest of Shadows", "Glacial Falls", "The Steppe of Life",
-    "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress",
+    "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress", "Eastpark Workshop", "Westpark Workshop ",
     "Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep", "Market",
     "Hangar", "Refinery", "Quarry", "Wildhammer Stronghold", "Dragonmaw Stronghold",
     "Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
@@ -89,7 +90,7 @@ local buttonMessages = {
 		"All quiet on the front",
 		"Situation is under control",
 		"All quiet here",
-		"Situation is under control",
+		"We are looking good",
         -- Add more custom messages if needed...
     },
 }
@@ -135,7 +136,8 @@ local options = {
             set = function(_, newValue)
                 buttonMessageIndices.allClear = newValue
             end,
-            order = 3,
+            order = 3, 		
+        
         
         },
     },
@@ -159,23 +161,20 @@ for _, location in ipairs(battlegroundLocations) do
     locationTable[location] = location
 end
 
--- Function to get the current subzone text (location)
-local function GetCurrentLocation()
-    return GetSubZoneText()
+local function isInBattleground()
+    local inInstance, instanceType = IsInInstance()
+    return inInstance and (instanceType == "pvp" or instanceType == "arena")
 end
 
 local function ButtonOnClick(self)
-    local currentLocation = GetCurrentLocation()
-    local location = locationTable[currentLocation]
-    -- Check if location is in the defined battleground locations
-    if not location then
-        print("You are not in a BattleGround.")
+    if not isInBattleground() then
+        print("You are not in a battleground.")
         return
     end
 
-
+    local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()
     local enemyFaction = playerFaction == "Hordie" and "Alliance" or "Hordie"
-    local message = self:GetText() .. " " .. enemyFaction .. " coming in fast at " .. location
+    local message = self:GetText() .. " " .. enemyFaction .. " coming in fast at " .. currentLocation
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -185,8 +184,9 @@ f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
 f:SetScript("OnEvent", function(self, event, ...)
     if event == "ZONE_CHANGED_NEW_AREA" then
-        local currentLocation = GetCurrentLocation()
+        local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()
         local location = locationTable[currentLocation]
+
         -- Check if location is in the defined battleground locations
         if location then
             IncCallout:Show()  -- Show the GUI
@@ -332,6 +332,27 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
     end,
 })
 
+-- assuming IncCalloutFrame is the name of your addon's frame that you created elsewhere
+local frame = CreateFrame("Frame") -- create a new frame to listen to events
+
+-- this function is called when an event occurs
+local function eventHandler(self, event, ...)
+    if event == "PLAYER_ENTERING_WORLD" then
+        local isInInstance, instanceType = IsInInstance()
+        if isInInstance then
+            -- This block of code is executed when the player enters an instance.
+            -- You should place your code here to show your addon's GUI.
+            IncCalloutFrame:Show() -- assuming IncCalloutFrame is the name of your addon's frame.
+        end
+    end
+end
+
+-- Register the PLAYER_ENTERING_WORLD event with your frame
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+-- Set the frame's script to call your event handler function when an event is fired
+frame:SetScript("OnEvent", eventHandler)
+
 -- Function to handle player login and logout
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
@@ -357,8 +378,8 @@ IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
-    local location = locationTable[GetCurrentLocation()]
-    
+    local location = GetRealZoneText() .. " - " .. GetSubZoneText()
+
     -- Check if location is in the defined battleground locations
     if not location then
         print("You are not in a BattleGround.")
@@ -372,8 +393,8 @@ allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
-    local location = locationTable[GetCurrentLocation()]
-    
+    local location = GetRealZoneText() .. " - " .. GetSubZoneText()
+
     -- Check if location is in the defined battleground locations
     if not location then
         print("You are not in a BattleGround.")
@@ -387,8 +408,8 @@ sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
-    local location = locationTable[GetCurrentLocation()]
-    
+    local location = GetRealZoneText() .. " - " .. GetSubZoneText()
+
     -- Check if location is in the defined battleground locations
     if not location then
         print("You are not in a BattleGround.")
@@ -405,8 +426,6 @@ SLASH_INC1 = "/inc"
 SlashCmdList["INC"] = function()
     if IncCallout:IsShown() then
         IncCallout:Hide()
-    else
-        IncCallout:Show()
     end
 end
 

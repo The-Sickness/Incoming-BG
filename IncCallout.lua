@@ -332,17 +332,15 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
     end,
 })
 
--- assuming IncCalloutFrame is the name of your addon's frame that you created elsewhere
 local frame = CreateFrame("Frame") -- create a new frame to listen to events
 
 -- this function is called when an event occurs
 local function eventHandler(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
         local isInInstance, instanceType = IsInInstance()
-        if isInInstance then
-            -- This block of code is executed when the player enters an instance.
-            -- You should place your code here to show your addon's GUI.
-            IncCalloutFrame:Show() -- assuming IncCalloutFrame is the name of your addon's frame.
+        if isInInstance and instanceType == "pvp" then
+ 
+            IncCalloutMainFrame:Show() 
         end
     end
 end
@@ -352,6 +350,7 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
 -- Set the frame's script to call your event handler function when an event is fired
 frame:SetScript("OnEvent", eventHandler)
+
 
 -- Function to handle player login and logout
 local function OnEvent(self, event, ...)

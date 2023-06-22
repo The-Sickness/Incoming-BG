@@ -1,3 +1,7 @@
+-- IncCallout (Rebuild of Incoming-BG)
+-- Made by Sharpedge_Gaming
+-- v1.7 - 10.1
+
 local addonName, addonNamespace = ...
 
 -- Load embedded libraries
@@ -27,7 +31,7 @@ f:SetScript("OnEvent", function(self, event, ...)
             print("Don't forget to call INC's")
             IncCallout:Show()  -- Show the GUI
         else
-            print("You need to que up for PVP")
+            print("|cFFFF0000You need to queue up for PvP|r")
             IncCallout:Hide()  -- Hide the GUI
         end
     end

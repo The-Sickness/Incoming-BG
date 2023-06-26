@@ -29,7 +29,7 @@ f:SetScript("OnEvent", function(self, event, ...)
         local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
             print("Don't forget to call INC's")
-            IncCallout:Show()  -- Show the GUI
+            
         else
             print("|cFFFF0000You need to queue up for PvP|r")
             
@@ -195,7 +195,7 @@ f:SetScript("OnEvent", function(self, event, ...)
         if location then
             IncCallout:Show()  -- Show the GUI
         else
-            IncCallout:Hide()  -- Hide the GUI
+            
         end
     end
 end)

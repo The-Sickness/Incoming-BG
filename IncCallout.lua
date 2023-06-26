@@ -32,7 +32,7 @@ f:SetScript("OnEvent", function(self, event, ...)
             IncCallout:Show()  -- Show the GUI
         else
             print("|cFFFF0000You need to queue up for PvP|r")
-            IncCallout:Hide()  -- Hide the GUI
+            
         end
     end
 end)

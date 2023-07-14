@@ -176,9 +176,10 @@ local function ButtonOnClick(self)
         return
     end
 
-    local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()
-    local enemyFaction = playerFaction == "Hordie" and "Alliance" or "Hordie"
-    local message = self:GetText() .. " " .. enemyFaction .. " coming in fast at " .. currentLocation
+    local currentLocation = GetSubZoneText()
+    local playerFaction = UnitFactionGroup("player") or ""
+    local enemyFaction = playerFaction == "Alliance" and "Horde" or "Alliance"
+    local message = self:GetText() .. " " .. enemyFaction .. " incoming at " .. currentLocation
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -381,46 +382,46 @@ IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
-    local location = GetRealZoneText() .. " - " .. GetSubZoneText()
+    local location = GetSubZoneText()
 
     -- Check if location is in the defined battleground locations
     if not location then
-        print("You are not in a BattleGround.")
-        return
-    end
+    print("You are not in a BattleGround.")
+    return
+end
 
-    local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
+SendChatMessage(message, "INSTANCE_CHAT")
 end
 allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
-    local location = GetRealZoneText() .. " - " .. GetSubZoneText()
+    local location = GetSubZoneText()
 
     -- Check if location is in the defined battleground locations
     if not location then
-        print("You are not in a BattleGround.")
-        return
-    end
+    print("You are not in a BattleGround.")
+    return
+end
 
-    local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
+SendChatMessage(message, "INSTANCE_CHAT")
 end
 sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
-    local location = GetRealZoneText() .. " - " .. GetSubZoneText()
+    local location = GetSubZoneText()
 
     -- Check if location is in the defined battleground locations
     if not location then
-        print("You are not in a BattleGround.")
-        return
-    end
+    print("You are not in a BattleGround.")
+    return
+end
 
-    local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
+SendChatMessage(message, "INSTANCE_CHAT")
 end
 incButton:SetScript("OnClick", IncButtonOnClick)
 

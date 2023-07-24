@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v1.7 - 10.1
+-- v2.0 - 10.1.5
 
 local addonName, addonNamespace = ...
 
@@ -69,6 +69,11 @@ local buttonMessages = {
 		"Calling for backup",
 		"Could use some backup",
 		"Reinforcements needed",
+		"In need of additional support",
+        "Calling all hands on deck",
+        "Require extra manpower",
+        "Assistance urgently needed",
+        "Requesting more participants",
         -- Add more custom messages if needed...
     },
     inc = {
@@ -82,6 +87,11 @@ local buttonMessages = {
 		"Enemy push incoming",
 		"Enemy blitz incoming",
 		"Enemy strike team inbound",
+		"Incoming attack alert",
+		"Enemy wave inbound",
+		"Enemy squad closing in",
+		"Anticipate enemy push",
+		"Enemy forces are closing in",
         -- Add more custom messages if needed...
     },
     allClear = {
@@ -95,6 +105,11 @@ local buttonMessages = {
 		"Situation is under control",
 		"All quiet here",
 		"We are looking good",
+		"Perimeter is secured",
+        "Situation is calm",
+        "No threats detected",
+        "All quiet on this end",
+        "Area is threat-free",
         -- Add more custom messages if needed...
     },
 }

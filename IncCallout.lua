@@ -16,7 +16,9 @@ local AceConfigDialog = LibStub:GetLibrary("AceConfigDialog-3.0")
 local icon = LibStub:GetLibrary("LibDBIcon-1.0")
 --local LDB = LibStub("LibDataBroker-1.1")
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
- 
+--local LSM = LibStub ("LibSharedMedia-3.0")
+local LSM = LibStub("LibSharedMedia-3.0")
+
 local addonName, addonNamespace = ...
  
 local IncDB, db 
@@ -192,9 +194,8 @@ end
 -- This function will be triggered every time IncCallout is shown
 IncCallout:SetScript("OnShow", function()
     applyButtonColor()
-    -- You can also apply other settings here, if needed.
+    
 end)
-
 
 local options = {
     name = "IncCallout",
@@ -202,7 +203,7 @@ local options = {
     args = {
         sendMore = {
             type = "select",
-            name = "Send More message",
+            name = "Send More Message",
             desc = "Select the message for the 'Send More' button",
             values = buttonMessages.sendMore,
             get = function() return buttonMessageIndices.sendMore end,
@@ -211,7 +212,7 @@ local options = {
         },
         inc = {
             type = "select",
-            name = "INC message",
+            name = "INC Message",
             desc = "Select the message for the 'INC' button",
             values = buttonMessages.inc,
             get = function() return buttonMessageIndices.inc end,
@@ -220,7 +221,7 @@ local options = {
         },
         allClear = {
             type = "select",
-            name = "All Clear message",
+            name = "All Clear Message",
             desc = "Select the message for the 'All Clear' button",
             values = buttonMessages.allClear,
             get = function() return buttonMessageIndices.allClear end,
@@ -241,24 +242,24 @@ local options = {
             order = 4,
         },
         fontColor = {
-        type = "color",
-        name = "Button Font Color",
-        desc = "Set the color of the button text.",
-        hasAlpha = true,
-        get = function()
-            local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- Default to white
-            return color.r, color.g, color.b, color.a
-        end,
-        set = function(_, r, g, b, a)
-            IncDB.fontColor.r = r
-            IncDB.fontColor.g = g
-            IncDB.fontColor.b = b
-            IncDB.fontColor.a = a
-            for _, text in ipairs(buttonTexts) do
-                text:SetTextColor(r, g, b, a)
-            end
-        end,
-        order = 5,
+            type = "color",
+            name = "Button Font Color",
+            desc = "Set the color of the button text.",
+            hasAlpha = true,
+            get = function()
+                local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- Default to white
+                return color.r, color.g, color.b, color.a
+            end,
+            set = function(_, r, g, b, a)
+                IncDB.fontColor.r = r
+                IncDB.fontColor.g = g
+                IncDB.fontColor.b = b
+                IncDB.fontColor.a = a
+                for _, text in ipairs(buttonTexts) do
+                    text:SetTextColor(r, g, b, a)
+                end
+            end,
+            order = 5,
         },
         buttonColor = {
             type = "color",
@@ -274,10 +275,42 @@ local options = {
                 IncDB.buttonColor.g = g 
                 IncDB.buttonColor.b = b 
                 IncDB.buttonColor.a = a 
-            applyButtonColor() 
---                
+                applyButtonColor() 
             end,
             order = 6,
+        },
+        font = {
+            type = "select",
+            name = "Font",
+            desc = "Select the font for the buttons.",
+            dialogControl = "LSM30_Font",
+            values = LSM:HashTable("font"),
+            get = function()
+                return IncDB.font or "Friz Quadrata TT"
+            end,
+            set = function(_, newValue)
+                IncDB.font = newValue
+                local size = IncDB.fontSize or 15  -- Default font size
+                for _, text in ipairs(buttonTexts) do
+                    text:SetFont(LSM:Fetch("font", newValue), size)
+                end
+            end,
+            order = 7,
+        },
+        fontSize = {
+            type = "range",
+            name = "Font Size",
+            desc = "Adjust the font size for the buttons.",
+            min = 8, max = 24, step = 1,
+            get = function() return IncDB.fontSize or 15 end,
+            set = function(_, newValue)
+                IncDB.fontSize = newValue
+                local font = IncDB.font or "Friz Quadrata TT"  -- Default font
+                for _, text in ipairs(buttonTexts) do
+                    text:SetFont(LSM:Fetch("font", font), newValue)
+                end
+            end,
+            order = 8,
         },
     },
 }
@@ -390,7 +423,6 @@ local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at "
 SendChatMessage(message, "INSTANCE_CHAT")
 end
  
- 
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
     local location = GetSubZoneText()
@@ -499,25 +531,18 @@ end
     for _, text in ipairs(buttonTexts) do
         text:SetTextColor(r, g, b, a)
     end
- 
-    -- Load the font
-    local defaultSize = 15  -- Default font size
-    local font = IncDB.font or "Fonts\\ARIALN.ttf"  -- Default to Arial
+    
+    local font = IncDB.font or "Friz Quadrata TT"  -- Default font
+    local fontSize = IncDB.fontSize or 15  -- Default font size
     for _, text in ipairs(buttonTexts) do
-        local _, size = text:GetFont()
-        size = size or defaultSize
-        text:SetFont(font, size)  -- Preserve the font size
-    end
- 
+    text:SetFont(LSM:Fetch("font", font), fontSize)
+end
     -- Load the minimap icon settings
     icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
  
     elseif event == "PLAYER_LOGOUT" then
-
-end
- 
- 
-end
+    end
+ end
  
 IncCallout:SetScript("OnEvent", OnEvent)
  

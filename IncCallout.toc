@@ -1,7 +1,7 @@
-## Interface: 100105
+## Interface: 100107
 ## Title: IncCallout
 ## Author: Sharpedge_Gaming
-## Version: v.2.2
+## Version: v.2.3
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 

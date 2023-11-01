@@ -364,7 +364,7 @@ f:SetScript("OnEvent", function(self, event, ...)
         if location then
             IncCallout:Show()  -- Show the GUI
         else
-            IncCallout:Hide()  -- Hide the GUI
+            
         end
     end
 end)

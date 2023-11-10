@@ -340,16 +340,14 @@ local function isInBattleground()
 end
  
 local function ButtonOnClick(self)
-    if not isInBattleground() then
-        print("You are not in a battleground.")
-        return
-    end
- 
-    local currentLocation = GetSubZoneText()
-    local playerFaction = UnitFactionGroup("player") or ""
-    local enemyFaction = playerFaction == "Alliance" and "Horde" or "Alliance"
-    local message = self:GetText() .. " " .. enemyFaction .. " incoming at " .. currentLocation
-    SendChatMessage(message, "INSTANCE_CHAT")
+if not isInBattleground() then
+print("You are not in a battleground.")
+return
+end
+
+local currentLocation = GetSubZoneText()
+local message = self:GetText() .. " Incoming at " .. currentLocation
+SendChatMessage(message, "INSTANCE_CHAT")
 end
  
 -- Register an event listener for when the player enters a new zone or subzone

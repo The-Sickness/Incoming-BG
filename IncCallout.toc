@@ -5,6 +5,7 @@
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
+## X-Wago-ID: as3Dfg57
 ## SavedVariables: IncCalloutDB 
 
  

@@ -1,7 +1,8 @@
+
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
 -- v2.3 - 10.1.7
- 
+
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
 --local AceDB = LibStub("AceDB-3.0")
@@ -61,7 +62,7 @@ local battlegroundLocations = {
     "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
     "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
     "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu",  "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
-    "Ashran", "StormShield",    
+    "Ashran", "StormShield", "The Ringing Deeps",   
 }
  
 local buttonMessages = {
@@ -339,16 +340,14 @@ local function isInBattleground()
 end
  
 local function ButtonOnClick(self)
-    if not isInBattleground() then
-        print("You are not in a battleground.")
-        return
-    end
- 
-    local currentLocation = GetSubZoneText()
-    local playerFaction = UnitFactionGroup("player") or ""
-    local enemyFaction = playerFaction == "Alliance" and "Horde" or "Alliance"
-    local message = self:GetText() .. " " .. enemyFaction .. " incoming at " .. currentLocation
-    SendChatMessage(message, "INSTANCE_CHAT")
+if not isInBattleground() then
+print("You are not in a battleground.")
+return
+end
+
+local currentLocation = GetSubZoneText()
+local message = self:GetText() .. " Incoming at " .. currentLocation
+SendChatMessage(message, "INSTANCE_CHAT")
 end
  
 -- Register an event listener for when the player enters a new zone or subzone
@@ -543,6 +542,43 @@ end
     elseif event == "PLAYER_LOGOUT" then
     end
  end
+ 
+local function CheckButtonKeybinds()
+    if IsModifiedClick("INCCALLOUT_BUTTON1") then
+        button1:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_BUTTON2") then
+        button2:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_BUTTON3") then
+        button3:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_BUTTON4") then
+        button4:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_BUTTONZERG") then
+        buttonZerg:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_INCBUTTON") then
+        incButton:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_SENDMOREBUTTON") then
+        sendMoreButton:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_ALLCLEARBUTTON") then
+        allClearButton:Click();
+    end
+    if IsModifiedClick("INCCALLOUT_EXITBUTTON") then
+        exitButton:Click();
+    end
+end
+
+-- Create an OnUpdate script to check for key presses
+local f = CreateFrame("Frame")
+f:SetScript("OnUpdate", function(self, elapsed)
+    CheckButtonKeybinds()
+end)
+
  
 IncCallout:SetScript("OnEvent", OnEvent)
  

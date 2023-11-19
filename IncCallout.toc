@@ -1,10 +1,11 @@
-## Interface: 100107
+## Interface: 100200
 ## Title: IncCallout
 ## Author: Sharpedge_Gaming
-## Version: v.2.3
+## Version: v.2.4
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
+## X-Wago-ID: as3Dfg57
 ## SavedVariables: IncCalloutDB 
 
  

@@ -1,4 +1,34 @@
-This is a complete rebuild/rewrite of Incoming-BG. There is a new GUI, and now you can choose what messages you want to use. I have now made it to where the GUI will appear when you log in. There is an Exit button to close out the addon. Whenever you need it again just make sure to use /inc and the GUI will pop up wherever you last had it anchored.
+The MUST-HAVE addon for calling INC's in Battlegrounds, Rated BG's, Brawls, And Rated Brawls, (soon to be SRBG's)
+
+ 
+
+IncCallout now works in ALL BG's.
+
+ 
+
+Update: 
+
+I have removed the code that will make the GUI appear upon login, and on a /reload. It will appear once you go into a BG match, and will disappear when you leave. 
+
+If needs be the minimap button will enable it outside of a BG to where you can adjust setting and what not. I was getting some suggestions to remove the auto 
+
+GUI when you login, so now that is gone.
+
+ 
+
+ 
+
+You may also use /inc slash command to pull up the GUI as well.
+
+ 
+
+I will make another video when I have time.
+
+ 
+
+I plan to add more messages for the buttons 1-4 and Zerg in the future. 
+
+ 
 
  
 
@@ -10,23 +40,119 @@ This is a complete rebuild/rewrite of Incoming-BG. There is a new GUI, and now y
 
  
 
+Here is some info on the GUI: There is only one GUI. There is no need to configure anything, unless you want to choose different messages besides the default ones. You don't have to configure what battleground you are in, my addon does that for you based on your location. My addon will call an INC or whatever message you want based on where you are in the battleground. There is nothing that you as a player has to do with configuration. All you gotta do is click the appropriate button in whatever situation you are in. Rather it's a INC, All Clear, Zerg, or whatever, all you gotta do is click a button..... 
+
+ 
+
+ 
+
+You have the options to change the message for chat for calling an INC. You have the option to change the button colors, you can change the button font color, you can change the font, you can change the font size, and you can change the background Opacity.
+
+ 
+
+*MiniMap Button:
+
+MiniMap button has a couple of functions. You can move it anywhere on the MiniMap. Left Click will toggle the IncCallout GUI, (you can still use /inc if you want). Right Click will toggle Message options.
+
+ 
+
 * Examples of Buttons:  SEE IMAGES
 
-1, 2, 3, 4, and Zerg: (you choose the number) at your location. Example if you press 2- " 2 Alliance at LightHouse" or whatever your location is. Or if you press 4 "4 Hordies at WaterWorks"  Or, whatever your location is.  In another words, whatever fraction you are will determine if the message says Alliance or Hordies. ( these are hard coded and will remain what they are)
+ 
 
-All Clear at your location: ( you can choose between 3 different messages)
+If you use the buttons 1, 2, 3, 4, and Zerg these are the messages you will see if you are Alliance:
 
-Incoming at your location: ( you can choose between 3 different messages)
+Button 1: 1 Incoming fast at (your location)
 
-Send More to your location: ( you can choose between 3 different messages)
+Button 2: 2 Incoming fast at (your location)
+
+Button 3: 3 Incoming fast at (your location)
+
+Button 4: 4 Incoming fast at (your location)
+
+Zerg: Zerg Incoming fast at (your location)
 
  
 
-*This addon works in BG's that have "zones". If the BG doesn't have zones it will NOT work. The only BG's that I have found that it doesn't work on is ASHRAN and SEETHING SHORE. that's because they have no zones. All you are doing is killing the enemy boss. And just fighting for Azerite. 
+If you use the buttons 1, 2, 3, 4, and Zerg these are the messages you will see if you are Horde:
+
+Button 1: 1 Incoming fast at (your location)
+
+Button 2: 2 Incoming fast at (your location)
+
+Button 3: 3 Incoming fast at (your location)
+
+Button 4: 4 Incoming fast at (your location)
+
+Zerg: Zerg Incoming fast at (your location)
 
  
 
-Use: The GUI will appear when you log in. If you exit the addon you must either use /inc. Or you can /reload. Whatever position you had the GUI on screen is where it will appear. If you change any of the Send More, INC, or All Clear messages they will be saved.
+The other buttons INC, Send More, and All Clear have default messages chosen. 
+
+ 
+
+For the INC button here are the messages you can chose from:
+
+"Incoming",
+"INC INC INC",
+"INC",
+"Gotta INC",
+"BIG INC",
+"Incoming enemy forces",
+"Incoming threat",
+"Enemy push incoming",
+"Enemy blitz incoming",
+"Enemy strike team inbound",
+"Incoming attack alert",
+"Enemy wave inbound",
+"Enemy squad closing in",
+"Anticipate enemy push",
+"Enemy forces are closing in",
+
+-- Add more custom messages if needed...
+
+ 
+
+For the Send More button here are the messages you can chose from:
+
+"We need more peeps",
+"Need help",
+"We are outnumbered",
+"Need a few more",
+"Need more",
+"Backup required",
+"We could use some help",
+"Calling for backup",
+"Could use some backup",
+"Reinforcements needed",
+"In need of additional support",
+"Calling all hands on deck",
+"Require extra manpower",
+"Assistance urgently needed",
+"Requesting more participants",
+-- Add more custom messages if needed...
+
+ 
+
+For the All Clear button here are the messages you can chose from:
+
+"We are all clear",
+"All clear",
+"Looks like a ghost town",
+"All good",
+"Looking good",
+"Area secure",
+"All quiet on the front",
+"Situation is under control",
+"All quiet here",
+"We are looking good",
+"Perimeter is secured",
+"Situation is calm",
+"No threats detected",
+"All quiet on this end",
+"Area is threat-free",
+-- Add more custom messages if needed...
 
 
 ![Pic5](https://github.com/The-Sickness/IncCallout/assets/5657780/699a4ff0-b51f-46f7-8c95-20bfdacdec2e)

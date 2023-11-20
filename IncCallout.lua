@@ -1,4 +1,3 @@
-
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
 -- v2.3 - 10.1.7
@@ -44,6 +43,8 @@ local buttonMessageIndices = {
     inc = 1,
     allClear = 1
 }
+
+SLASH_INC1 = "/inc"
  
 -- Define the battleground locations
 local battlegroundLocations = {
@@ -579,6 +580,14 @@ f:SetScript("OnUpdate", function(self, elapsed)
     CheckButtonKeybinds()
 end)
 
+  SLASH_INC1 = "/inc"
+SlashCmdList["INC"] = function()
+    if IncCallout:IsShown() then
+        IncCallout:Hide()
+    else
+        IncCallout:Show()
+    end
+ end
  
 IncCallout:SetScript("OnEvent", OnEvent)
  

@@ -464,11 +464,11 @@ local function OnEvent(self, event, ...)
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
     
         else
-            print("|cFFFF0000You need to queue up for PvP|r")
+            IncCallout:Hide() 
         end
         
         if inInstance and instanceType == "pvp" then
-            IncCalloutMainFrame:Show() 
+            IncCallout:Show() 
         end
  
     elseif event == "PLAYER_LOGIN" then
@@ -587,15 +587,3 @@ IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_LOGOUT")
 IncCallout:SetScript("OnEvent", OnEvent)
-
-
-
-
-
-
-
-
-
-
-
-

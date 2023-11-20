@@ -544,42 +544,6 @@ end
     end
  end
  
-local function CheckButtonKeybinds()
-    if IsModifiedClick("INCCALLOUT_BUTTON1") then
-        button1:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_BUTTON2") then
-        button2:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_BUTTON3") then
-        button3:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_BUTTON4") then
-        button4:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_BUTTONZERG") then
-        buttonZerg:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_INCBUTTON") then
-        incButton:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_SENDMOREBUTTON") then
-        sendMoreButton:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_ALLCLEARBUTTON") then
-        allClearButton:Click();
-    end
-    if IsModifiedClick("INCCALLOUT_EXITBUTTON") then
-        exitButton:Click();
-    end
-end
-
--- Create an OnUpdate script to check for key presses
-local f = CreateFrame("Frame")
-f:SetScript("OnUpdate", function(self, elapsed)
-    CheckButtonKeybinds()
-end)
-
   SLASH_INC1 = "/inc"
 SlashCmdList["INC"] = function()
     if IncCallout:IsShown() then

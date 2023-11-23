@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v2.3 - 10.1.7
+-- v2.6 - 10.1.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -451,14 +451,6 @@ local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. locati
 SendChatMessage(message, "INSTANCE_CHAT")
 end
  
--- Register the slash command
-SLASH_INC1 = "/inc"
-SlashCmdList["INC"] = function()
-    if IncCallout:IsShown() then
-        IncCallout:Hide()
-    end
-end
- 
 local function OnEvent(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
@@ -544,14 +536,26 @@ end
     end
  end
  
-  SLASH_INC1 = "/inc"
+SLASH_INC1 = "/inc"
 SlashCmdList["INC"] = function()
     if IncCallout:IsShown() then
         IncCallout:Hide()
     else
         IncCallout:Show()
     end
- end
+end
+
+-- New function to handle the '/incmsg' command
+local function IncomingBGMessageCommandHandler(msg)
+    local messageType = "INSTANCE_CHAT"  
+    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'"  -- Replace with your desired message
+
+    -- Send the message
+    SendChatMessage(message, messageType)
+end
+
+SLASH_INCOMINGBGMSG1 = "/incmsg"
+SlashCmdList["INCOMINGBGMSG"] = IncomingBGMessageCommandHandler
  
 IncCallout:SetScript("OnEvent", OnEvent)
  

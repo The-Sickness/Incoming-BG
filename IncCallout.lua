@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v2.6 - 10.1.7
+-- v2.8 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -22,7 +22,6 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local addonName, addonNamespace = ...
  
 local IncDB, db 
--- Initialize your addon using AceAddon-3.0
 local addon = AceAddon:NewAddon(addonName)
  
 local defaults = {
@@ -42,6 +41,29 @@ local buttonMessageIndices = {
     sendMore = 1,
     inc = 1,
     allClear = 1
+}
+
+local predefinedColors = {
+    { text = "White", value = {r = 1, g = 1, b = 1, a = 1} },
+    { text = "Red", value = {r = 1, g = 0, b = 0, a = 1} },
+    { text = "Green", value = {r = 0, g = 1, b = 0, a = 1} },
+    { text = "Blue", value = {r = 0, g = 0, b = 1, a = 1} },
+    { text = "Yellow", value = {r = 1, g = 1, b = 0, a = 1} },
+    { text = "Cyan", value = {r = 0, g = 1, b = 1, a = 1} },
+    { text = "Magenta", value = {r = 1, g = 0, b = 1, a = 1} },
+    { text = "Orange", value = {r = 1, g = 0.5, b = 0, a = 1} },
+    { text = "Purple", value = {r = 0.5, g = 0, b = 0.5, a = 1} },
+    { text = "Pink", value = {r = 1, g = 0.75, b = 0.8, a = 1} },
+    { text = "Lime", value = {r = 0.5, g = 1, b = 0, a = 1} },
+    { text = "Sky Blue", value = {r = 0, g = 0.75, b = 1, a = 1} },
+    { text = "Brown", value = {r = 0.6, g = 0.4, b = 0.2, a = 1} },
+    { text = "Grey", value = {r = 0.5, g = 0.5, b = 0.5, a = 1} },
+    { text = "Dark Green", value = {r = 0, g = 0.5, b = 0, a = 1} },
+    { text = "Teal", value = {r = 0, g = 0.5, b = 0.5, a = 1} },
+    { text = "Maroon", value = {r = 0.5, g = 0, b = 0, a = 1} },
+    { text = "Olive", value = {r = 0.5, g = 0.5, b = 0, a = 1} },
+    { text = "Navy", value = {r = 0, g = 0, b = 0.5, a = 1} },
+    { text = "Coral", value = {r = 1, g = 0.5, b = 0.3, a = 1} },
 }
 
 SLASH_INC1 = "/inc"
@@ -125,7 +147,7 @@ local buttonMessages = {
  
 -- Create the main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 155)
+IncCallout:SetSize(160, 180)
 IncCallout:SetPoint("CENTER")
  
 -- Create a background texture for the main frame
@@ -150,7 +172,7 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
  
-local fontSize = 15
+local fontSize = 14
  
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
@@ -164,14 +186,15 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     end
     button:SetScript("OnClick", onClick)
     button:GetFontString():SetTextColor(1, 1, 1, 1)
---    button:SetBackdrop({
---        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
---        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
---        tile = true,
---        tileSize = 16,
---        edgeSize = 16,
---        insets = { left = 4, right = 4, top = 4, bottom = 4 }
---    })
+    button:SetBackdrop({
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      tile = true,
+      tileSize = 12,
+      edgeSize = 7,  
+      insets = { left = 1, right = 1, top = 1, bottom = 1 }
+})
+
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
     return button
@@ -244,42 +267,62 @@ local options = {
             order = 4,
         },
         fontColor = {
-            type = "color",
-            name = "Button Font Color",
-            desc = "Set the color of the button text.",
-            hasAlpha = true,
-            get = function()
-                local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- Default to white
-                return color.r, color.g, color.b, color.a
-            end,
-            set = function(_, r, g, b, a)
-                IncDB.fontColor.r = r
-                IncDB.fontColor.g = g
-                IncDB.fontColor.b = b
-                IncDB.fontColor.a = a
-                for _, text in ipairs(buttonTexts) do
-                    text:SetTextColor(r, g, b, a)
-                end
-            end,
-            order = 5,
+    type = "select",
+    name = "Button Font Color",
+    desc = "Set the color of the button text.",
+    values = function()
+        local colorValues = {}
+        for i, color in ipairs(predefinedColors) do
+            colorValues[i] = color.text
+        end
+        return colorValues
+    end,
+    get = function()
+        local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- Default to white
+        for index, color in ipairs(predefinedColors) do
+            if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
+                return index
+            end
+        end
+        return 1 -- Default to first color (White) if no match is found
+    end,
+    set = function(_, selectedValue)
+        local color = predefinedColors[selectedValue].value
+        IncDB.fontColor = color
+        for _, text in ipairs(buttonTexts) do
+            text:SetTextColor(color.r, color.g, color.b, color.a)
+        end
+    end,
+    style = "dropdown",
+    order = 5,
         },
         buttonColor = {
-            type = "color",
-            name = "Button Color",
-            desc = "Set the color of the buttons.",
-            hasAlpha = true,
-            get = function()
-                local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
-                return color.r, color.g, color.b, color.a
-            end,
-            set = function(_, r, g, b, a)
-                IncDB.buttonColor.r = r  
-                IncDB.buttonColor.g = g 
-                IncDB.buttonColor.b = b 
-                IncDB.buttonColor.a = a 
-                applyButtonColor() 
-            end,
-            order = 6,
+    type = "select",
+    name = "Button Color",
+    desc = "Select the color of the buttons.",
+    values = function()
+        local colorValues = {}
+        for i, color in ipairs(predefinedColors) do
+            colorValues[i] = color.text
+        end
+        return colorValues
+    end,
+    get = function()
+        local currentColor = IncDB.buttonColor
+        for index, color in ipairs(predefinedColors) do
+            if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
+                return index
+            end
+        end
+        return 1 -- Default to first color if no match is found
+    end,
+    set = function(_, selectedValue)
+        local color = predefinedColors[selectedValue].value
+        IncDB.buttonColor = color
+        applyButtonColor() 
+    end,
+    style = "dropdown",
+    order = 6,
         },
         font = {
             type = "select",
@@ -292,7 +335,7 @@ local options = {
             end,
             set = function(_, newValue)
                 IncDB.font = newValue
-                local size = IncDB.fontSize or 15  -- Default font size
+                local size = IncDB.fontSize or 14  -- Default font size
                 for _, text in ipairs(buttonTexts) do
                     text:SetFont(LSM:Fetch("font", newValue), size)
                 end
@@ -304,7 +347,7 @@ local options = {
             name = "Font Size",
             desc = "Adjust the font size for the buttons.",
             min = 8, max = 24, step = 1,
-            get = function() return IncDB.fontSize or 15 end,
+            get = function() return IncDB.fontSize or 14 end,
             set = function(_, newValue)
                 IncDB.fontSize = newValue
                 local font = IncDB.font or "Friz Quadrata TT"  -- Default font
@@ -369,7 +412,6 @@ f:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
--- Now that IncCallout is defined, you can create IncCalloutLDB
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
     type = "data source",
     text = "IncCallout",
@@ -470,16 +512,32 @@ db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
 IncDB = db.profile
 playerFaction = UnitFactionGroup("player")
  
+local function BuffRequestButtonOnClick()
+    local message = "Need buffs please!"
+    SendChatMessage(message, "INSTANCE_CHAT")  
+end
+ 
 -- Create the buttons
 local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 15, -20, ButtonOnClick)
 local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 3, 0, ButtonOnClick)
 local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 3, 0, ButtonOnClick)
 local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 3, 0, ButtonOnClick)
 local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 3, 0, ButtonOnClick)
-local incButton = createButton("incButton", 60, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
-local sendMoreButton = createButton("sendMoreButton", 80, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
-local allClearButton = createButton("allClearButton", 60, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
-local exitButton = createButton("exitButton", 60, 22, "Exit", {"TOP", allClearButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
+local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
+local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
+local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
+local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+
+-- Apply the color to all the buttons
+applyButtonColor()
+
+-- Function for Buff Request Button
+local function BuffRequestButtonOnClick()
+    -- Example implementation: Sends a generic buff request in chat
+    local message = "Requesting buffs, please!"
+    SendChatMessage(message, "SAY")  -- or "INSTANCE_CHAT", depending on your preference
+end
 
 -- Apply the PostClick script to each button
 for _, button in ipairs(buttons) do
@@ -491,6 +549,7 @@ end
 allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 incButton:SetScript("OnClick", IncButtonOnClick)
+
 -- Apply the color to all the buttons
 applyButtonColor()
  
@@ -515,7 +574,6 @@ end
     local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
     local r, g, b, a = color.r, color.g, color.b, color.a
     applyButtonColor() 
-
  
     -- Load the font color
     local savedColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}  -- Default to white
@@ -548,7 +606,7 @@ end
 -- New function to handle the '/incmsg' command
 local function IncomingBGMessageCommandHandler(msg)
     local messageType = "INSTANCE_CHAT"  
-    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'"  -- Replace with your desired message
+    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."  
 
     -- Send the message
     SendChatMessage(message, messageType)

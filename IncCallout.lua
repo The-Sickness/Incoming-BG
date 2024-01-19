@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v2.8 - 10.2.5
+-- v2.9 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -527,7 +527,7 @@ local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, 
 local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
 local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
 local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+local exitButton = createButton("exitButton", 50, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
 
 -- Apply the color to all the buttons
 applyButtonColor()
@@ -536,7 +536,7 @@ applyButtonColor()
 local function BuffRequestButtonOnClick()
     -- Example implementation: Sends a generic buff request in chat
     local message = "Requesting buffs, please!"
-    SendChatMessage(message, "SAY")  -- or "INSTANCE_CHAT", depending on your preference
+    SendChatMessage(message, "INSTANCE_CHAT") 
 end
 
 -- Apply the PostClick script to each button

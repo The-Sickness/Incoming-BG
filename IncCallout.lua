@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.0 - 10.2.5
+-- v3.1 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -269,7 +269,10 @@ local options = {
             desc = "Select the message for the 'Send More' button",
             values = buttonMessages.sendMore,
             get = function() return buttonMessageIndices.sendMore end,
-            set = function(_, newValue) buttonMessageIndices.sendMore = newValue end,
+            set = function(_, newValue) 
+                buttonMessageIndices.sendMore = newValue
+                IncDB.sendMoreIndex = newValue  -- Save the index to IncDB
+            end,
             order = 1,
         },
         inc = {
@@ -278,7 +281,10 @@ local options = {
             desc = "Select the message for the 'INC' button",
             values = buttonMessages.inc,
             get = function() return buttonMessageIndices.inc end,
-            set = function(_, newValue) buttonMessageIndices.inc = newValue end,
+            set = function(_, newValue) 
+                buttonMessageIndices.inc = newValue
+                IncDB.incIndex = newValue  -- Save the index to IncDB
+            end,
             order = 2,
         },
         allClear = {
@@ -287,7 +293,10 @@ local options = {
             desc = "Select the message for the 'All Clear' button",
             values = buttonMessages.allClear,
             get = function() return buttonMessageIndices.allClear end,
-            set = function(_, newValue) buttonMessageIndices.allClear = newValue end,
+            set = function(_, newValue) 
+                buttonMessageIndices.allClear = newValue
+                IncDB.allClearIndex = newValue  -- Save the index to IncDB
+            end,
             order = 3,
         },
         opacity = {
@@ -458,8 +467,6 @@ end)
 
 UpdatePoints()
 
-
- 
 f:SetScript("OnEvent", function(self, event, ...)
     if event == "ZONE_CHANGED_NEW_AREA" then
         local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()

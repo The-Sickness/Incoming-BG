@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v2.9 - 10.2.5
+-- v3.0 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -147,7 +147,7 @@ local buttonMessages = {
  
 -- Create the main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 180)
+IncCallout:SetSize(160, 230)
 IncCallout:SetPoint("CENTER")
  
 -- Create a background texture for the main frame
@@ -165,14 +165,51 @@ BorderFrame:SetPoint("CENTER", IncCallout, "CENTER")
 local borderTexture = BorderFrame:CreateTexture(nil, "OVERLAY")
 borderTexture:SetColorTexture(1, 1, 1)
 borderTexture:SetAllPoints(BorderFrame)
- 
+
+local xOffsetConquest =45 
+local yOffsetConquest = 15 
+local xOffsetHonor = 45 
+local yOffsetHonor = -5 
+
+-- Create a container frame for the Conquest Points label
+local conquestContainer = CreateFrame("Frame", "ConquestContainerFrame", IncCallout, "BackdropTemplate")
+conquestContainer:SetPoint("BOTTOMLEFT", IncCallout, "BOTTOMLEFT", xOffsetConquest, yOffsetConquest)
+conquestContainer:SetSize(85, 40) 
+conquestContainer:SetBackdrop({
+    bgFile = "Interface/Tooltips/UI-Tooltip-Background"
+    
+})
+conquestContainer:SetBackdropColor(0, 0, 0, 0) 
+
+local fontSize = 14
+
+-- Create the Conquest Points label within its container
+local conquestPointsLabel = conquestContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+conquestPointsLabel:SetPoint("CENTER", conquestContainer, "CENTER", 0, 0)
+conquestPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", fontSize)  -- Set font and size
+conquestPointsLabel:SetText("Conquest: 0")
+
+-- Create a container frame for the Honor Points label
+local honorContainer = CreateFrame("Frame", "HonorContainerFrame", IncCallout, "BackdropTemplate")
+honorContainer:SetPoint("BOTTOMLEFT", IncCallout, "BOTTOMLEFT", xOffsetHonor, yOffsetHonor)
+honorContainer:SetSize(85, 40) 
+honorContainer:SetBackdrop({
+    bgFile = "Interface/Tooltips/UI-Tooltip-Background"
+    
+})
+honorContainer:SetBackdropColor(0, 0, 0, 0) 
+
+-- Create the Honor Points label within its container
+local honorPointsLabel = honorContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+honorPointsLabel:SetPoint("CENTER", honorContainer, "CENTER", 0, 0)
+honorPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", fontSize)  
+honorPointsLabel:SetText("Honor: 0")
+
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
 IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
- 
-local fontSize = 14
  
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
@@ -397,6 +434,31 @@ end
 -- Register an event listener for when the player enters a new zone or subzone
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+
+-- Constants for the IDs
+local CONQUEST_CURRENCY_ID = 1602
+local HONOR_CURRENCY_ID = 1792
+
+-- Function to update points
+local function UpdatePoints()
+    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
+    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+
+    conquestPointsLabel:SetText("Conquest: " .. (conquestInfo and conquestInfo.quantity or 0))
+    honorPointsLabel:SetText("Honor: " .. (honorInfo and honorInfo.quantity or 0))
+end
+
+IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+IncCallout:RegisterEvent("HONOR_XP_UPDATE")
+IncCallout:SetScript("OnEvent", function(self, event, ...)
+    if event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        UpdatePoints()
+    end
+end)
+
+UpdatePoints()
+
+
  
 f:SetScript("OnEvent", function(self, event, ...)
     if event == "ZONE_CHANGED_NEW_AREA" then
@@ -495,6 +557,7 @@ end
  
 local function OnEvent(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
+	    UpdatePoints() 
         local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
     

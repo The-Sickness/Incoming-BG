@@ -785,13 +785,6 @@ IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:SetScript("OnEvent", OnEvent)
 
-
--- Register the event handling function for the appropriate events
-IncCallout:RegisterEvent("PLAYER_LOGIN")
-IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
-IncCallout:RegisterEvent("PLAYER_LOGOUT")
-IncCallout:SetScript("OnEvent", OnEvent)
-
 -- Buff Request Button OnClick Function
 local function BuffRequestButtonOnClick()
     local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]

@@ -2,36 +2,6 @@ The MUST-HAVE addon for calling INC's in Battlegrounds, Rated BG's, Brawls, And 
 
  
 
-IncCallout now works in ALL BG's.
-
- 
-
-Update: 
-
-I have removed the code that will make the GUI appear upon login, and on a /reload. It will appear once you go into a BG match, and will disappear when you leave. 
-
-If needs be the minimap button will enable it outside of a BG to where you can adjust setting and what not. I was getting some suggestions to remove the auto 
-
-GUI when you login, so now that is gone.
-
- 
-
- 
-
-You may also use /inc slash command to pull up the GUI as well.
-
- 
-
-I will make another video when I have time.
-
- 
-
-I plan to add more messages for the buttons 1-4 and Zerg in the future. 
-
- 
-
- 
-
 * Have even been in a situation in a BG or Epic BG to where you don't have time to type out that there is an INC at your location/flag? Stopping to type out your message for your group will take away from you defending the flag. 
 
  
@@ -44,13 +14,41 @@ Here is some info on the GUI: There is only one GUI. There is no need to configu
 
  
 
+The Conquest and Honor tabs are at the bottom of the GUI. Both of these can be edited for color, font, and size. Both Conquest and Honor will update in real time. It's just a convenient way to see your points if you don't have them listed in another DataBroker addon that lets them be visible at all times. 
+
+ 
+
+ 
+
+READ:
+
+ 
+
+ 
+
+Don't be fooled by imitations on needing a dependable addon to call your Inc's. This is your one shop stop.
+
  
 
 You have the options to change the message for chat for calling an INC. You have the option to change the button colors, you can change the button font color, you can change the font, you can change the font size, and you can change the background Opacity.
 
  
 
+IncCallout now works in ALL BG's.
+
+ 
+
+Also added in /incmsg. Its a message you can use in Instance chat to tell folks about the addon (if you want to):
+
+"Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'"
+
+ 
+
+ 
+
 *MiniMap Button:
+
+ 
 
 MiniMap button has a couple of functions. You can move it anywhere on the MiniMap. Left Click will toggle the IncCallout GUI, (you can still use /inc if you want). Right Click will toggle Message options.
 
@@ -60,7 +58,7 @@ MiniMap button has a couple of functions. You can move it anywhere on the MiniMa
 
  
 
-If you use the buttons 1, 2, 3, 4, and Zerg these are the messages you will see if you are Alliance:
+If you use the buttons 1, 2, 3, 4, and Zerg 
 
 Button 1: 1 Incoming fast at (your location)
 
@@ -73,18 +71,6 @@ Button 4: 4 Incoming fast at (your location)
 Zerg: Zerg Incoming fast at (your location)
 
  
-
-If you use the buttons 1, 2, 3, 4, and Zerg these are the messages you will see if you are Horde:
-
-Button 1: 1 Incoming fast at (your location)
-
-Button 2: 2 Incoming fast at (your location)
-
-Button 3: 3 Incoming fast at (your location)
-
-Button 4: 4 Incoming fast at (your location)
-
-Zerg: Zerg Incoming fast at (your location)
 
  
 
@@ -152,6 +138,23 @@ For the All Clear button here are the messages you can chose from:
 "No threats detected",
 "All quiet on this end",
 "Area is threat-free",
+-- Add more custom messages if needed...
+
+ 
+
+For the Request Buffs button:
+
+"Need buffs please!",
+"Buff up, team!",
+"Could use some buffs here!",
+"Calling for all buffs, let's gear up!",
+"Looking for that magical boost, buffs needed!",
+"Time to get enchanted, where are those buffs?",
+"Let’s get buffed for the battle ahead!",
+"Buffs are our best friends, let’s have them!",
+"Ready for buffs, let's enhance our strength!",
+"Buffs needed for extra might and magic!",
+"Gimme some buffs, let’s not fall behind!"
 -- Add more custom messages if needed...
 
 

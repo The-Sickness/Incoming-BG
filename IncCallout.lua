@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.2 - 10.2.5
+-- v3.3 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -28,7 +28,8 @@ local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white 
-        opacity = 1,  -- Default to fully opaque
+        opacity = 1,
+		hmdIndex = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
         conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
@@ -162,9 +163,21 @@ local buttonMessages = {
     "Buffs needed for extra might and magic!",
     "Gimme some buffs, let’s not fall behind!"
     -- Add more custom messages if needed...
-}
-    
-} 
+	},
+	hmd = {
+    "Focus healers!",
+    "Take down healers!",
+    "Target healers to win!",
+    "Healers must die!",
+    "Eliminate healers fast!",
+    "Healers top priority!",
+    "Attack healers!",
+    "Healers spotted, engage!",
+    "Priority: healers!",
+    "Remove healers for win!"
+    -- Add more messages as needed...
+   }
+ } 
    
 -- Create the main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
@@ -340,6 +353,18 @@ local options = {
                         IncDB.buffRequestIndex = newValue
                     end,
                     order = 4,
+					}, 
+				hmd = {
+                    type = "select",
+                    name = "H.M.D. Message",
+                    desc = "Select the message for the 'H.M.D.' button",
+                    values = buttonMessages.hmd,
+                    get = function() return buttonMessageIndices.hmd end,
+                    set = function(_, newValue)
+                    buttonMessageIndices.hmd = newValue
+                    IncDB.hmdIndex = newValue -- Ensure this is saving correctly
+                    end,
+                    order = 5, 
                 },
             },
         },
@@ -544,7 +569,6 @@ local options = {
     },
 }
 
-
 -- Register the options table
 AceConfig:RegisterOptionsTable(addonName, options)
 
@@ -556,9 +580,53 @@ configPanel.default = function()
     buttonMessageIndices.inc = 1
     buttonMessageIndices.allClear = 1
 	buttonMessageIndices.buffRequest = 1
+	buttonMessageIndices.hmd = IncDB.hmdIndex or 1
 
 end
- 
+
+local function ListHealers()
+    local groupType, groupSize
+    if IsInRaid() then
+        groupType = "raid"
+        groupSize = GetNumGroupMembers()
+    elseif IsInGroup() then
+        groupType = "party"
+        groupSize = GetNumGroupMembers() -- Include the player
+    else
+        print("You are not in a group.")
+        return
+    end
+
+    local healerNames = {}
+    for i = 1, groupSize do
+        local unit = groupType..i
+        local role = UnitGroupRolesAssigned(unit)
+        if role == "HEALER" then
+            table.insert(healerNames, GetUnitName(unit, true))
+        end
+    end
+
+    if #healerNames > 0 then
+        local healerList = table.concat(healerNames, ", ")
+        SendChatMessage("Healers on our team: " .. healerList, "INSTANCE_CHAT")
+    else
+        if IsInGroup() or IsInRaid() then
+            SendChatMessage("We have no heals, lol..", "INSTANCE_CHAT")
+        end
+    end
+end
+
+local healerButton = createButton("healerButton", 70, 22, "Healers", {"BOTTOMLEFT", IncCallout, "BOTTOMLEFT"}, 0, -27, ListHealers)
+local healsButton = createButton("healsButton", 70, 22, "H.M.D.", {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"}, 20, 0, function()
+end)
+
+local function HMDButtonOnClick()
+    local message = buttonMessages.hmd[buttonMessageIndices.hmd]
+    SendChatMessage(message, "INSTANCE_CHAT")  
+end
+
+healsButton:SetScript("OnClick", HMDButtonOnClick)
+
 -- Create a table to map each location to itself
 local locationTable = {}
 for _, location in ipairs(battlegroundLocations) do
@@ -720,6 +788,7 @@ local function OnEvent(self, event, ...)
         IncDB = db.profile
         playerFaction = UnitFactionGroup("player")
         isDBInitialized = true  -- Set the flag here
+		buttonMessageIndices.hmd = IncDB.hmdIndex or 1
 
         -- Initialize IncDB.minimap if it's not already initialized
         if not IncDB.minimap then
@@ -783,6 +852,7 @@ IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
 IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
+IncCallout:RegisterEvent("PLAYER_LOGOUT")
 IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Buff Request Button OnClick Function

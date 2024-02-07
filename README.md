@@ -18,6 +18,16 @@ The Conquest and Honor tabs are at the bottom of the GUI. Both of these can be e
 
  
 
+The Healer Button will announce to your team members who are the healers for your team in Instance-Chat. That lets team members know who to peel for, or not. 
+
+The H.M.D. (Healers Must Die) button has 10 different messages you can choose from that will target enemy healers. It reminds your team mates that Healers Must Die.....
+
+ 
+
+"See images" to check out the GUI and Settings
+
+ 
+
  
 
 READ:
@@ -140,7 +150,7 @@ For the All Clear button here are the messages you can chose from:
 "Area is threat-free",
 -- Add more custom messages if needed...
 
-
+ 
 
 For the Request Buffs button:
 
@@ -156,6 +166,23 @@ For the Request Buffs button:
 "Buffs needed for extra might and magic!",
 "Gimme some buffs, let’s not fall behind!"
 -- Add more custom messages if needed...
+
+ 
+
+H.M.D. (Healers Must Die) Button:
+
+"Focus healers!",
+"Take down healers!",
+"Target healers to win!",
+"Healers must die!",
+"Eliminate healers fast!",
+"Healers top priority!",
+"Attack healers!",
+"Healers spotted, engage!",
+"Priority: healers!",
+"Remove healers for win!"
+
+-- Add more messages as needed...
 
 
  

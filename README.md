@@ -140,7 +140,7 @@ For the All Clear button here are the messages you can chose from:
 "Area is threat-free",
 -- Add more custom messages if needed...
 
- 
+
 
 For the Request Buffs button:
 
@@ -158,5 +158,6 @@ For the Request Buffs button:
 -- Add more custom messages if needed...
 
 
-![pic](https://github.com/The-Sickness/Incoming-BG/assets/5657780/571a3c6f-f918-4ec2-977c-894125155f7c)
+ 
+![WoWScrnShot_020624_173739](https://github.com/The-Sickness/Incoming-BG/assets/5657780/f6b3c5a0-23a1-452f-a3e5-7218eae1d9bd)
 

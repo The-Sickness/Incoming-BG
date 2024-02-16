@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.3 - 10.2.5
+-- v3.4 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -18,6 +18,7 @@ local icon = LibStub:GetLibrary("LibDBIcon-1.0")
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 --local LSM = LibStub ("LibSharedMedia-3.0")
 local LSM = LibStub("LibSharedMedia-3.0")
+local AceGUI = LibStub("AceGUI-3.0")
 
 local addonName, addonNamespace = ...
  
@@ -48,6 +49,45 @@ local buttonMessageIndices = {
     sendMore = 1,
     inc = 1,
     allClear = 1
+}
+
+local colorOptions = {
+    { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
+    { name = "Solid Black", color = {0, 0, 0, 1} },
+    { name = "Semi-Transparent White", color = {1, 1, 1, 0.5} },
+    { name = "Solid White", color = {1, 1, 1, 1} },
+    { name = "Semi-Transparent Red", color = {1, 0, 0, 0.5} },
+    { name = "Solid Red", color = {1, 0, 0, 1} },
+    { name = "Semi-Transparent Green", color = {0, 1, 0, 0.5} },
+    { name = "Solid Green", color = {0, 1, 0, 1} },
+    { name = "Semi-Transparent Blue", color = {0, 0, 1, 0.5} },
+    { name = "Solid Blue", color = {0, 0, 1, 1} },
+    { name = "Semi-Transparent Yellow", color = {1, 1, 0, 0.5} },
+    { name = "Solid Yellow", color = {1, 1, 0, 1} },
+    { name = "Semi-Transparent Cyan", color = {0, 1, 1, 0.5} },
+    { name = "Solid Cyan", color = {0, 1, 1, 1} },
+    { name = "Semi-Transparent Magenta", color = {1, 0, 1, 0.5} },
+    { name = "Solid Magenta", color = {1, 0, 1, 1} },
+    { name = "Semi-Transparent Orange", color = {1, 0.5, 0, 0.5} },
+    { name = "Solid Orange", color = {1, 0.5, 0, 1} },
+    { name = "Semi-Transparent Purple", color = {0.5, 0, 0.5, 0.5} },
+    { name = "Solid Purple", color = {0.5, 0, 0.5, 1} },
+    { name = "Semi-Transparent Grey", color = {0.5, 0.5, 0.5, 0.5} },
+    { name = "Solid Grey", color = {0.5, 0.5, 0.5, 1} },
+    { name = "Semi-Transparent Teal", color = {0, 0.5, 0.5, 0.5} },
+    { name = "Solid Teal", color = {0, 0.5, 0.5, 1} },
+    { name = "Semi-Transparent Pink", color = {1, 0.75, 0.8, 0.5} },
+    { name = "Solid Pink", color = {1, 0.75, 0.8, 1} },
+}
+
+local borderOptions = {
+    { name = "Azerite", file = "Interface/Tooltips/UI-Tooltip-Border-Azerite" },
+    { name = "Classic", file = "Interface/Tooltips/UI-Tooltip-Border" },
+    { name = "Sleek", file = "Interface/DialogFrame/UI-DialogBox-Border" },
+    { name = "Corrupted", file = "Interface/Tooltips/UI-Tooltip-Border-Corrupted" },
+    { name = "Maw", file = "Interface/Tooltips/UI-Tooltip-Border-Maw" },
+    { name = "Smooth", file = "Interface/LFGFRAME/LFGBorder" },
+	{ name = "Glass", file = "Interface/DialogFrame/UI-DialogBox-TestWatermark-Border" },
 }
 
 local predefinedColors = {
@@ -178,73 +218,56 @@ local buttonMessages = {
     -- Add more messages as needed...
    }
  } 
-   
--- Create the main frame
+ 
+-- Define your main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 230)
+IncCallout:SetSize(160, 240)
 IncCallout:SetPoint("CENTER")
- 
--- Create a background texture for the main frame
-local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
-bgTexture:SetColorTexture(0, 0, 0)
-bgTexture:SetAllPoints(IncCallout)
- 
--- Create a border frame
-local BorderFrame = CreateFrame("Frame", nil, IncCallout, "BackdropTemplate")
-BorderFrame:SetFrameLevel(IncCallout:GetFrameLevel() - 1) -- Ensure it's behind the main frame
-BorderFrame:SetSize(IncCallout:GetWidth() + 4, IncCallout:GetHeight() + 4) -- Adjust these values for border thickness
-BorderFrame:SetPoint("CENTER", IncCallout, "CENTER")
- 
--- Create a border texture for the border frame
-local borderTexture = BorderFrame:CreateTexture(nil, "OVERLAY")
-borderTexture:SetColorTexture(1, 1, 1)
-borderTexture:SetAllPoints(BorderFrame)
-
-local xOffsetConquest =45 
-local yOffsetConquest = 15 
-local xOffsetHonor = 45 
-local yOffsetHonor = -5 
-
--- Create a container frame for the Conquest Points label
-local conquestContainer = CreateFrame("Frame", "ConquestContainerFrame", IncCallout, "BackdropTemplate")
-conquestContainer:SetPoint("BOTTOMLEFT", IncCallout, "BOTTOMLEFT", xOffsetConquest, yOffsetConquest)
-conquestContainer:SetSize(85, 40) 
-conquestContainer:SetBackdrop({
-    bgFile = "Interface/Tooltips/UI-Tooltip-Background"
-    
-})
-conquestContainer:SetBackdropColor(0, 0, 0, 0) 
-
-local fontSize = 14
-
--- Create the Conquest Points label within its container
-local conquestPointsLabel = conquestContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-conquestPointsLabel:SetPoint("CENTER", conquestContainer, "CENTER", 0, 0)
-conquestPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", fontSize)  -- Set font and size
-conquestPointsLabel:SetText("Conquest: 0")
-
--- Create a container frame for the Honor Points label
-local honorContainer = CreateFrame("Frame", "HonorContainerFrame", IncCallout, "BackdropTemplate")
-honorContainer:SetPoint("BOTTOMLEFT", IncCallout, "BOTTOMLEFT", xOffsetHonor, yOffsetHonor)
-honorContainer:SetSize(85, 40) 
-honorContainer:SetBackdrop({
-    bgFile = "Interface/Tooltips/UI-Tooltip-Background"
-    
-})
-honorContainer:SetBackdropColor(0, 0, 0, 0) 
-
--- Create the Honor Points label within its container
-local honorPointsLabel = honorContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-honorPointsLabel:SetPoint("CENTER", honorContainer, "CENTER", 0, 0)
-honorPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", fontSize)  
-honorPointsLabel:SetText("Honor: 0")
-
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
 IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
- 
+
+local fontSize = 14
+
+-- Create a container frame for the Conquest Points label
+local conquestContainer = CreateFrame("Frame", "ConquestContainerFrame", IncCallout, "BackdropTemplate")
+conquestContainer:SetPoint("BOTTOMLEFT", IncCallout, "BOTTOMLEFT", 45, 15) -- Assuming xOffsetConquest and yOffsetConquest are defined
+conquestContainer:SetSize(85, 40)
+conquestContainer:SetBackdrop({bgFile = "Interface/Tooltips/UI-Tooltip-Background"})
+conquestContainer:SetBackdropColor(0, 0, 0, 0)
+
+-- Create the Conquest Points label within its container
+local conquestPointsLabel = conquestContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+conquestPointsLabel:SetPoint("CENTER", conquestContainer, "CENTER", 0, 0)
+conquestPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", fontSize)
+conquestPointsLabel:SetText("Conquest: 0")
+
+-- Create a container frame for the Honor Points label
+local honorContainer = CreateFrame("Frame", "HonorContainerFrame", IncCallout, "BackdropTemplate")
+honorContainer:SetPoint("BOTTOMLEFT", IncCallout, "BOTTOMLEFT", 45, -5) -- Assuming xOffsetHonor and yOffsetHonor are defined
+honorContainer:SetSize(85, 40)
+honorContainer:SetBackdrop({bgFile = "Interface/Tooltips/UI-Tooltip-Background"})
+honorContainer:SetBackdropColor(0, 0, 0, 0)
+
+-- Create the Honor Points label within its container
+local honorPointsLabel = honorContainer:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+honorPointsLabel:SetPoint("CENTER", honorContainer, "CENTER", 0, 0)
+honorPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", fontSize)
+honorPointsLabel:SetText("Honor: 0")
+
+local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
+bgTexture:SetColorTexture(0, 0, 0)
+bgTexture:SetAllPoints(IncCallout)
+
+-- Your existing setup for making IncCallout movable and handling drag events remains unchanged
+IncCallout:SetMovable(true)
+IncCallout:EnableMouse(true)
+IncCallout:RegisterForDrag("LeftButton")
+IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
+IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
+
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
     local button = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate, BackdropTemplate")
@@ -272,7 +295,7 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
 end
  
 local function applyButtonColor()
-    -- Check if IncDB is initialized
+
     if not IncDB then
         return
     end
@@ -296,6 +319,30 @@ IncCallout:SetScript("OnShow", function()
         applyButtonColor()
     end
 end)
+
+local function applyBorderChange()
+    local selectedIndex = IncDB.selectedBorderIndex or 1
+    local selectedBorder = borderOptions[selectedIndex].file
+
+    local backdropSettings = {
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = selectedBorder,
+        tile = false,
+        tileSize = 12,
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    }
+
+    IncCallout:SetBackdrop(backdropSettings)
+	
+end
+
+local function applyColorChange()
+    local selectedIndex = IncDB.selectedColorIndex or 1
+    local selectedColor = colorOptions[selectedIndex].color
+
+    IncCallout:SetBackdropColor(unpack(selectedColor))
+end
 
 local options = {
     name = "IncCallout",
@@ -362,90 +409,121 @@ local options = {
                     get = function() return buttonMessageIndices.hmd end,
                     set = function(_, newValue)
                     buttonMessageIndices.hmd = newValue
-                    IncDB.hmdIndex = newValue -- Ensure this is saving correctly
+                    IncDB.hmdIndex = newValue 
                     end,
                     order = 5, 
                 },
             },
         },
         appearanceSettings = {
-            type = "group",
-            name = "Appearance Settings",
+    type = "group",
+    name = "Appearance Settings",
+    order = 2,
+    args = {
+        fontColor = {
+            type = "select",
+            name = "Button Font Color",
+            desc = "Set the color of the button text.",
+            style = "dropdown",
             order = 2,
-            args = {
-                opacity = {
-                    type = "range",
-                    name = "Opacity",
-                    desc = "Adjust the transparency of the IncCallout frame.",
-                    min = 0, max = 1, step = 0.05,
-                    get = function() return IncDB.opacity or 1 end,
-                    set = function(_, newValue)
-                        bgTexture:SetAlpha(newValue)
-                        borderTexture:SetAlpha(newValue)
-                        IncDB.opacity = newValue
-                    end,
-                    order = 1,
-                },
-                fontColor = {
-                    type = "select",
-                    name = "Button Font Color",
-                    desc = "Set the color of the button text.",
-                    values = function()
-                        local colorValues = {}
-                        for i, color in ipairs(predefinedColors) do
-                            colorValues[i] = color.text
-                        end
-                        return colorValues
-                    end,
-                    get = function()
-                        local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                        for index, color in ipairs(predefinedColors) do
-                            if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
-                                return index
-                            end
-                        end
-                        return 1
-                    end,
-                    set = function(_, selectedValue)
-                        local color = predefinedColors[selectedValue].value
-                        IncDB.fontColor = color
-                        for _, text in ipairs(buttonTexts) do
-                            text:SetTextColor(color.r, color.g, color.b, color.a)
-                        end
-                    end,
-                    style = "dropdown",
-                    order = 2,
-                },
-                buttonColor = {
-                    type = "select",
-                    name = "Button Color",
-                    desc = "Select the color of the buttons.",
-                    values = function()
-                        local colorValues = {}
-                        for i, color in ipairs(predefinedColors) do
-                            colorValues[i] = color.text
-                        end
-                        return colorValues
-                    end,
-                    get = function()
-                        local currentColor = IncDB.buttonColor
-                        for index, color in ipairs(predefinedColors) do
-                            if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
-                                return index
-                            end
-                        end
-                        return 1
-                    end,
-                    set = function(_, selectedValue)
-                        local color = predefinedColors[selectedValue].value
-                        IncDB.buttonColor = color
-                        applyButtonColor()
-                    end,
-                    style = "dropdown",
-                    order = 3,
-                },
-            },
+            values = function()
+                local colorValues = {}
+                for i, color in ipairs(predefinedColors) do
+                    colorValues[i] = color.text
+                end
+                return colorValues
+            end,
+            get = function()
+                local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+                for index, color in ipairs(predefinedColors) do
+                    if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
+                        return index
+                    end
+                end
+                return 1
+            end,
+            set = function(_, selectedValue)
+                local color = predefinedColors[selectedValue].value
+                IncDB.fontColor = color
+                for _, text in ipairs(buttonTexts) do
+                    text:SetTextColor(color.r, color.g, color.b, color.a)
+                end
+            end,
         },
+        buttonColor = {
+            type = "select",
+            name = "Button Color",
+            desc = "Select the color of the buttons.",
+            style = "dropdown",
+            order = 3,
+            values = function()
+                local colorValues = {}
+                for i, color in ipairs(predefinedColors) do
+                    colorValues[i] = color.text
+                end
+                return colorValues
+            end,
+            get = function()
+                local currentColor = IncDB.buttonColor
+                for index, color in ipairs(predefinedColors) do
+                    if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
+                        return index
+                    end
+                end
+                return 1
+            end,
+            set = function(_, selectedValue)
+                local color = predefinedColors[selectedValue].value
+                IncDB.buttonColor = color
+                applyButtonColor()
+            end,
+        },
+        borderStyle = {
+            type = "select",
+            name = "Border Style",
+            desc = "Select the border style for the frame.",
+            style = "dropdown",
+            order = 4,
+            values = function()
+                local values = {}
+                for i, option in ipairs(borderOptions) do
+                    values[i] = option.name
+                end
+                return values
+            end,
+            get = function()
+                return IncDB.selectedBorderIndex or 1
+            end,
+            set = function(_, selectedIndex)
+                IncDB.selectedBorderIndex = selectedIndex
+                applyBorderChange()
+                applyColorChange()
+            end,
+        },
+        backdropColor = {
+            type = "select",
+            name = "Backdrop Color",
+            desc = "Select the backdrop color and transparency for the frame.",
+            style = "dropdown",
+            order = 5,
+            values = function()
+                local values = {}
+                for i, option in ipairs(colorOptions) do
+                    values[i] = option.name
+                end
+                return values
+            end,
+            get = function()
+                return IncDB.selectedColorIndex or 1
+            end,
+            set = function(_, selectedIndex)
+                IncDB.selectedColorIndex = selectedIndex
+                applyColorChange()
+            end,
+        },
+    },
+},
+
         fontSettings = {
             type = "group",
             name = "Font Settings",
@@ -575,12 +653,12 @@ AceConfig:RegisterOptionsTable(addonName, options)
 -- Create a config panel
 local configPanel = AceConfigDialog:AddToBlizOptions(addonName, "IncCallout")
 configPanel.default = function()
-    -- Reset the options to default values
     buttonMessageIndices.sendMore = 1
     buttonMessageIndices.inc = 1
     buttonMessageIndices.allClear = 1
 	buttonMessageIndices.buffRequest = 1
 	buttonMessageIndices.hmd = IncDB.hmdIndex or 1
+	IncDB.selectedBorderIndex = 1
 
 end
 
@@ -591,7 +669,7 @@ local function ListHealers()
         groupSize = GetNumGroupMembers()
     elseif IsInGroup() then
         groupType = "party"
-        groupSize = GetNumGroupMembers() -- Include the player
+        groupSize = GetNumGroupMembers() 
     else
         print("You are not in a group.")
         return
@@ -653,7 +731,6 @@ end
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
--- Constants for the IDs
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 
@@ -789,6 +866,8 @@ local function OnEvent(self, event, ...)
         playerFaction = UnitFactionGroup("player")
         isDBInitialized = true  -- Set the flag here
 		buttonMessageIndices.hmd = IncDB.hmdIndex or 1
+		applyBorderChange()
+		applyColorChange()
 
         -- Initialize IncDB.minimap if it's not already initialized
         if not IncDB.minimap then
@@ -806,7 +885,7 @@ local function OnEvent(self, event, ...)
 
         -- Load the opacity setting
         bgTexture:SetAlpha(IncDB.opacity or 1)
-        borderTexture:SetAlpha(IncDB.opacity or 1)
+        
 
         -- Load the button color
         local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red

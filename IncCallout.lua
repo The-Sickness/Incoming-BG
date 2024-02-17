@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.4 - 10.2.5
+-- v3.5 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -23,6 +23,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 local addonName, addonNamespace = ...
  
 local IncDB, db 
+-- Initialize your addon using AceAddon-3.0
 local addon = AceAddon:NewAddon(addonName)
  
 local defaults = {
@@ -39,7 +40,7 @@ local defaults = {
         honorFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
     },
 }
-
+ 
 local buttonTexts = {}
 local buttons = {}
  
@@ -50,6 +51,8 @@ local buttonMessageIndices = {
     inc = 1,
     allClear = 1
 }
+
+SLASH_INC1 = "/inc"
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -89,31 +92,6 @@ local borderOptions = {
     { name = "Smooth", file = "Interface/LFGFRAME/LFGBorder" },
 	{ name = "Glass", file = "Interface/DialogFrame/UI-DialogBox-TestWatermark-Border" },
 }
-
-local predefinedColors = {
-    { text = "White", value = {r = 1, g = 1, b = 1, a = 1} },
-    { text = "Red", value = {r = 1, g = 0, b = 0, a = 1} },
-    { text = "Green", value = {r = 0, g = 1, b = 0, a = 1} },
-    { text = "Blue", value = {r = 0, g = 0, b = 1, a = 1} },
-    { text = "Yellow", value = {r = 1, g = 1, b = 0, a = 1} },
-    { text = "Cyan", value = {r = 0, g = 1, b = 1, a = 1} },
-    { text = "Magenta", value = {r = 1, g = 0, b = 1, a = 1} },
-    { text = "Orange", value = {r = 1, g = 0.5, b = 0, a = 1} },
-    { text = "Purple", value = {r = 0.5, g = 0, b = 0.5, a = 1} },
-    { text = "Pink", value = {r = 1, g = 0.75, b = 0.8, a = 1} },
-    { text = "Lime", value = {r = 0.5, g = 1, b = 0, a = 1} },
-    { text = "Sky Blue", value = {r = 0, g = 0.75, b = 1, a = 1} },
-    { text = "Brown", value = {r = 0.6, g = 0.4, b = 0.2, a = 1} },
-    { text = "Grey", value = {r = 0.5, g = 0.5, b = 0.5, a = 1} },
-    { text = "Dark Green", value = {r = 0, g = 0.5, b = 0, a = 1} },
-    { text = "Teal", value = {r = 0, g = 0.5, b = 0.5, a = 1} },
-    { text = "Maroon", value = {r = 0.5, g = 0, b = 0, a = 1} },
-    { text = "Olive", value = {r = 0.5, g = 0.5, b = 0, a = 1} },
-    { text = "Navy", value = {r = 0, g = 0, b = 0.5, a = 1} },
-    { text = "Coral", value = {r = 1, g = 0.5, b = 0.3, a = 1} },
-}
-
-SLASH_INC1 = "/inc"
  
 -- Define the battleground locations
 local battlegroundLocations = {
@@ -219,7 +197,6 @@ local buttonMessages = {
    }
  } 
  
--- Define your main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
 IncCallout:SetSize(160, 240)
 IncCallout:SetPoint("CENTER")
@@ -261,13 +238,12 @@ local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
 bgTexture:SetColorTexture(0, 0, 0)
 bgTexture:SetAllPoints(IncCallout)
 
--- Your existing setup for making IncCallout movable and handling drag events remains unchanged
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
 IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
-
+ 
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
     local button = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate, BackdropTemplate")
@@ -421,62 +397,40 @@ local options = {
     order = 2,
     args = {
         fontColor = {
-            type = "select",
-            name = "Button Font Color",
-            desc = "Set the color of the button text.",
-            style = "dropdown",
-            order = 2,
-            values = function()
-                local colorValues = {}
-                for i, color in ipairs(predefinedColors) do
-                    colorValues[i] = color.text
-                end
-                return colorValues
-            end,
-            get = function()
-                local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                for index, color in ipairs(predefinedColors) do
-                    if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
-                        return index
-                    end
-                end
-                return 1
-            end,
-            set = function(_, selectedValue)
-                local color = predefinedColors[selectedValue].value
-                IncDB.fontColor = color
-                for _, text in ipairs(buttonTexts) do
-                    text:SetTextColor(color.r, color.g, color.b, color.a)
-                end
-            end,
+    type = "color",
+    name = "Button Font Color",
+    desc = "Set the color of the button text.",
+    order = 2,
+    hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+    get = function()
+        local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+    end,
+    set = function(_, r, g, b, a)
+        local color = {r = r, g = g, b = b, a = a}
+        IncDB.fontColor = color
+        for _, text in ipairs(buttonTexts) do
+            text:SetTextColor(r, g, b, a)
+        end
+    end,
         },
         buttonColor = {
-            type = "select",
-            name = "Button Color",
-            desc = "Select the color of the buttons.",
-            style = "dropdown",
-            order = 3,
-            values = function()
-                local colorValues = {}
-                for i, color in ipairs(predefinedColors) do
-                    colorValues[i] = color.text
-                end
-                return colorValues
-            end,
-            get = function()
-                local currentColor = IncDB.buttonColor
-                for index, color in ipairs(predefinedColors) do
-                    if color.value.r == currentColor.r and color.value.g == currentColor.g and color.value.b == currentColor.b and color.value.a == currentColor.a then
-                        return index
-                    end
-                end
-                return 1
-            end,
-            set = function(_, selectedValue)
-                local color = predefinedColors[selectedValue].value
-                IncDB.buttonColor = color
-                applyButtonColor()
-            end,
+    type = "color",
+    name = "Button Color",
+    desc = "Select the color of the buttons.",
+    order = 3,
+    hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+    get = function()
+        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+    end,
+    set = function(_, r, g, b, a)
+        local color = {r = r, g = g, b = b, a = a}
+        IncDB.buttonColor = color
+        applyButtonColor()
+    end,
+
+
         },
         borderStyle = {
             type = "select",
@@ -661,7 +615,7 @@ configPanel.default = function()
 	IncDB.selectedBorderIndex = 1
 
 end
-
+ 
 local function ListHealers()
     local groupType, groupSize
     if IsInRaid() then
@@ -771,7 +725,7 @@ f:SetScript("OnEvent", function(self, event, ...)
  
         -- Check if location is in the defined battleground locations
         if location then
-            IncCallout:Show()  -- Show the GUI
+            IncCallout:Show()  
         else
             
         end

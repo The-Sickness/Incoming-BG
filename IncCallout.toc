@@ -1,7 +1,7 @@
-## Interface: 100205
+## Interface: 100200
 ## Title: IncCallout
 ## Author: Sharpedge_Gaming
-## Version: v.3.4
+## Version: v.3.5
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
@@ -11,7 +11,6 @@
  
 embeds.xml
 IncCallout.lua
-
 
 
 

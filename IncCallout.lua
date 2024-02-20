@@ -91,6 +91,11 @@ local borderOptions = {
     { name = "Maw", file = "Interface/Tooltips/UI-Tooltip-Border-Maw" },
     { name = "Smooth", file = "Interface/LFGFRAME/LFGBorder" },
 	{ name = "Glass", file = "Interface/DialogFrame/UI-DialogBox-TestWatermark-Border" },
+	{ name = "Gold", file = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border" },
+	{ name = "Slide", file = "Interface\\FriendsFrame\\UI-Toast-Border" },
+	{ name = "Glow", file = "Interface\\TutorialFrame\\UI-TutorialFrame-CalloutGlow" },
+	{ name = "Grey", file = "Interface\\Tooltips\\UI-Tooltip-Background" },
+		
 }
  
 -- Define the battleground locations
@@ -304,8 +309,8 @@ local function applyBorderChange()
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
         edgeFile = selectedBorder,
         tile = false,
-        tileSize = 12,
-        edgeSize = 16,
+        tileSize = 16,
+        edgeSize = 8,
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     }
 
@@ -640,7 +645,8 @@ local function ListHealers()
 
     if #healerNames > 0 then
         local healerList = table.concat(healerNames, ", ")
-        SendChatMessage("Healers on our team: " .. healerList, "INSTANCE_CHAT")
+        SendChatMessage("Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
+
     else
         if IsInGroup() or IsInRaid() then
             SendChatMessage("We have no heals, lol..", "INSTANCE_CHAT")
@@ -887,6 +893,31 @@ IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("PLAYER_LOGOUT")
 IncCallout:SetScript("OnEvent", OnEvent)
+
+local addonName = "Incallout-BG"
+local currentVersion = tonumber(GetAddOnMetadata(addonName, "Version"))
+
+local function CheckForUpdates()
+    local githubRepo = "The-Sickness/Incoming-BG"  -- Replace "YourUsername" with your GitHub username
+    local url = "https://api.github.com/repos/" .. githubRepo .. "/releases/latest"
+    local response = GetAddOnMetadata(addonName, "X-Update-Url") or url
+
+    local _, _, version = string.find(response, '"tag_name": "v([%d%.]+)"')
+    version = tonumber(version)
+
+    if version and version > currentVersion then
+        print("|cFFFF0000" .. addonName .. ": New version available! (v" .. version .. ")|r")
+        -- Add your notification mechanism here (e.g., pop-up frame or chat message)
+    else
+        print("|cFF00FF00" .. addonName .. ": Up to date!|r")
+    end
+end
+
+-- Call the function to check for updates when the player logs in
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_LOGIN")
+frame:SetScript("OnEvent", CheckForUpdates)
+
 
 -- Buff Request Button OnClick Function
 local function BuffRequestButtonOnClick()

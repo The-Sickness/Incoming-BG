@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.5 - 10.2.5
+-- v3.7 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -818,6 +818,8 @@ end
 local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
+
+
  
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
@@ -877,7 +879,7 @@ local function OnEvent(self, event, ...)
         else
             IncCallout:Hide()
         end
-        UpdatePoints()  -- Call UpdatePoints here as well
+        UpdatePoints() 
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         -- These events are fired when currency (conquest points) or honor points are updated
@@ -893,31 +895,6 @@ IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("PLAYER_LOGOUT")
 IncCallout:SetScript("OnEvent", OnEvent)
-
-local addonName = "Incallout-BG"
-local currentVersion = tonumber(GetAddOnMetadata(addonName, "Version"))
-
-local function CheckForUpdates()
-    local githubRepo = "The-Sickness/Incoming-BG"  -- Replace "YourUsername" with your GitHub username
-    local url = "https://api.github.com/repos/" .. githubRepo .. "/releases/latest"
-    local response = GetAddOnMetadata(addonName, "X-Update-Url") or url
-
-    local _, _, version = string.find(response, '"tag_name": "v([%d%.]+)"')
-    version = tonumber(version)
-
-    if version and version > currentVersion then
-        print("|cFFFF0000" .. addonName .. ": New version available! (v" .. version .. ")|r")
-        -- Add your notification mechanism here (e.g., pop-up frame or chat message)
-    else
-        print("|cFF00FF00" .. addonName .. ": Up to date!|r")
-    end
-end
-
--- Call the function to check for updates when the player logs in
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:SetScript("OnEvent", CheckForUpdates)
-
 
 -- Buff Request Button OnClick Function
 local function BuffRequestButtonOnClick()

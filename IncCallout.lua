@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.6 - 10.2.5
+-- v3.8 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -23,7 +23,6 @@ local AceGUI = LibStub("AceGUI-3.0")
 local addonName, addonNamespace = ...
  
 local IncDB, db 
--- Initialize your addon using AceAddon-3.0
 local addon = AceAddon:NewAddon(addonName)
  
 local defaults = {
@@ -32,6 +31,7 @@ local defaults = {
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white 
         opacity = 1,
 		hmdIndex = 1,
+		scale = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
         conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
@@ -94,6 +94,7 @@ local borderOptions = {
 	{ name = "Gold", file = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border" },
 	{ name = "Slide", file = "Interface\\FriendsFrame\\UI-Toast-Border" },
 	{ name = "Glow", file = "Interface\\TutorialFrame\\UI-TutorialFrame-CalloutGlow" },
+	{ name = "Glow 2", file = "Interface\\AddOns\\IncCallout\\Textures\\BG15.blp" },
 	{ name = "Grey", file = "Interface\\Tooltips\\UI-Tooltip-Background" },
 	{ name = "Blue", file = "Interface\\AddOns\\IncCallout\\Textures\\BG1.png" },
 	{ name = "Black Gloss", file = "Interface\\AddOns\\IncCallout\\Textures\\BG2.blp" },
@@ -109,6 +110,7 @@ local borderOptions = {
 	{ name = "Neon Red", file = "Interface\\AddOns\\IncCallout\\Textures\\BG12.blp" },
 	{ name = "Neon Green", file = "Interface\\AddOns\\IncCallout\\Textures\\BG13.blp" },
 	{ name = "Neon Blue", file = "Interface\\AddOns\\IncCallout\\Textures\\BG14.blp" },
+	{ name = "Double Yellow", file = "Interface\\AddOns\\IncCallout\\Textures\\BG16.blp" },
 			
 }
  
@@ -339,7 +341,23 @@ local function applyColorChange()
     IncCallout:SetBackdropColor(unpack(selectedColor))
 end
 
-local options = {
+local function ScaleGUI()
+    local scaleFactor = IncDB.scale or 1; -- Default scale is 1
+    -- Scale the main frame
+    IncCallout:SetScale(scaleFactor);
+    
+    -- Adjust font sizes for readability
+    local adjustedFontSize = math.floor(fontSize * scaleFactor);
+    conquestPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
+    honorPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
+    
+    -- Adjust buttons or other elements similarly
+    for _, buttonText in ipairs(buttonTexts) do
+        buttonText:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
+    end
+end
+
+ local options = {
     name = "IncCallout",
     type = "group",
     args = {
@@ -410,50 +428,49 @@ local options = {
                 },
             },
         },
-        appearanceSettings = {
-    type = "group",
-    name = "Appearance Settings",
-    order = 2,
-    args = {
-        fontColor = {
-    type = "color",
-    name = "Button Font Color",
-    desc = "Set the color of the button text.",
-    order = 2,
-    hasAlpha = true, -- Depending on whether you want alpha (transparency) support
-    get = function()
-        local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-    end,
-    set = function(_, r, g, b, a)
-        local color = {r = r, g = g, b = b, a = a}
-        IncDB.fontColor = color
-        for _, text in ipairs(buttonTexts) do
-            text:SetTextColor(r, g, b, a)
-        end
-    end,
-        },
-        buttonColor = {
-    type = "color",
-    name = "Button Color",
-    desc = "Select the color of the buttons.",
-    order = 3,
-    hasAlpha = true, -- Depending on whether you want alpha (transparency) support
-    get = function()
-        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
-        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-    end,
-    set = function(_, r, g, b, a)
-        local color = {r = r, g = g, b = b, a = a}
-        IncDB.buttonColor = color
-        applyButtonColor()
-    end,
+                  appearanceSettings = {
+                                     type = "group",
+                                     name = "Appearance Settings",
+                                     order = 2,
+                                     args = {
+                           fontColor = {
+                                     type = "color",
+                                     name = "Button Font Color",
+                                     desc = "Set the color of the button text.",
+                                     order = 2,
+                                     hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+                                     get = function()
+                                         local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+                                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                                      end,
+                                      set = function(_, r, g, b, a)
+                                          local color = {r = r, g = g, b = b, a = a}
+                                          IncDB.fontColor = color
+                                          for _, text in ipairs(buttonTexts) do
+                                             text:SetTextColor(r, g, b, a)
+                                       end
+                                     end
+                                    },
+                    buttonColor = {
+                                type = "color",
+                                name = "Button Color",
+                                desc = "Select the color of the buttons.",
+                                order = 3,
+                                hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+                                get = function()
+                                    local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+                                    return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                                 end,
+                                 set = function(_, r, g, b, a)
+                                 local color = {r = r, g = g, b = b, a = a}
+                                 IncDB.buttonColor = color
+                                 applyButtonColor()
+                                 end,
 
-
-        },
-        borderStyle = {
-            type = "select",
-            name = "Border Style",
+                                  },
+                                  borderStyle = {
+                                              type = "select",
+                                              name = "Border Style",
             desc = "Select the border style for the frame.",
             style = "dropdown",
             order = 4,
@@ -493,10 +510,28 @@ local options = {
                 IncDB.selectedColorIndex = selectedIndex
                 applyColorChange()
             end,
+			},
+			scaleOption = {
+    type = "range",
+    name = "GUI Scale",
+    desc = "Adjust the scale of the GUI.",
+    min = 0.5, -- Minimum scale factor
+    max = 2.0, -- Maximum scale factor
+    step = 0.05, -- Step size for the slider
+    get = function()
+        return IncDB.scale or 1 -- Default scale is 1
+    end,
+    set = function(_, value)
+        IncDB.scale = value
+        ScaleGUI(value) -- Assuming ScaleGUI is your scaling function
+    end,
+    order = 6,
+	           
+				
         },
     },
 },
-
+      
         fontSettings = {
             type = "group",
             name = "Font Settings",
@@ -738,9 +773,6 @@ end)
 
 UpdatePoints()
 
-
-
-
 f:SetScript("OnEvent", function(self, event, ...)
     if event == "ZONE_CHANGED_NEW_AREA" then
         local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()
@@ -836,8 +868,6 @@ local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. locati
 SendChatMessage(message, "INSTANCE_CHAT")
 end
 
-
- 
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
         db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
@@ -897,6 +927,7 @@ local function OnEvent(self, event, ...)
             IncCallout:Hide()
         end
         UpdatePoints() 
+		ScaleGUI()
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         -- These events are fired when currency (conquest points) or honor points are updated

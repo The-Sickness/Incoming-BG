@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.8 - 10.2.5
+-- v3.9 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -23,6 +23,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 local addonName, addonNamespace = ...
  
 local IncDB, db 
+-- Initialize your addon using AceAddon-3.0
 local addon = AceAddon:NewAddon(addonName)
  
 local defaults = {
@@ -111,7 +112,6 @@ local borderOptions = {
 	{ name = "Neon Green", file = "Interface\\AddOns\\IncCallout\\Textures\\BG13.blp" },
 	{ name = "Neon Blue", file = "Interface\\AddOns\\IncCallout\\Textures\\BG14.blp" },
 	{ name = "Double Yellow", file = "Interface\\AddOns\\IncCallout\\Textures\\BG16.blp" },
-			
 }
  
 -- Define the battleground locations
@@ -325,8 +325,8 @@ local function applyBorderChange()
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
         edgeFile = selectedBorder,
         tile = false,
-        tileSize = 16,
-        edgeSize = 8,
+        tileSize = 12,
+        edgeSize = 16,
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     }
 
@@ -357,7 +357,7 @@ local function ScaleGUI()
     end
 end
 
- local options = {
+local options = {
     name = "IncCallout",
     type = "group",
     args = {
@@ -428,49 +428,50 @@ end
                 },
             },
         },
-                  appearanceSettings = {
-                                     type = "group",
-                                     name = "Appearance Settings",
-                                     order = 2,
-                                     args = {
-                           fontColor = {
-                                     type = "color",
-                                     name = "Button Font Color",
-                                     desc = "Set the color of the button text.",
-                                     order = 2,
-                                     hasAlpha = true, -- Depending on whether you want alpha (transparency) support
-                                     get = function()
-                                         local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                                      end,
-                                      set = function(_, r, g, b, a)
-                                          local color = {r = r, g = g, b = b, a = a}
-                                          IncDB.fontColor = color
-                                          for _, text in ipairs(buttonTexts) do
-                                             text:SetTextColor(r, g, b, a)
-                                       end
-                                     end
-                                    },
-                    buttonColor = {
-                                type = "color",
-                                name = "Button Color",
-                                desc = "Select the color of the buttons.",
-                                order = 3,
-                                hasAlpha = true, -- Depending on whether you want alpha (transparency) support
-                                get = function()
-                                    local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
-                                    return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                                 end,
-                                 set = function(_, r, g, b, a)
-                                 local color = {r = r, g = g, b = b, a = a}
-                                 IncDB.buttonColor = color
-                                 applyButtonColor()
-                                 end,
+        appearanceSettings = {
+    type = "group",
+    name = "Appearance Settings",
+    order = 2,
+    args = {
+        fontColor = {
+    type = "color",
+    name = "Button Font Color",
+    desc = "Set the color of the button text.",
+    order = 2,
+    hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+    get = function()
+        local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+    end,
+    set = function(_, r, g, b, a)
+        local color = {r = r, g = g, b = b, a = a}
+        IncDB.fontColor = color
+        for _, text in ipairs(buttonTexts) do
+            text:SetTextColor(r, g, b, a)
+        end
+    end,
+        },
+        buttonColor = {
+    type = "color",
+    name = "Button Color",
+    desc = "Select the color of the buttons.",
+    order = 3,
+    hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+    get = function()
+        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+    end,
+    set = function(_, r, g, b, a)
+        local color = {r = r, g = g, b = b, a = a}
+        IncDB.buttonColor = color
+        applyButtonColor()
+    end,
 
-                                  },
-                                  borderStyle = {
-                                              type = "select",
-                                              name = "Border Style",
+
+        },
+        borderStyle = {
+            type = "select",
+            name = "Border Style",
             desc = "Select the border style for the frame.",
             style = "dropdown",
             order = 4,
@@ -526,12 +527,10 @@ end
         ScaleGUI(value) -- Assuming ScaleGUI is your scaling function
     end,
     order = 6,
-	           
-				
         },
     },
 },
-      
+
         fontSettings = {
             type = "group",
             name = "Font Settings",
@@ -695,7 +694,6 @@ local function ListHealers()
     if #healerNames > 0 then
         local healerList = table.concat(healerNames, ", ")
         SendChatMessage("Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
-
     else
         if IsInGroup() or IsInRaid() then
             SendChatMessage("We have no heals, lol..", "INSTANCE_CHAT")
@@ -867,7 +865,7 @@ end
 local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
-
+ 
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
         db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
@@ -877,6 +875,7 @@ local function OnEvent(self, event, ...)
 		buttonMessageIndices.hmd = IncDB.hmdIndex or 1
 		applyBorderChange()
 		applyColorChange()
+		ScaleGUI()
 
         -- Initialize IncDB.minimap if it's not already initialized
         if not IncDB.minimap then
@@ -926,8 +925,7 @@ local function OnEvent(self, event, ...)
         else
             IncCallout:Hide()
         end
-        UpdatePoints() 
-		ScaleGUI()
+        UpdatePoints()  -- Call UpdatePoints here as well
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         -- These events are fired when currency (conquest points) or honor points are updated

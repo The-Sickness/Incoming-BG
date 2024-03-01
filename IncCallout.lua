@@ -697,13 +697,6 @@ local healerButton = createButton("healerButton", 70, 22, "Healers", {"BOTTOMLEF
 local healsButton = createButton("healsButton", 70, 22, "H.M.D.", {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"}, 20, 0, function()
 end)
 
-function applyButtonBorderColor()
-    local color = IncDB.buttonBorderColor or {r = 0, g = 0, b = 0, a = 1}
-    for _, button in ipairs(buttons) do
-        button:SetBackdropBorderColor(color.r, color.g, color.b, color.a)
-    end
-end
-
 local function HMDButtonOnClick()
     local message = buttonMessages.hmd[buttonMessageIndices.hmd]
     SendChatMessage(message, "INSTANCE_CHAT")  

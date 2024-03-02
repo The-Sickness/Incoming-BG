@@ -29,11 +29,10 @@ local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white 
-        opacity = 1,
 		hmdIndex = 1,
 		scale = 1,
         conquestFont = "Friz Quadrata TT",
-        conquestFontSize = 13,
+        conquestFontSize = 14,
         conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
         honorFont = "Friz Quadrata TT",
         honorFontSize = 14,
@@ -43,6 +42,7 @@ local defaults = {
  
 local buttonTexts = {}
 local buttons = {}
+ 
 local playerFaction
  
 local buttonMessageIndices = {
@@ -226,7 +226,7 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
 
-local fontSize = 13
+local fontSize = 14
 
 -- Create a container frame for the Conquest Points label
 local conquestContainer = CreateFrame("Frame", "ConquestContainerFrame", IncCallout, "BackdropTemplate")
@@ -264,32 +264,57 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
  
--- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
-    local button = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate, BackdropTemplate")
+    local button = CreateFrame("Button", name, IncCallout, "BackdropTemplate")
     button:SetSize(width, height)
-    button:SetText(text)
     if type(anchor) == "table" then
         button:SetPoint(anchor[1], anchor[2], anchor[3], xOffset, yOffset)
     else
         button:SetPoint(anchor, xOffset, yOffset)
     end
-    button:SetScript("OnClick", onClick)
-    button:GetFontString():SetTextColor(1, 1, 1, 1)
+    
+    -- Setting up custom text on the button
+    button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    button.text:SetAllPoints()
+    button.text:SetText(text)
     button:SetBackdrop({
-  bgFile = "Interface/Tooltips/UI-Tooltip-Background", 
-  tile = true,
-  tileSize = 12,
-  insets = { left = 0, right = 0, top = 0, bottom = 0 }
-})
-
-    table.insert(buttonTexts, button:GetFontString())
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background", -- Background texture
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border", -- Border texture
+      tile = true, tileSize = 12, edgeSize = 7,
+      insets = { left = 1, right = 1, top = 1, bottom = 1 }
+    })
+    -- Set the default color; adjust as needed
+    button:SetBackdropColor(0, 0, 0, 0.5) 
+    
+    button.text:SetTextColor(1, 1, 1, 1)
+    
+    table.insert(buttonTexts, button.text)
     table.insert(buttons, button)
+    
+    button:SetScript("OnMouseDown", function(self)
+        self:SetBackdropColor(0, 0, 0, 0.5) 
+    end)
+    button:SetScript("OnMouseUp", function(self, mouseButton)
+        if mouseButton == "LeftButton" then
+            button:SetBackdropColor(0, 0, 0, 0.5)
+ 
+        end
+    end)
+
+    -- Modify this part to include the sound effect on click
+    button:SetScript("OnClick", function(self, mouseButton, down)
+        if mouseButton == "LeftButton" and not down then
+            PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
+            if onClick then 
+                onClick(self)
+            end
+        end
+    end)
+    
     return button
 end
- 
-local function applyButtonColor()
 
+local function applyButtonColor()
     if not IncDB then
         return
     end
@@ -302,9 +327,10 @@ local function applyButtonColor()
     end
     for _, button in ipairs(buttons) do
         button:SetBackdropColor(r, g, b, a)
-        button.Left:SetColorTexture(r, g, b, a)
-        button.Right:SetColorTexture(r, g, b, a)
-        button.Middle:SetColorTexture(r, g, b, a)
+        -- Remove or comment out the lines that cause the error
+        -- button.Left:SetColorTexture(r, g, b, a)
+        -- button.Right:SetColorTexture(r, g, b, a)
+        -- button.Middle:SetColorTexture(r, g, b, a)
     end
 end
 
@@ -322,8 +348,8 @@ local function applyBorderChange()
         bgFile = "Interface/Tooltips/UI-Tooltip-Background",
         edgeFile = selectedBorder,
         tile = false,
-        tileSize = 12,
-        edgeSize = 16,
+        tileSize = 16,
+        edgeSize = 8,
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     }
 
@@ -354,7 +380,7 @@ local function ScaleGUI()
     end
 end
 
-local options = {
+ local options = {
     name = "IncCallout",
     type = "group",
     args = {
@@ -368,160 +394,167 @@ local options = {
                     name = "Send More Message",
                     desc = "Select the message for the 'Send More' button",
                     values = buttonMessages.sendMore,
-                    order = 1,
                     get = function() return buttonMessageIndices.sendMore end,
                     set = function(_, newValue)
                         buttonMessageIndices.sendMore = newValue
                         IncDB.sendMoreIndex = newValue
                     end,
+                    order = 1,
                 },
                 inc = {
                     type = "select",
                     name = "INC Message",
                     desc = "Select the message for the 'INC' button",
                     values = buttonMessages.inc,
-                    order = 2,
                     get = function() return buttonMessageIndices.inc end,
                     set = function(_, newValue)
                         buttonMessageIndices.inc = newValue
                         IncDB.incIndex = newValue
                     end,
+                    order = 2,
                 },
                 allClear = {
                     type = "select",
                     name = "All Clear Message",
                     desc = "Select the message for the 'All Clear' button",
                     values = buttonMessages.allClear,
-                    order = 3,
                     get = function() return buttonMessageIndices.allClear end,
                     set = function(_, newValue)
                         buttonMessageIndices.allClear = newValue
                         IncDB.allClearIndex = newValue
                     end,
+                    order = 3,
                 },
                 buffRequest = {
                     type = "select",
                     name = "Buff Request Message",
                     desc = "Select the message for the 'Request Buffs' button",
                     values = buttonMessages.buffRequest,
-                    order = 4,
                     get = function() return buttonMessageIndices.buffRequest end,
                     set = function(_, newValue)
                         buttonMessageIndices.buffRequest = newValue
                         IncDB.buffRequestIndex = newValue
                     end,
-                },
-                hmd = {
+                    order = 4,
+					}, 
+				hmd = {
                     type = "select",
                     name = "H.M.D. Message",
                     desc = "Select the message for the 'H.M.D.' button",
                     values = buttonMessages.hmd,
-                    order = 5,
                     get = function() return buttonMessageIndices.hmd end,
                     set = function(_, newValue)
-                        buttonMessageIndices.hmd = newValue
-                        IncDB.hmdIndex = newValue 
+                    buttonMessageIndices.hmd = newValue
+                    IncDB.hmdIndex = newValue 
                     end,
+                    order = 5, 
                 },
             },
         },
-        appearanceSettings = {
-            type = "group",
-            name = "Appearance Settings",
-            order = 2,
-            args = {
-                fontColor = {
-                    type = "color",
-                    name = "Button Font Color",
-                    desc = "Set the color of the button text.",
-                    order = 1,
-                    hasAlpha = true,
-                    get = function()
-                        local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                    end,
-                    set = function(_, r, g, b, a)
-                        IncDB.fontColor = {r = r, g = g, b = b, a = a}
-                        for _, text in ipairs(buttonTexts) do
-                            text:SetTextColor(r, g, b, a)
-                        end
-                    end,
-                },
-                buttonColor = {
-                    type = "color",
-                    name = "Button Color",
-                    desc = "Select the color of the buttons.",
-                    order = 2,
-                    hasAlpha = true,
-                    get = function()
-                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1}
-                        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                    end,
-                    set = function(_, r, g, b, a)
-                        IncDB.buttonColor = {r = r, g = g, b = b, a = a}
-                        applyButtonColor()
-                    end,
-                },
-                borderStyle = {
-                    type = "select",
-                    name = "Border Style",
-                    desc = "Select the border style for the frame.",
-                    style = "dropdown",
-                    order = 3,
-                    values = function()
-                        local values = {}
-                        for i, option in ipairs(borderOptions) do
-                            values[i] = option.name
-                        end
-                        return values
-                    end,
-                    get = function()
-                        return IncDB.selectedBorderIndex or 1
-                    end,
-                    set = function(_, selectedIndex)
-                        IncDB.selectedBorderIndex = selectedIndex
-                        applyBorderChange()
-                    end,
-                },
-                backdropColor = {
-                    type = "select",
-                    name = "Backdrop Color",
-                    desc = "Select the backdrop color and transparency for the frame.",
-                    style = "dropdown",
-                    order = 4,
-                    values = function()
-                        local values = {}
-                        for i, option in ipairs(colorOptions) do
-                            values[i] = option.name
-                        end
-                        return values
-                    end,
-                    get = function()
-                        return IncDB.selectedColorIndex or 1
-                    end,
-                    set = function(_, selectedIndex)
-                        IncDB.selectedColorIndex = selectedIndex
-                        applyColorChange()
-                    end,
-                },
-                scaleOption = {
-                    type = "range",
-                    name = "GUI Scale",
-                    desc = "Adjust the scale of the GUI.",
-                    min = 0.5,
-                    max = 2.0,
-                    step = 0.05,
-                    order = 5,
-                    get = function()
-                        return IncDB.scale or 1
-                    end,
-                    set = function(_, value)
-                        IncDB.scale = value
-                        ScaleGUI(value)
-                    end,
-                },
-            },
-        },     
+                  appearanceSettings = {
+                                     type = "group",
+                                     name = "Appearance Settings",
+                                     order = 2,
+                                     args = {
+                           fontColor = {
+                                     type = "color",
+                                     name = "Button Font Color",
+                                     desc = "Set the color of the button text.",
+                                     order = 2,
+                                     hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+                                     get = function()
+                                         local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+                                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                                      end,
+                                      set = function(_, r, g, b, a)
+                                          local color = {r = r, g = g, b = b, a = a}
+                                          IncDB.fontColor = color
+                                          for _, text in ipairs(buttonTexts) do
+                                             text:SetTextColor(r, g, b, a)
+                                       end
+                                     end
+                                    },
+                    buttonColor = {
+                                type = "color",
+                                name = "Button Color",
+                                desc = "Select the color of the buttons.",
+                                order = 3,
+                                hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+                                get = function()
+                                    local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+                                    return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                                 end,
+                                 set = function(_, r, g, b, a)
+                                 local color = {r = r, g = g, b = b, a = a}
+                                 IncDB.buttonColor = color
+                                 applyButtonColor()
+                                 end,
+
+                                  },
+                                  borderStyle = {
+                                              type = "select",
+                                              name = "Border Style",
+            desc = "Select the border style for the frame.",
+            style = "dropdown",
+            order = 4,
+            values = function()
+                local values = {}
+                for i, option in ipairs(borderOptions) do
+                    values[i] = option.name
+                end
+                return values
+            end,
+            get = function()
+                return IncDB.selectedBorderIndex or 1
+            end,
+            set = function(_, selectedIndex)
+                IncDB.selectedBorderIndex = selectedIndex
+                applyBorderChange()
+                applyColorChange()
+            end,
+        },
+        backdropColor = {
+            type = "select",
+            name = "Backdrop Color",
+            desc = "Select the backdrop color and transparency for the frame.",
+            style = "dropdown",
+            order = 5,
+            values = function()
+                local values = {}
+                for i, option in ipairs(colorOptions) do
+                    values[i] = option.name
+                end
+                return values
+            end,
+            get = function()
+                return IncDB.selectedColorIndex or 1
+            end,
+            set = function(_, selectedIndex)
+                IncDB.selectedColorIndex = selectedIndex
+                applyColorChange()
+            end,
+			},
+			scaleOption = {
+    type = "range",
+    name = "GUI Scale",
+    desc = "Adjust the scale of the GUI.",
+    min = 0.5, -- Minimum scale factor
+    max = 2.0, -- Maximum scale factor
+    step = 0.05, -- Step size for the slider
+    get = function()
+        return IncDB.scale or 1 -- Default scale is 1
+    end,
+    set = function(_, value)
+        IncDB.scale = value
+        ScaleGUI(value) -- Assuming ScaleGUI is your scaling function
+    end,
+    order = 6,
+	           
+				
+        },
+    },
+},
+      
         fontSettings = {
             type = "group",
             name = "Font Settings",
@@ -659,7 +692,7 @@ configPanel.default = function()
 	IncDB.selectedBorderIndex = 1
 
 end
-
+ 
 local function ListHealers()
     local groupType, groupSize
     if IsInRaid() then
@@ -697,9 +730,11 @@ local healerButton = createButton("healerButton", 70, 22, "Healers", {"BOTTOMLEF
 local healsButton = createButton("healsButton", 70, 22, "H.M.D.", {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"}, 20, 0, function()
 end)
 
-local function HMDButtonOnClick()
+local function HMDButtonOnClick(self)
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)  -- Ensure this line is present for sound
     local message = buttonMessages.hmd[buttonMessageIndices.hmd]
-    SendChatMessage(message, "INSTANCE_CHAT")  
+    SendChatMessage(message, "INSTANCE_CHAT")
+    
 end
 
 healsButton:SetScript("OnClick", HMDButtonOnClick)
@@ -825,7 +860,8 @@ local function AllClearButtonOnClick()
     print("You are not in a BattleGround.")
     return
 end
- 
+
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
 local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -839,7 +875,8 @@ local function SendMoreButtonOnClick()
     print("You are not in a BattleGround.")
     return
 end
- 
+
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -853,7 +890,8 @@ local function IncButtonOnClick()
     print("You are not in a BattleGround.")
     return
 end
- 
+
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
 local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -885,6 +923,7 @@ local function OnEvent(self, event, ...)
         -- Load the opacity setting
         bgTexture:SetAlpha(IncDB.opacity or 1)
         
+
         -- Load the button color
         local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
         applyButtonColor()
@@ -897,7 +936,7 @@ local function OnEvent(self, event, ...)
 
         -- Load the font and font size
         local font = IncDB.font or "Friz Quadrata TT"  -- Default font
-        local fontSize = IncDB.fontSize or 13  -- Default font size
+        local fontSize = IncDB.fontSize or 15  -- Default font size
         for _, text in ipairs(buttonTexts) do
             text:SetFont(LSM:Fetch("font", font), fontSize)
         end
@@ -919,6 +958,7 @@ local function OnEvent(self, event, ...)
 		ScaleGUI()
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        -- These events are fired when currency (conquest points) or honor points are updated
         UpdatePoints()
     end
 
@@ -934,6 +974,7 @@ IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Buff Request Button OnClick Function
 local function BuffRequestButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
     SendChatMessage(message, "INSTANCE_CHAT")  
 end
@@ -944,11 +985,11 @@ local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"},
 local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 3, 0, ButtonOnClick)
 local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 3, 0, ButtonOnClick)
 local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 3, 0, ButtonOnClick)
-local incButton = createButton("incButton", 95, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
-local sendMoreButton = createButton("sendMoreButton", 95, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
-local allClearButton = createButton("allClearButton", 95, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
-local buffRequestButton = createButton("buffRequestButton", 95, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local exitButton = createButton("exitButton", 40, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
+local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
+local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
+local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
+local exitButton = createButton("exitButton", 50, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
 
 -- Apply the color to all the buttons
 applyButtonColor()

@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v4.0 - 10.2.5
+-- v4.1 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -267,7 +267,7 @@ IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
  
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
-    local button = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate, BackdropTemplate")
+    local button = CreateFrame("Button", nil, IncCallout, " BackdropTemplate")
     button:SetSize(width, height)
     button:SetText(text)
     if type(anchor) == "table" then
@@ -295,11 +295,9 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     button:SetScript("OnMouseUp", function(self, mouseButton)
         if mouseButton == "LeftButton" then
             button:SetBackdropColor(0, 0, 0, 0)
- 
         end
     end)
-
-    -- Modify this part to include the sound effect on click
+    
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
             PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
@@ -325,10 +323,7 @@ local function applyButtonColor()
         r, g, b, a = 1, 0, 0, 1 -- Default to red
     end
     for _, button in ipairs(buttons) do
-        button:SetBackdropColor(r, g, b, a)
-        button.Left:SetColorTexture(r, g, b, a)
-        button.Right:SetColorTexture(r, g, b, a)
-        button.Middle:SetColorTexture(r, g, b, a)
+        button:SetBackdropColor(r, g, b, a)        
     end
 end
 

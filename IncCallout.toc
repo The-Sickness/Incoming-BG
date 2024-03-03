@@ -1,7 +1,7 @@
 ## Interface: 100205
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
-## Version: v.4.0
+## Version: v.4.1
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 

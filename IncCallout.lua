@@ -29,6 +29,7 @@ local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white 
+        opacity = 1,
 		hmdIndex = 1,
 		scale = 1,
         conquestFont = "Friz Quadrata TT",
@@ -264,57 +265,34 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
  
+-- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
-    local button = CreateFrame("Button", name, IncCallout, "BackdropTemplate")
+    local button = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate, BackdropTemplate")
     button:SetSize(width, height)
+    button:SetText(text)
     if type(anchor) == "table" then
         button:SetPoint(anchor[1], anchor[2], anchor[3], xOffset, yOffset)
     else
         button:SetPoint(anchor, xOffset, yOffset)
     end
-    
-    -- Setting up custom text on the button
-    button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    button.text:SetAllPoints()
-    button.text:SetText(text)
+    button:SetScript("OnClick", onClick)
+    button:GetFontString():SetTextColor(1, 1, 1, 1)
     button:SetBackdrop({
-      bgFile = "Interface/Tooltips/UI-Tooltip-Background", -- Background texture
-      edgeFile = "Interface/Tooltips/UI-Tooltip-Border", -- Border texture
-      tile = true, tileSize = 12, edgeSize = 7,
+      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+      tile = true,
+      tileSize = 12,
+      edgeSize = 7,  
       insets = { left = 1, right = 1, top = 1, bottom = 1 }
-    })
-    -- Set the default color; adjust as needed
-    button:SetBackdropColor(0, 0, 0, 0.5) 
-    
-    button.text:SetTextColor(1, 1, 1, 1)
-    
-    table.insert(buttonTexts, button.text)
-    table.insert(buttons, button)
-    
-    button:SetScript("OnMouseDown", function(self)
-        self:SetBackdropColor(0, 0, 0, 0.5) 
-    end)
-    button:SetScript("OnMouseUp", function(self, mouseButton)
-        if mouseButton == "LeftButton" then
-            button:SetBackdropColor(0, 0, 0, 0.5)
- 
-        end
-    end)
+})
 
-    -- Modify this part to include the sound effect on click
-    button:SetScript("OnClick", function(self, mouseButton, down)
-        if mouseButton == "LeftButton" and not down then
-            PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
-            if onClick then 
-                onClick(self)
-            end
-        end
-    end)
-    
+    table.insert(buttonTexts, button:GetFontString())
+    table.insert(buttons, button)
     return button
 end
-
+ 
 local function applyButtonColor()
+
     if not IncDB then
         return
     end
@@ -327,10 +305,9 @@ local function applyButtonColor()
     end
     for _, button in ipairs(buttons) do
         button:SetBackdropColor(r, g, b, a)
-        -- Remove or comment out the lines that cause the error
-        -- button.Left:SetColorTexture(r, g, b, a)
-        -- button.Right:SetColorTexture(r, g, b, a)
-        -- button.Middle:SetColorTexture(r, g, b, a)
+        button.Left:SetColorTexture(r, g, b, a)
+        button.Right:SetColorTexture(r, g, b, a)
+        button.Middle:SetColorTexture(r, g, b, a)
     end
 end
 
@@ -730,11 +707,9 @@ local healerButton = createButton("healerButton", 70, 22, "Healers", {"BOTTOMLEF
 local healsButton = createButton("healsButton", 70, 22, "H.M.D.", {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"}, 20, 0, function()
 end)
 
-local function HMDButtonOnClick(self)
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)  -- Ensure this line is present for sound
+local function HMDButtonOnClick()
     local message = buttonMessages.hmd[buttonMessageIndices.hmd]
-    SendChatMessage(message, "INSTANCE_CHAT")
-    
+    SendChatMessage(message, "INSTANCE_CHAT")  
 end
 
 healsButton:SetScript("OnClick", HMDButtonOnClick)
@@ -860,8 +835,7 @@ local function AllClearButtonOnClick()
     print("You are not in a BattleGround.")
     return
 end
-
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
+ 
 local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -875,8 +849,7 @@ local function SendMoreButtonOnClick()
     print("You are not in a BattleGround.")
     return
 end
-
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+ 
 local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -890,8 +863,7 @@ local function IncButtonOnClick()
     print("You are not in a BattleGround.")
     return
 end
-
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
+ 
 local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -974,7 +946,6 @@ IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Buff Request Button OnClick Function
 local function BuffRequestButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
     SendChatMessage(message, "INSTANCE_CHAT")  
 end

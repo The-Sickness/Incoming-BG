@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v3.9 - 10.2.5
+-- v4.0 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -288,6 +288,27 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
 
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
+	
+	button:SetScript("OnMouseDown", function(self)
+        self:SetBackdropColor(0, 0, 0, 0) 
+    end)
+    button:SetScript("OnMouseUp", function(self, mouseButton)
+        if mouseButton == "LeftButton" then
+            button:SetBackdropColor(0, 0, 0, 0)
+ 
+        end
+    end)
+
+    -- Modify this part to include the sound effect on click
+    button:SetScript("OnClick", function(self, mouseButton, down)
+        if mouseButton == "LeftButton" and not down then
+            PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
+            if onClick then 
+                onClick(self)
+            end
+        end
+    end)
+	
     return button
 end
  
@@ -343,15 +364,12 @@ end
 
 local function ScaleGUI()
     local scaleFactor = IncDB.scale or 1; -- Default scale is 1
-    -- Scale the main frame
     IncCallout:SetScale(scaleFactor);
     
-    -- Adjust font sizes for readability
     local adjustedFontSize = math.floor(fontSize * scaleFactor);
     conquestPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
     honorPointsLabel:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
     
-    -- Adjust buttons or other elements similarly
     for _, buttonText in ipairs(buttonTexts) do
         buttonText:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
     end
@@ -438,7 +456,7 @@ end
                                      name = "Button Font Color",
                                      desc = "Set the color of the button text.",
                                      order = 2,
-                                     hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+                                     hasAlpha = true, 
                                      get = function()
                                          local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
                                          return currentColor.r, currentColor.g, currentColor.b, currentColor.a
@@ -456,7 +474,7 @@ end
                                 name = "Button Color",
                                 desc = "Select the color of the buttons.",
                                 order = 3,
-                                hasAlpha = true, -- Depending on whether you want alpha (transparency) support
+                                hasAlpha = true, 
                                 get = function()
                                     local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
                                     return currentColor.r, currentColor.g, currentColor.b, currentColor.a
@@ -519,11 +537,11 @@ end
     max = 2.0, -- Maximum scale factor
     step = 0.05, -- Step size for the slider
     get = function()
-        return IncDB.scale or 1 -- Default scale is 1
+        return IncDB.scale or 1 
     end,
     set = function(_, value)
         IncDB.scale = value
-        ScaleGUI(value) -- Assuming ScaleGUI is your scaling function
+        ScaleGUI(value) 
     end,
     order = 6,
 	           
@@ -708,6 +726,7 @@ local healsButton = createButton("healsButton", 70, 22, "H.M.D.", {"BOTTOMLEFT",
 end)
 
 local function HMDButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.hmd[buttonMessageIndices.hmd]
     SendChatMessage(message, "INSTANCE_CHAT")  
 end
@@ -732,6 +751,7 @@ return
 end
 
 local currentLocation = GetSubZoneText()
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 local message = self:GetText() .. " Incoming at " .. currentLocation
 SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -837,11 +857,13 @@ local function AllClearButtonOnClick()
 end
  
 local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 SendChatMessage(message, "INSTANCE_CHAT")
 end
  
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
  
     -- Check if location is in the defined battleground locations
@@ -865,6 +887,7 @@ local function IncButtonOnClick()
 end
  
 local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -946,6 +969,7 @@ IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Buff Request Button OnClick Function
 local function BuffRequestButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
     SendChatMessage(message, "INSTANCE_CHAT")  
 end

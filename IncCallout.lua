@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v4.1 - 10.2.5
+-- v4.3 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -81,6 +81,7 @@ local colorOptions = {
     { name = "Solid Teal", color = {0, 0.5, 0.5, 1} },
     { name = "Semi-Transparent Pink", color = {1, 0.75, 0.8, 0.5} },
     { name = "Solid Pink", color = {1, 0.75, 0.8, 1} },
+	
 }
 
 local borderOptions = {
@@ -114,7 +115,6 @@ local borderOptions = {
 			
 }
  
--- Define the battleground locations
 local battlegroundLocations = {
     "Stables", "Blacksmith", "Lumber Mill", "Gold Mine", "Mine", "Trollbane Hall", "Defiler's Den", "Farm",
     "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins", 
@@ -151,7 +151,7 @@ local buttonMessages = {
         "Require extra manpower",
         "Assistance urgently needed",
         "Requesting more participants",
-        -- Add more custom messages if needed...
+        
     },
     inc = {
         "Incoming",
@@ -169,7 +169,7 @@ local buttonMessages = {
         "Enemy squad closing in",
         "Anticipate enemy push",
         "Enemy forces are closing in",
-        -- Add more custom messages if needed...
+        
     },
     allClear = {
         "We are all clear",
@@ -187,7 +187,7 @@ local buttonMessages = {
         "No threats detected",
         "All quiet on this end",
         "Area is threat-free",
-        -- Add more custom messages if needed...
+        
     },
     buffRequest = {
     "Need buffs please!",
@@ -201,7 +201,7 @@ local buttonMessages = {
     "Ready for buffs, let's enhance our strength!",
     "Buffs needed for extra might and magic!",
     "Gimme some buffs, let’s not fall behind!"
-    -- Add more custom messages if needed...
+    
 	},
 	hmd = {
     "Focus healers!",
@@ -214,12 +214,12 @@ local buttonMessages = {
     "Healers spotted, engage!",
     "Priority: healers!",
     "Remove healers for win!"
-    -- Add more messages as needed...
+    
    }
  } 
  
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 240)
+IncCallout:SetSize(160, 255)
 IncCallout:SetPoint("CENTER")
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
@@ -891,51 +891,47 @@ local function OnEvent(self, event, ...)
         db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
         IncDB = db.profile
         playerFaction = UnitFactionGroup("player")
-        isDBInitialized = true  -- Set the flag here
-		buttonMessageIndices.hmd = IncDB.hmdIndex or 1
-		applyBorderChange()
-		applyColorChange()
+        isDBInitialized = true
+        buttonMessageIndices.hmd = IncDB.hmdIndex or 1
+        applyBorderChange()
+        applyColorChange()
 
-        -- Initialize IncDB.minimap if it's not already initialized
         if not IncDB.minimap then
             IncDB.minimap = {
                 hide = false,
-                minimapPos = 45, -- Default position angle (in degrees)
+                minimapPos = 45,
             }
         end
 
-        -- Load saved button messages indices
         buttonMessageIndices.sendMore = IncDB.sendMoreIndex or 1
         buttonMessageIndices.inc = IncDB.incIndex or 1
         buttonMessageIndices.allClear = IncDB.allClearIndex or 1
         buttonMessageIndices.buffRequest = IncDB.buffRequestIndex or 1
 
-        -- Load the opacity setting
         bgTexture:SetAlpha(IncDB.opacity or 1)
-        
 
-        -- Load the button color
-        local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+        local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1}
         applyButtonColor()
 
-        -- Load the font color
-        local savedColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}  -- Default to white
+        local savedColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
         for _, text in ipairs(buttonTexts) do
             text:SetTextColor(savedColor.r, savedColor.g, savedColor.b, savedColor.a)
         end
 
-        -- Load the font and font size
-        local font = IncDB.font or "Friz Quadrata TT"  -- Default font
-        local fontSize = IncDB.fontSize or 15  -- Default font size
+        local font = IncDB.font or "Friz Quadrata TT"
+        local fontSize = IncDB.fontSize or 15
         for _, text in ipairs(buttonTexts) do
             text:SetFont(LSM:Fetch("font", font), fontSize)
         end
 
-        -- Load the minimap icon settings
         icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
 
-        -- Now safe to call UpdatePoints
         UpdatePoints()
+
+        -- Initialize map features after the main setup is complete
+        if addonNamespace and addonNamespace.InitializeMapFeatures then
+            addonNamespace.InitializeMapFeatures()
+        end
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
@@ -945,14 +941,13 @@ local function OnEvent(self, event, ...)
             IncCallout:Hide()
         end
         UpdatePoints() 
-		ScaleGUI()
+        ScaleGUI()
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
-        -- These events are fired when currency (conquest points) or honor points are updated
         UpdatePoints()
     end
-
 end
+
 
 -- Register the event handling function for the appropriate events
 IncCallout:RegisterEvent("PLAYER_LOGIN")
@@ -979,7 +974,13 @@ local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, 
 local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
 local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
 local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local exitButton = createButton("exitButton", 50, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+local showMapButton = createButton("showMapButton", 100, 22, "Show Map", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, 
+function()
+ToggleWorldMap() 
+end)
+local exitButton = createButton("exitButton", 50, 22, "Exit", {"TOP", showMapButton, "BOTTOM"}, 0, -5, function()
+    IncCallout:Hide() 
+end)
 
 -- Apply the color to all the buttons
 applyButtonColor()

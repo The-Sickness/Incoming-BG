@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v4.3 - 10.2.5
+-- v4.4 - 10.2.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -21,7 +21,8 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
 local addonName, addonNamespace = ...
- 
+IncDB = IncDB or {}
+
 local IncDB, db 
 local addon = AceAddon:NewAddon(addonName)
  
@@ -32,6 +33,7 @@ local defaults = {
         opacity = 1,
 		hmdIndex = 1,
 		scale = 1,
+		worldMapScale = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
         conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
@@ -539,7 +541,25 @@ end
         ScaleGUI(value) 
     end,
     order = 6,
-	           
+	        },
+            worldMapScale = {
+    type = "range",
+    name = "WorldMap Scale",
+    desc = "Adjust the scale of the WorldMap.",
+    min = 0.5, -- Minimum scale factor
+    max = 2.0, -- Maximum scale factor
+    step = 0.01, -- Step size for the slider
+    get = function()
+    return IncCalloutDB.settings.mapScale
+end,
+
+set = function(_, value)
+    IncCalloutDB.settings.mapScale = value
+    if addonNamespace.ResizeWorldMap then
+        addonNamespace.ResizeWorldMap()
+    end
+end,
+    order = 7,			
 				
         },
     },
@@ -947,8 +967,6 @@ local function OnEvent(self, event, ...)
         UpdatePoints()
     end
 end
-
-
 -- Register the event handling function for the appropriate events
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -996,6 +1014,17 @@ for _, button in ipairs(buttons) do
     button:SetScript("PostClick", function()
         applyButtonColor()
     end)
+end
+
+local function OnAddonLoaded(self, event, loadedAddonName)
+    if loadedAddonName == addonName then
+        EnsureDBSettings() 
+        RestoreMapPositionAndScale()  
+        
+        if addonNamespace.ResizeWorldMap then
+            addonNamespace.ResizeWorldMap()
+        end
+    end
 end
 
 -- Slash command registration

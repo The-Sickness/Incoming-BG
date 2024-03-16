@@ -27,13 +27,19 @@ local function SaveMapPosition()
 end
 
 local function ResizeWorldMap()
-    EnsureDBSettings() 
+    EnsureDBSettings()
+    
     if WorldMapFrame and IncCalloutDB.settings.mapScale then
-        WorldMapFrame:SetScale(IncCalloutDB.settings.mapScale)
         
-        local pos = IncCalloutDB.settings.mapPosition
-        WorldMapFrame:ClearAllPoints()
-        WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
+        if UnitIsPVP("player") then
+            WorldMapFrame:SetScale(IncCalloutDB.settings.mapScale)
+            local pos = IncCalloutDB.settings.mapPosition
+            WorldMapFrame:ClearAllPoints()
+            WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
+        else
+            
+            WorldMapFrame:SetScale(1)
+        end
     end
 end
 
@@ -49,12 +55,15 @@ end)
 
 local function InitializeMapFeatures()
     local eventFrame = CreateFrame("Frame")
-    eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE") 
+  
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD") 
+   
+    eventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
     
     eventFrame:SetScript("OnEvent", function(self, event, ...)
-        if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
-            
+        if event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_FLAGS_CHANGED" then
+          
+            ResizeWorldMap()
         end
     end)
 end

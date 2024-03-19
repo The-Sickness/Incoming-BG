@@ -5,13 +5,14 @@ addonNamespace = addonNamespace or {}
 local function EnsureDBSettings()
     if not IncCalloutDB.settings then
         IncCalloutDB.settings = {
-            mapScale = 0.75, -- Default scale value
-            mapPosition = { -- Default position settings
+            mapScale = 0.75, 
+            mapPosition = { 
                 point = "CENTER",
                 relativePoint = "CENTER",
                 xOfs = 0,
                 yOfs = 0,
             },
+            resizeInPvPOnly = true, 
         }
     end
 end
@@ -30,15 +31,14 @@ local function ResizeWorldMap()
     EnsureDBSettings()
     
     if WorldMapFrame and IncCalloutDB.settings.mapScale then
-        
-        if UnitIsPVP("player") then
+       
+        if not IncCalloutDB.settings.resizeInPvPOnly or (IncCalloutDB.settings.resizeInPvPOnly and UnitIsPVP("player")) then
             WorldMapFrame:SetScale(IncCalloutDB.settings.mapScale)
             local pos = IncCalloutDB.settings.mapPosition
             WorldMapFrame:ClearAllPoints()
             WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
         else
-            
-            WorldMapFrame:SetScale(1)
+            WorldMapFrame:SetScale(1) 
         end
     end
 end
@@ -70,6 +70,9 @@ end
 
 addonNamespace.ResizeWorldMap = ResizeWorldMap
 InitializeMapFeatures()
+
+
+
 
 
 

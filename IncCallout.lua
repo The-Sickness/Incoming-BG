@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v4.4 - 10.2.5
+-- v4.7 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -372,6 +372,19 @@ local function ScaleGUI()
     end
 end
 
+local mapSizeOptions = {
+    { name = "Very Small", value = 0.4 },
+    { name = "Small", value = 0.5 },
+    { name = "Medium Small", value = 0.65 },
+    { name = "Medium", value = 0.75 }, -- Assuming this is the current default
+    { name = "Medium Large", value = 0.85 },
+    { name = "Large", value = 1.0 },
+    { name = "Very Large", value = 1.15 },
+    { name = "Huge", value = 1.3 },
+    { name = "Gigantic", value = 1.45 },
+    { name = "Colossal", value = 1.6 }
+}
+
  local options = {
     name = "IncCallout",
     type = "group",
@@ -483,9 +496,9 @@ end
                                  end,
 
                                   },
-                                  borderStyle = {
-                                              type = "select",
-                                              name = "Border Style",
+              borderStyle = {
+             type = "select",
+             name = "Border Style",
             desc = "Select the border style for the frame.",
             style = "dropdown",
             order = 4,
@@ -526,46 +539,61 @@ end
                 applyColorChange()
             end,
 			},
-			scaleOption = {
-    type = "range",
-    name = "GUI Scale",
-    desc = "Adjust the scale of the GUI.",
-    min = 0.5, -- Minimum scale factor
-    max = 2.0, -- Maximum scale factor
-    step = 0.05, -- Step size for the slider
-    get = function()
-        return IncDB.scale or 1 
-    end,
-    set = function(_, value)
-        IncDB.scale = value
-        ScaleGUI(value) 
-    end,
-    order = 6,
-	        },
-            worldMapScale = {
-    type = "range",
-    name = "WorldMap Scale",
-    desc = "Adjust the scale of the WorldMap.",
-    min = 0.5, -- Minimum scale factor
-    max = 2.0, -- Maximum scale factor
-    step = 0.01, -- Step size for the slider
-    get = function()
-    return IncCalloutDB.settings.mapScale
-end,
-
-set = function(_, value)
-    IncCalloutDB.settings.mapScale = value
-    if addonNamespace.ResizeWorldMap then
-        addonNamespace.ResizeWorldMap()
-    end
-end,
-    order = 7,			
-				
+			mapSizeChoice = {
+                    type = "select",
+                    name = "Map Size",
+                    desc = "Select the preferred size of the WorldMap.",
+                    order = 6,
+                    style = "dropdown",
+                    values = function()
+                        local values = {}
+                        for _, sizeOption in ipairs(mapSizeOptions) do
+                            values[sizeOption.value] = sizeOption.name
+                        end
+                        return values
+                    end,
+                    get = function() return IncCalloutDB.settings.mapScale end,
+                    set = function(_, selectedValue)
+                        IncCalloutDB.settings.mapScale = selectedValue
+                        if addonNamespace.ResizeWorldMap then
+                            addonNamespace.ResizeWorldMap()
+                        end
+                    end,
+                },
+                resizeInPvPOnly = {
+                    type = "toggle",
+                    name = "Resize Map in PvP Only",
+                    desc = "Enable to resize the WorldMap only in PvP scenarios.",
+                    order = 7,
+                    get = function() return IncCalloutDB.settings.resizeInPvPOnly end,
+                    set = function(_, value)
+                        IncCalloutDB.settings.resizeInPvPOnly = value
+                        if addonNamespace.ResizeWorldMap then
+                            addonNamespace.ResizeWorldMap()
+                        end
+                    end,
+				},
+			     scaleOption = {
+                    type = "range",
+                    name = "GUI Window Scale",
+                    desc = "Adjust the scale of the GUI.",
+                    min = 0.5, 
+                    max = 2.0, 
+                    step = 0.05, 
+                    get = function()
+                    return IncDB.scale or 1 
+                 end,
+                   set = function(_, value)
+                   IncDB.scale = value
+                   ScaleGUI(value) 
+                end,
+                   order = 8,
+	        				
         },
     },
 },
-      
-        fontSettings = {
+        
+       fontSettings = {
             type = "group",
             name = "Font Settings",
             order = 3,

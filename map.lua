@@ -30,18 +30,24 @@ end
 local function ResizeWorldMap()
     EnsureDBSettings()
     
+    -- Determine if the player is in a PvP zone, battleground, or arena
+    local inPvPZone = UnitIsPVP("player")
+    local zonePVPType = GetZonePVPInfo()
+    local inBattlegroundOrArena = zonePVPType == "combat" or IsActiveBattlefieldArena()
+
+    -- Resize the map if appropriate based on the addon's settings and the player's environment
     if WorldMapFrame and IncCalloutDB.settings.mapScale then
-       
-        if not IncCalloutDB.settings.resizeInPvPOnly or (IncCalloutDB.settings.resizeInPvPOnly and UnitIsPVP("player")) then
+        if not IncCalloutDB.settings.resizeInPvPOnly or (IncCalloutDB.settings.resizeInPvPOnly and (inPvPZone or inBattlegroundOrArena)) then
             WorldMapFrame:SetScale(IncCalloutDB.settings.mapScale)
             local pos = IncCalloutDB.settings.mapPosition
             WorldMapFrame:ClearAllPoints()
             WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
         else
-            WorldMapFrame:SetScale(1) 
+            WorldMapFrame:SetScale(1)
         end
     end
 end
+
 
 WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
 WorldMapFrame:SetMovable(true)

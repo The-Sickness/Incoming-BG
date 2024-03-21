@@ -29,25 +29,31 @@ end
 
 local function ResizeWorldMap()
     EnsureDBSettings()
-    
-    -- Determine if the player is in a PvP zone, battleground, or arena
-    local inPvPZone = UnitIsPVP("player")
-    local zonePVPType = GetZonePVPInfo()
-    local inBattlegroundOrArena = zonePVPType == "combat" or IsActiveBattlefieldArena()
 
-    -- Resize the map if appropriate based on the addon's settings and the player's environment
-    if WorldMapFrame and IncCalloutDB.settings.mapScale then
-        if not IncCalloutDB.settings.resizeInPvPOnly or (IncCalloutDB.settings.resizeInPvPOnly and (inPvPZone or inBattlegroundOrArena)) then
-            WorldMapFrame:SetScale(IncCalloutDB.settings.mapScale)
-            local pos = IncCalloutDB.settings.mapPosition
-            WorldMapFrame:ClearAllPoints()
-            WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
-        else
-            WorldMapFrame:SetScale(1)
+    -- Check PvP status
+    local inInstance, instanceType = IsInInstance()
+    local isPvPEnvironment = inInstance and (instanceType == "pvp" or instanceType == "arena")
+
+    -- Determine the scale to apply based on settings and context
+    local scale = 1  
+    if IncCalloutDB.settings.resizeInPvPOnly then
+       
+        if isPvPEnvironment then
+            scale = IncCalloutDB.settings.mapScale
         end
+    else
+       
+        scale = IncCalloutDB.settings.mapScale
+    end
+
+    -- Apply the determined scale
+    if WorldMapFrame then
+        WorldMapFrame:SetScale(scale)
+        local pos = IncCalloutDB.settings.mapPosition
+        WorldMapFrame:ClearAllPoints()
+        WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
     end
 end
-
 
 WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
 WorldMapFrame:SetMovable(true)
@@ -62,17 +68,15 @@ end)
 local function InitializeMapFeatures()
     local eventFrame = CreateFrame("Frame")
   
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD") 
-   
-    eventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
+    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    eventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")  
     
     eventFrame:SetScript("OnEvent", function(self, event, ...)
-        if event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_FLAGS_CHANGED" then
-          
-            ResizeWorldMap()
-        end
+       
+        ResizeWorldMap()
     end)
 end
+
 
 addonNamespace.ResizeWorldMap = ResizeWorldMap
 InitializeMapFeatures()

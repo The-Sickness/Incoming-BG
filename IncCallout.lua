@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v4.7 - 10.2.6
+-- v5.0 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -33,6 +33,7 @@ local defaults = {
         opacity = 1,
 		hmdIndex = 1,
 		scale = 1,
+		isLocked = false,
 		worldMapScale = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
@@ -261,12 +262,20 @@ local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
 bgTexture:SetColorTexture(0, 0, 0)
 bgTexture:SetAllPoints(IncCallout)
 
-IncCallout:SetMovable(true)
-IncCallout:EnableMouse(true)
-IncCallout:RegisterForDrag("LeftButton")
-IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
-IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
- 
+IncCallout:SetScript("OnDragStart", function(self)
+    if not IncDB.isLocked then
+        self:StartMoving()
+    end
+end)
+
+IncCallout:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    
+    if not IncDB.isLocked then
+               
+    end
+end)
+
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
     local button = CreateFrame("Button", nil, IncCallout, " BackdropTemplate")
@@ -588,6 +597,19 @@ local mapSizeOptions = {
                    ScaleGUI(value) 
                 end,
                    order = 8,
+				            },
+							lockGUI = {
+            type = "toggle",
+            name = "Lock GUI Window",
+            desc = "Enable to lock the GUI window's position.",
+            order = 9, 
+            get = function()
+                return IncDB.isLocked
+            end,
+            set = function(_, value)
+                IncDB.isLocked = value
+              
+            end,
 	        				
         },
     },

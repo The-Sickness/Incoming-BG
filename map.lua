@@ -1,3 +1,7 @@
+-- IncCallout (Rebuild of Incoming-BG)
+-- Made by Sharpedge_Gaming
+-- v5.2 - 10.2.6
+
 local addonName, addonNamespace = ...
 
 addonNamespace = addonNamespace or {}
@@ -77,9 +81,13 @@ local function InitializeMapFeatures()
     end)
 end
 
-
 addonNamespace.ResizeWorldMap = ResizeWorldMap
 InitializeMapFeatures()
+
+
+
+
+
 
 
 

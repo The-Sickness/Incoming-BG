@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.0 - 10.2.6
+-- v5.2 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -21,11 +21,12 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
 local addonName, addonNamespace = ...
+addonNamespace = addonNamespace or {} 
 IncDB = IncDB or {}
 
 local IncDB, db 
 local addon = AceAddon:NewAddon(addonName)
- 
+
 local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
@@ -56,6 +57,31 @@ local buttonMessageIndices = {
 }
 
 SLASH_INC1 = "/inc"
+
+local customRaidWarningFrame = CreateFrame("Frame", "CustomRaidWarningFrame", UIParent)
+customRaidWarningFrame:SetHeight(50) 
+customRaidWarningFrame:SetPoint("TOP", UIParent, "TOP", 0, -200) 
+customRaidWarningFrame:SetWidth(UIParent:GetWidth()) 
+
+customRaidWarningFrame.text = customRaidWarningFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+customRaidWarningFrame.text:SetAllPoints(true)
+customRaidWarningFrame.text:SetJustifyH("CENTER")
+customRaidWarningFrame.text:SetJustifyV("MIDDLE")
+
+customRaidWarningFrame:Hide() 
+
+local function ShowRaidWarning(message, duration)
+   
+    if IncDB.enableRaidWarnings then
+        customRaidWarningFrame.text:SetText(message)
+        customRaidWarningFrame.text:SetTextColor(1, 0, 0) -- Set text color to red
+        customRaidWarningFrame:Show()
+    
+        C_Timer.After(duration or 5, function() 
+            customRaidWarningFrame:Hide()
+        end)
+    end
+end
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -139,57 +165,57 @@ local battlegroundLocations = {
  
 local buttonMessages = {
     sendMore = {
-        "We need more peeps",
-        "Need help",
-        "We are outnumbered",
-        "Need a few more",
-        "Need more",
-        "Backup required",
-        "We could use some help",
-        "Calling for backup",
-        "Could use some backup",
-        "Reinforcements needed",
-        "In need of additional support",
-        "Calling all hands on deck",
-        "Require extra manpower",
-        "Assistance urgently needed",
-        "Requesting more participants",
+        "[Incoming-BG] We need more peeps",
+        "[Incoming-BG] Need help",
+        "[Incoming-BG] We are outnumbered",
+        "[Incoming-BG] Need a few more",
+        "[Incoming-BG] Need more",
+        "[Incoming-BG] Backup required",
+        "[Incoming-BG] We could use some help",
+        "[Incoming-BG] Calling for backup",
+        "[Incoming-BG] Could use some backup",
+        "[Incoming-BG] Reinforcements needed",
+        "[Incoming-BG] In need of additional support",
+        "[Incoming-BG] Calling all hands on deck",
+        "[Incoming-BG] Require extra manpower",
+        "[Incoming-BG] Assistance urgently needed",
+        "[Incoming-BG] Requesting more participants",
         
     },
     inc = {
-        "Incoming",
-        "INC INC INC",
-        "INC",
-        "Gotta INC",
-        "BIG INC",
-        "Incoming enemy forces",
-        "Incoming threat",
-        "Enemy push incoming",
-        "Enemy blitz incoming",
-        "Enemy strike team inbound",
-        "Incoming attack alert",
-        "Enemy wave inbound",
-        "Enemy squad closing in",
-        "Anticipate enemy push",
-        "Enemy forces are closing in",
+        "[Incoming-BG] Incoming",
+        "[Incoming-BG] INC INC INC",
+        "[Incoming-BG] INC",
+        "[Incoming-BG] Gotta INC",
+        "[Incoming-BG] BIG INC",
+        "[Incoming-BG] Incoming enemy forces",
+        "[Incoming-BG] Incoming threat",
+        "[Incoming-BG] Enemy push incoming",
+        "[Incoming-BG] Enemy blitz incoming",
+        "[Incoming-BG] Enemy strike team inbound",
+        "[Incoming-BG] Incoming attack alert",
+        "[Incoming-BG] Enemy wave inbound",
+        "[Incoming-BG] Enemy squad closing in",
+        "[Incoming-BG] Anticipate enemy push",
+        "[Incoming-BG] Enemy forces are closing in",
         
     },
     allClear = {
-        "We are all clear",
-        "All clear",
-        "Looks like a ghost town",
-        "All good",
-        "Looking good",
-        "Area secure",
-        "All quiet on the front",
-        "Situation is under control",
-        "All quiet here",
-        "We are looking good",
-        "Perimeter is secured",
-        "Situation is calm",
-        "No threats detected",
-        "All quiet on this end",
-        "Area is threat-free",
+        "[Incoming-BG] We are all clear",
+        "[Incoming-BG] All clear",
+        "[Incoming-BG] Looks like a ghost town",
+        "[Incoming-BG] All good",
+        "[Incoming-BG] Looking good",
+        "[Incoming-BG] Area secure",
+        "[Incoming-BG] All quiet on the front",
+        "[Incoming-BG] Situation is under control",
+        "[Incoming-BG] All quiet here",
+        "[Incoming-BG] We are looking good",
+        "[Incoming-BG] Perimeter is secured",
+        "[Incoming-BG] Situation is calm",
+        "[Incoming-BG] No threats detected",
+        "[Incoming-BG] All quiet on this end",
+        "[Incoming-BG] Area is threat-free",
         
     },
     buffRequest = {
@@ -278,7 +304,7 @@ end)
 
 -- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
-    local button = CreateFrame("Button", nil, IncCallout, " BackdropTemplate")
+    local button = CreateFrame("Button", nil, IncCallout, "BackdropTemplate")
     button:SetSize(width, height)
     button:SetText(text)
     if type(anchor) == "table" then
@@ -286,41 +312,48 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     else
         button:SetPoint(anchor, xOffset, yOffset)
     end
-    button:SetScript("OnClick", onClick)
     button:GetFontString():SetTextColor(1, 1, 1, 1)
     button:SetBackdrop({
-      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-      tile = true,
-      tileSize = 12,
-      edgeSize = 7,  
-      insets = { left = 1, right = 1, top = 1, bottom = 1 }
-})
+        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true,
+        tileSize = 12,
+        edgeSize = 7,  
+        insets = {left = 1, right = 1, top = 1, bottom = 1}
+    })
 
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
 	
-	button:SetScript("OnMouseDown", function(self)
+    button:SetScript("OnMouseDown", function(self)
         self:SetBackdropColor(0, 0, 0, 0) 
     end)
     button:SetScript("OnMouseUp", function(self, mouseButton)
         if mouseButton == "LeftButton" then
-            button:SetBackdropColor(0, 0, 0, 0)
+            self:SetBackdropColor(0, 0, 0, 0)
         end
     end)
     
+    -- Updated OnClick script
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
-            PlaySound(SOUNDKIT.IG_MAINMENU_OPEN) 
+            if useCustomSound then
+                if IncDB.raidWarningSound and type(IncDB.raidWarningSound) == "number" then
+                    PlaySound(IncDB.raidWarningSound, "master")
+                else
+                    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+                end
+            end
+
             if onClick then 
                 onClick(self)
             end
         end
     end)
-	
+
     return button
 end
- 
+
 local function applyButtonColor()
 
     if not IncDB then
@@ -394,7 +427,25 @@ local mapSizeOptions = {
     { name = "Colossal", value = 1.6 }
 }
 
- local options = {
+local soundOptions = {
+    [8959] = "Raid Warning", 
+    [8459] = "PVP Que ", 
+    [15266] = "Whistle", 
+    [12867] = "Horn", 
+    [9656] = "Laughing", 
+	[888] = "Level Up", 
+	[8960] = "Ready Check", 
+	[880] = "Drums", 
+	[9379] = "PVP Flag", 
+	[89880] = "Fireworks", 
+	[176304] = "Launcher", 
+	[34154] = "Challenge", 
+	[12867] = "Alarm", 
+	[161485] = "Lightning", 
+	["none"] = "No sound",
+}
+
+local options = {
     name = "IncCallout",
     type = "group",
     args = {
@@ -404,151 +455,190 @@ local mapSizeOptions = {
             order = 1,
             args = {
                 sendMore = {
-                    type = "select",
-                    name = "Send More Message",
-                    desc = "Select the message for the 'Send More' button",
-                    values = buttonMessages.sendMore,
-                    get = function() return buttonMessageIndices.sendMore end,
-                    set = function(_, newValue)
-                        buttonMessageIndices.sendMore = newValue
-                        IncDB.sendMoreIndex = newValue
-                    end,
-                    order = 1,
-                },
-                inc = {
-                    type = "select",
-                    name = "INC Message",
-                    desc = "Select the message for the 'INC' button",
-                    values = buttonMessages.inc,
-                    get = function() return buttonMessageIndices.inc end,
-                    set = function(_, newValue)
-                        buttonMessageIndices.inc = newValue
-                        IncDB.incIndex = newValue
-                    end,
-                    order = 2,
-                },
-                allClear = {
-                    type = "select",
-                    name = "All Clear Message",
-                    desc = "Select the message for the 'All Clear' button",
-                    values = buttonMessages.allClear,
-                    get = function() return buttonMessageIndices.allClear end,
-                    set = function(_, newValue)
-                        buttonMessageIndices.allClear = newValue
-                        IncDB.allClearIndex = newValue
-                    end,
-                    order = 3,
+    type = "select",
+    name = "Send More Message",
+    desc = "Select the message for the 'Send More' button",
+    values = buttonMessages.sendMore,
+    get = function() return buttonMessageIndices.sendMore end,
+    set = function(_, newValue)
+        buttonMessageIndices.sendMore = newValue
+        IncDB.sendMoreIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 1,
+},
+previewSendMore = {
+    type = "description",
+    name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("sendMore") .. "|r" end,
+    fontSize = "medium",
+    order = 1.1,
+},
+inc = {
+    type = "select",
+    name = "INC Message",
+    desc = "Select the message for the 'INC' button",
+    values = buttonMessages.inc,
+    get = function() return buttonMessageIndices.inc end,
+    set = function(_, newValue)
+        buttonMessageIndices.inc = newValue
+        IncDB.incIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 2,
+},
+previewInc = {
+    type = "description",
+    name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("inc") .. "|r" end,
+    fontSize = "medium",
+    order = 2.1,
+},
+allClear = {
+    type = "select",
+    name = "All Clear Message",
+    desc = "Select the message for the 'All Clear' button",
+    values = buttonMessages.allClear,
+    get = function() return buttonMessageIndices.allClear end,
+    set = function(_, newValue)
+        buttonMessageIndices.allClear = newValue
+        IncDB.allClearIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 3,
+},
+previewAllClear = {
+    type = "description",
+    name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("allClear") .. "|r" end,
+    fontSize = "medium",
+    order = 3.1,
                 },
                 buffRequest = {
-                    type = "select",
-                    name = "Buff Request Message",
-                    desc = "Select the message for the 'Request Buffs' button",
-                    values = buttonMessages.buffRequest,
-                    get = function() return buttonMessageIndices.buffRequest end,
-                    set = function(_, newValue)
-                        buttonMessageIndices.buffRequest = newValue
-                        IncDB.buffRequestIndex = newValue
-                    end,
-                    order = 4,
-					}, 
-				hmd = {
-                    type = "select",
-                    name = "H.M.D. Message",
-                    desc = "Select the message for the 'H.M.D.' button",
-                    values = buttonMessages.hmd,
-                    get = function() return buttonMessageIndices.hmd end,
-                    set = function(_, newValue)
-                    buttonMessageIndices.hmd = newValue
-                    IncDB.hmdIndex = newValue 
-                    end,
-                    order = 5, 
+    type = "select",
+    name = "Buff Request Message",
+    desc = "Select the message for the 'Request Buffs' button",
+    values = buttonMessages.buffRequest,
+    get = function() return buttonMessageIndices.buffRequest end,
+    set = function(_, newValue)
+        buttonMessageIndices.buffRequest = newValue
+        IncDB.buffRequestIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 4,
+},
+previewBuffRequest = {
+    type = "description",
+    name = function() return addonNamespace.getPreviewText("buffRequest") end,
+    fontSize = "medium",
+    order = 4.1,
+},
+hmd = {
+    type = "select",
+    name = "H.M.D. Message",
+    desc = "Select the message for the 'H.M.D.' button",
+    values = buttonMessages.hmd,
+    get = function() return buttonMessageIndices.hmd end,
+    set = function(_, newValue)
+        buttonMessageIndices.hmd = newValue
+        IncDB.hmdIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 5,
+},
+previewHMD = {
+    type = "description",
+    name = function() return addonNamespace.getPreviewText("hmd") end,
+    fontSize = "medium",
+    order = 5.1, -- Place it after your last message selection option
                 },
             },
         },
-                  appearanceSettings = {
-                                     type = "group",
-                                     name = "Appearance Settings",
-                                     order = 2,
-                                     args = {
-                           fontColor = {
-                                     type = "color",
-                                     name = "Button Font Color",
-                                     desc = "Set the color of the button text.",
-                                     order = 2,
-                                     hasAlpha = true, 
-                                     get = function()
-                                         local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                                      end,
-                                      set = function(_, r, g, b, a)
-                                          local color = {r = r, g = g, b = b, a = a}
-                                          IncDB.fontColor = color
-                                          for _, text in ipairs(buttonTexts) do
-                                             text:SetTextColor(r, g, b, a)
-                                       end
-                                     end
-                                    },
-                    buttonColor = {
-                                type = "color",
-                                name = "Button Color",
-                                desc = "Select the color of the buttons.",
-                                order = 3,
-                                hasAlpha = true, 
-                                get = function()
-                                    local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
-                                    return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                                 end,
-                                 set = function(_, r, g, b, a)
-                                 local color = {r = r, g = g, b = b, a = a}
-                                 IncDB.buttonColor = color
-                                 applyButtonColor()
-                                 end,
-
-                                  },
-              borderStyle = {
-             type = "select",
-             name = "Border Style",
-            desc = "Select the border style for the frame.",
-            style = "dropdown",
-            order = 4,
-            values = function()
-                local values = {}
-                for i, option in ipairs(borderOptions) do
-                    values[i] = option.name
-                end
-                return values
-            end,
-            get = function()
-                return IncDB.selectedBorderIndex or 1
-            end,
-            set = function(_, selectedIndex)
-                IncDB.selectedBorderIndex = selectedIndex
-                applyBorderChange()
-                applyColorChange()
-            end,
+        appearanceSettings = {
+            type = "group",
+            name = "Appearance Settings",
+            order = 2,
+            args = {
+                buttonColor = {
+                    type = "color",
+                    name = "Button Color",
+                    desc = "Select the color of the buttons.",
+                    order = 1,
+                    hasAlpha = true,
+                    get = function() return IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a end,
+                    set = function(_, r, g, b, a)
+                        IncDB.buttonColor = {r = r, g = g, b = b, a = a}
+                        -- Function to apply button color changes
+                    end,
+                },
+                fontColor = {
+                    type = "color",
+                    name = "Font Color",
+                    desc = "Select the color of the button text.",
+                    order = 2,
+                    hasAlpha = true,
+                    get = function() return IncDB.fontColor.r, IncDB.fontColor.g, IncDB.fontColor.b, IncDB.fontColor.a end,
+                    set = function(_, r, g, b, a)
+                        IncDB.fontColor = {r = r, g = g, b = b, a = a}
+                        -- Function to apply font color changes
+                    end,
+                },
+                scaleOption = {
+                    type = "range",
+                    name = "GUI Window Scale",
+                    desc = "Adjust the scale of the GUI window.",
+                    order = 3,
+                    min = 0.5,
+                    max = 2.0,
+                    step = 0.05,
+                    get = function() return IncDB.scale end,
+                    set = function(_, value)
+                        IncDB.scale = value
+                        -- Function to apply GUI scale changes
+                    end,
+                },
+                enableRaidWarnings = {
+                    type = "toggle",
+                    name = "Enable Raid Warnings",
+                    desc = "Toggle Raid Warning Messages on or off.",
+                    order = 4,
+                    get = function() return IncDB.enableRaidWarnings end,
+                    set = function(_, value)
+                        IncDB.enableRaidWarnings = value
+                        -- Function to toggle raid warnings
+                    end,
+				},
+				raidWarningSound = {
+    type = "select",
+    name = "Raid Warning Sound",
+    desc = "Select the sound to play for Raid Warnings.",
+    order = 5,
+    values = soundOptions,
+    get = function() return IncDB.raidWarningSound end,
+    set = function(_, selectedValue)
+        IncDB.raidWarningSound = selectedValue
+        -- Play the sound here as a preview using SoundKit ID
+        if selectedValue and type(selectedValue) == "number" then
+            PlaySound(selectedValue, "master") -- The "master" channel ensures it plays regardless of client sound settings
+        end
+    end,
+                },
+                lockGUI = {
+                    type = "toggle",
+                    name = "Lock GUI Window",
+                    desc = "Lock or unlock the GUI window's position.",
+                    order = 6,
+                    get = function() return IncDB.isLocked end,
+                    set = function(_, value)
+                        IncDB.isLocked = value
+                        -- Function to lock or unlock the GUI window
+                    end,
+                },
+            },
         },
-        backdropColor = {
-            type = "select",
-            name = "Backdrop Color",
-            desc = "Select the backdrop color and transparency for the frame.",
-            style = "dropdown",
-            order = 5,
-            values = function()
-                local values = {}
-                for i, option in ipairs(colorOptions) do
-                    values[i] = option.name
-                end
-                return values
-            end,
-            get = function()
-                return IncDB.selectedColorIndex or 1
-            end,
-            set = function(_, selectedIndex)
-                IncDB.selectedColorIndex = selectedIndex
-                applyColorChange()
-            end,
-			},
-			mapSizeChoice = {
+        mapSettings = {
+            type = "group",
+            name = "Map Settings",
+            order = 3,
+            args = {
+                			mapSizeChoice = {
                     type = "select",
                     name = "Map Size",
                     desc = "Select the preferred size of the WorldMap.",
@@ -581,40 +671,9 @@ local mapSizeOptions = {
                             addonNamespace.ResizeWorldMap()
                         end
                     end,
-				},
-			     scaleOption = {
-                    type = "range",
-                    name = "GUI Window Scale",
-                    desc = "Adjust the scale of the GUI.",
-                    min = 0.5, 
-                    max = 2.0, 
-                    step = 0.05, 
-                    get = function()
-                    return IncDB.scale or 1 
-                 end,
-                   set = function(_, value)
-                   IncDB.scale = value
-                   ScaleGUI(value) 
-                end,
-                   order = 8,
-				            },
-							lockGUI = {
-            type = "toggle",
-            name = "Lock GUI Window",
-            desc = "Enable to lock the GUI window's position.",
-            order = 9, 
-            get = function()
-                return IncDB.isLocked
-            end,
-            set = function(_, value)
-                IncDB.isLocked = value
-              
-            end,
-	        				
+                },
+            },
         },
-    },
-},
-        
        fontSettings = {
             type = "group",
             name = "Font Settings",
@@ -737,7 +796,6 @@ local mapSizeOptions = {
         },
     },
 }
-
 -- Register the options table
 AceConfig:RegisterOptionsTable(addonName, options)
 
@@ -752,7 +810,23 @@ configPanel.default = function()
 	IncDB.selectedBorderIndex = 1
 
 end
- 
+
+function addonNamespace.getPreviewText(messageType)
+    local previewText = "|cff00ff00[Incoming-BG] " 
+    if messageType == "sendMore" and buttonMessageIndices.sendMore and buttonMessages.sendMore[buttonMessageIndices.sendMore] then
+        previewText = previewText .. buttonMessages.sendMore[buttonMessageIndices.sendMore]
+    elseif messageType == "inc" and buttonMessageIndices.inc and buttonMessages.inc[buttonMessageIndices.inc] then
+        previewText = previewText .. buttonMessages.inc[buttonMessageIndices.inc]
+    elseif messageType == "allClear" and buttonMessageIndices.allClear and buttonMessages.allClear[buttonMessageIndices.allClear] then
+        previewText = previewText .. buttonMessages.allClear[buttonMessageIndices.allClear]
+    elseif messageType == "buffRequest" and buttonMessageIndices.buffRequest and buttonMessages.buffRequest[buttonMessageIndices.buffRequest] then
+        previewText = previewText .. buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
+    elseif messageType == "hmd" and buttonMessageIndices.hmd and buttonMessages.hmd[buttonMessageIndices.hmd] then
+        previewText = previewText .. buttonMessages.hmd[buttonMessageIndices.hmd]
+    end
+    return previewText .. "|r" -- End color
+end
+
 local function ListHealers()
     local groupType, groupSize
     if IsInRaid() then
@@ -786,9 +860,35 @@ local function ListHealers()
     end
 end
 
-local healerButton = createButton("healerButton", 70, 22, "Healers", {"BOTTOMLEFT", IncCallout, "BOTTOMLEFT"}, 0, -27, ListHealers)
-local healsButton = createButton("healsButton", 70, 22, "H.M.D.", {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"}, 20, 0, function()
-end)
+-- For the Healer button, you likely want to play the custom sound
+local healerButton = createButton(
+    "healerButton",
+    70, 22,
+    "Healers",
+    {"BOTTOMLEFT", IncCallout, "BOTTOMLEFT"},
+    0, -27,
+    function(self, button)
+        -- Ensure the default sound plays
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+        
+        ListHealers()
+    end
+    
+)
+
+
+local healsButton = createButton(
+    "healsButton",
+    70, 22,
+    "H.M.D.",
+    {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"},
+    20, 0,
+    function() 
+        
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end,
+    false 
+)
 
 local function HMDButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
@@ -810,18 +910,22 @@ local function isInBattleground()
 end
  
 local function ButtonOnClick(self)
-if not isInBattleground() then
-print("You are not in a battleground.")
-return
+    if not isInBattleground() then
+        print("You are not in a battleground.")
+        return
+    end
+
+    if IncDB.raidWarningSound and type(IncDB.raidWarningSound) == "number" then
+        PlaySound(IncDB.raidWarningSound, "master")
+    end
+
+    local currentLocation = GetSubZoneText()
+   
+    local message = "[Incoming-BG] " .. self:GetText() .. " Incoming at " .. currentLocation
+    SendChatMessage(message, "INSTANCE_CHAT")
+    ShowRaidWarning(message, 2)
 end
 
-local currentLocation = GetSubZoneText()
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-local message = self:GetText() .. " Incoming at " .. currentLocation
-SendChatMessage(message, "INSTANCE_CHAT")
-end
- 
--- Register an event listener for when the player enters a new zone or subzone
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -863,7 +967,6 @@ f:SetScript("OnEvent", function(self, event, ...)
         local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()
         local location = locationTable[currentLocation]
  
-        -- Check if location is in the defined battleground locations
         if location then
             IncCallout:Show()  
         else
@@ -913,47 +1016,70 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
  
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
+    
+    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
+        PlaySound(IncDB.raidWarningSound, "master")
+    else
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
+
     local location = GetSubZoneText()
- 
-    -- Check if location is in the defined battleground locations
     if not location then
-    print("You are not in a BattleGround.")
-    return
+        print("You are not in a Battleground.")
+        return
+    end
+
+    local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
+    ShowRaidWarning(message, 2)
 end
- 
-local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-SendChatMessage(message, "INSTANCE_CHAT")
-end
+
  
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    
+    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
+        PlaySound(IncDB.raidWarningSound, "master")
+    else
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
+
     local location = GetSubZoneText()
- 
-    -- Check if location is in the defined battleground locations
     if not location then
-    print("You are not in a BattleGround.")
-    return
+        print("You are not in a Battleground.")
+        return
+    end
+
+    local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
+    ShowRaidWarning(message, 2)
 end
- 
-local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
-SendChatMessage(message, "INSTANCE_CHAT")
-end
+
  
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
+    
+    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
+        PlaySound(IncDB.raidWarningSound, "master")
+    else
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
+
     local location = GetSubZoneText()
- 
-    -- Check if location is in the defined battleground locations
     if not location then
-    print("You are not in a BattleGround.")
-    return
+        print("You are not in a Battleground.")
+        return
+    end
+
+    local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
+    ShowRaidWarning(message, 2)
 end
- 
-local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-SendChatMessage(message, "INSTANCE_CHAT")
+
+local function onChatMessage(message)
+    if string.find(message, "%[Incoming%-BG%]") then
+        PlaySound(SOUNDKIT.RAID_WARNING, "master")
+    end
 end
 
 local function OnEvent(self, event, ...)
@@ -980,28 +1106,11 @@ local function OnEvent(self, event, ...)
 
         bgTexture:SetAlpha(IncDB.opacity or 1)
 
-        local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1}
         applyButtonColor()
-
-        local savedColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-        for _, text in ipairs(buttonTexts) do
-            text:SetTextColor(savedColor.r, savedColor.g, savedColor.b, savedColor.a)
-        end
-
-        local font = IncDB.font or "Friz Quadrata TT"
-        local fontSize = IncDB.fontSize or 15
-        for _, text in ipairs(buttonTexts) do
-            text:SetFont(LSM:Fetch("font", font), fontSize)
-        end
 
         icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
 
         UpdatePoints()
-
-        -- Initialize map features after the main setup is complete
-        if addonNamespace and addonNamespace.InitializeMapFeatures then
-            addonNamespace.InitializeMapFeatures()
-        end
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
@@ -1010,19 +1119,23 @@ local function OnEvent(self, event, ...)
         else
             IncCallout:Hide()
         end
-        UpdatePoints() 
+        UpdatePoints()
         ScaleGUI()
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         UpdatePoints()
+
+    elseif event == "CHAT_MSG_INSTANCE_CHAT" then
+        local message = ...
+        onChatMessage(message)
     end
 end
--- Register the event handling function for the appropriate events
+
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
 IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
-IncCallout:RegisterEvent("PLAYER_LOGOUT")
+IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
 IncCallout:SetScript("OnEvent", OnEvent)
 
 -- Buff Request Button OnClick Function
@@ -1042,10 +1155,11 @@ local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, 
 local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
 local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
 local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local showMapButton = createButton("showMapButton", 100, 22, "Show Map", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, 
-function()
-ToggleWorldMap() 
-end)
+local showMapButton = createButton("showMapButton", 100, 22, "Show Map", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    ToggleWorldMap()
+end, false)
+
 local exitButton = createButton("exitButton", 50, 22, "Exit", {"TOP", showMapButton, "BOTTOM"}, 0, -5, function()
     IncCallout:Hide() 
 end)
@@ -1092,7 +1206,6 @@ local function IncomingBGMessageCommandHandler(msg)
     local messageType = "INSTANCE_CHAT"  
     local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."  
 
-    -- Send the message
     SendChatMessage(message, messageType)
 end
 

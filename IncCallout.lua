@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.2 - 10.2.6
+-- v5.3 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -414,6 +414,7 @@ local function ScaleGUI()
     end
 end
 
+
 local mapSizeOptions = {
     { name = "Very Small", value = 0.4 },
     { name = "Small", value = 0.5 },
@@ -552,87 +553,131 @@ previewHMD = {
             },
         },
         appearanceSettings = {
-            type = "group",
-            name = "Appearance Settings",
-            order = 2,
-            args = {
-                buttonColor = {
-                    type = "color",
-                    name = "Button Color",
-                    desc = "Select the color of the buttons.",
-                    order = 1,
-                    hasAlpha = true,
-                    get = function() return IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a end,
-                    set = function(_, r, g, b, a)
-                        IncDB.buttonColor = {r = r, g = g, b = b, a = a}
-                        -- Function to apply button color changes
-                    end,
-                },
-                fontColor = {
-                    type = "color",
-                    name = "Font Color",
-                    desc = "Select the color of the button text.",
-                    order = 2,
-                    hasAlpha = true,
-                    get = function() return IncDB.fontColor.r, IncDB.fontColor.g, IncDB.fontColor.b, IncDB.fontColor.a end,
-                    set = function(_, r, g, b, a)
-                        IncDB.fontColor = {r = r, g = g, b = b, a = a}
-                        -- Function to apply font color changes
-                    end,
-                },
-                scaleOption = {
-                    type = "range",
-                    name = "GUI Window Scale",
-                    desc = "Adjust the scale of the GUI window.",
-                    order = 3,
-                    min = 0.5,
-                    max = 2.0,
-                    step = 0.05,
-                    get = function() return IncDB.scale end,
-                    set = function(_, value)
-                        IncDB.scale = value
-                        -- Function to apply GUI scale changes
-                    end,
-                },
-                enableRaidWarnings = {
-                    type = "toggle",
-                    name = "Enable Raid Warnings",
-                    desc = "Toggle Raid Warning Messages on or off.",
-                    order = 4,
-                    get = function() return IncDB.enableRaidWarnings end,
-                    set = function(_, value)
-                        IncDB.enableRaidWarnings = value
-                        -- Function to toggle raid warnings
-                    end,
-				},
-				raidWarningSound = {
-    type = "select",
-    name = "Raid Warning Sound",
-    desc = "Select the sound to play for Raid Warnings.",
-    order = 5,
-    values = soundOptions,
-    get = function() return IncDB.raidWarningSound end,
-    set = function(_, selectedValue)
-        IncDB.raidWarningSound = selectedValue
-        -- Play the sound here as a preview using SoundKit ID
-        if selectedValue and type(selectedValue) == "number" then
-            PlaySound(selectedValue, "master") -- The "master" channel ensures it plays regardless of client sound settings
-        end
-    end,
-                },
-                lockGUI = {
-                    type = "toggle",
-                    name = "Lock GUI Window",
-                    desc = "Lock or unlock the GUI window's position.",
-                    order = 6,
-                    get = function() return IncDB.isLocked end,
-                    set = function(_, value)
-                        IncDB.isLocked = value
-                        -- Function to lock or unlock the GUI window
-                    end,
-                },
-            },
+    type = "group",
+    name = "Appearance Settings",
+    order = 2,
+    args = {
+        buttonColor = {
+            type = "color",
+            name = "Button Color",
+            desc = "Select the color of the buttons.",
+            order = 1,
+            hasAlpha = true,
+            get = function() return IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a end,
+            set = function(_, r, g, b, a)
+                IncDB.buttonColor = {r = r, g = g, b = b, a = a}
+                -- Function to apply button color changes
+            end,
         },
+        fontColor = {
+            type = "color",
+            name = "Font Color",
+            desc = "Select the color of the button text.",
+            order = 2,
+            hasAlpha = true,
+            get = function() return IncDB.fontColor.r, IncDB.fontColor.g, IncDB.fontColor.b, IncDB.fontColor.a end,
+            set = function(_, r, g, b, a)
+                IncDB.fontColor = {r = r, g = g, b = b, a = a}
+                -- Function to apply font color changes
+            end,
+        },
+        scaleOption = {
+            type = "range",
+            name = "GUI Window Scale",
+            desc = "Adjust the scale of the GUI window.",
+            order = 3,
+            min = 0.5,
+            max = 2.0,
+            step = 0.05,
+            get = function() return IncDB.scale end,
+            set = function(_, value)
+                IncDB.scale = value
+                -- Function to apply GUI scale changes
+            end,
+        },
+        borderStyle = {
+            type = "select",
+            name = "Border Style",
+            desc = "Select the border style for the frame.",
+            style = "dropdown",
+            order = 4,
+            values = function()
+                local values = {}
+                for i, option in ipairs(borderOptions) do
+                    values[i] = option.name
+                end
+                return values
+            end,
+            get = function()
+                return IncDB.selectedBorderIndex or 1
+            end,
+            set = function(_, selectedIndex)
+                IncDB.selectedBorderIndex = selectedIndex
+                applyBorderChange()
+                applyColorChange()
+            end,
+        },
+        backdropColor = {
+            type = "select",
+            name = "Backdrop Color",
+            desc = "Select the backdrop color and transparency for the frame.",
+            style = "dropdown",
+            order = 5,
+            values = function()
+                local values = {}
+                for i, option in ipairs(colorOptions) do
+                    values[i] = option.name
+                end
+                return values
+            end,
+            get = function()
+                return IncDB.selectedColorIndex or 1
+            end,
+            set = function(_, selectedIndex)
+                IncDB.selectedColorIndex = selectedIndex
+                applyColorChange()
+            end,
+        },
+        enableRaidWarnings = {
+            type = "toggle",
+            name = "Enable Raid Warnings",
+            desc = "Toggle Raid Warning Messages on or off.",
+            order = 6,
+            get = function() return IncDB.enableRaidWarnings end,
+            set = function(_, value)
+                IncDB.enableRaidWarnings = value
+                -- Function to toggle raid warnings
+            end,
+        },
+        raidWarningSound = {
+            type = "select",
+            name = "Raid Warning Sound",
+            desc = "Select the sound to play for Raid Warnings.",
+            order = 7,
+            values = soundOptions,
+            get = function() return IncDB.raidWarningSound end,
+            set = function(_, selectedValue)
+                IncDB.raidWarningSound = selectedValue
+                -- Play the sound here as a preview using SoundKit ID
+                if selectedValue and type(selectedValue) == "number" then
+                    PlaySound(selectedValue, "master")
+                end
+            end,
+        },
+        lockGUI = {
+            type = "toggle",
+            name = "Lock GUI Window",
+            desc = "Lock or unlock the GUI window's position.",
+            order = 8,
+            get = function() return IncDB.isLocked end,
+            set = function(_, value)
+                IncDB.isLocked = value
+                -- Function to lock or unlock the GUI window
+            end,
+        },
+    },
+},
+
         mapSettings = {
             type = "group",
             name = "Map Settings",
@@ -1090,7 +1135,8 @@ local function OnEvent(self, event, ...)
         isDBInitialized = true
         buttonMessageIndices.hmd = IncDB.hmdIndex or 1
         applyBorderChange()
-        applyColorChange()
+		applyColorChange()
+        
 
         if not IncDB.minimap then
             IncDB.minimap = {

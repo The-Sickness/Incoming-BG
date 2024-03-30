@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.3 - 10.2.6
+-- v5.6 - 10.2.6
 
 local addonName, addonNamespace = ...
 
@@ -41,12 +41,10 @@ local function ResizeWorldMap()
     -- Determine the scale to apply based on settings and context
     local scale = 1  
     if IncCalloutDB.settings.resizeInPvPOnly then
-       
         if isPvPEnvironment then
             scale = IncCalloutDB.settings.mapScale
         end
     else
-       
         scale = IncCalloutDB.settings.mapScale
     end
 
@@ -59,6 +57,17 @@ local function ResizeWorldMap()
     end
 end
 
+-- Initialize and register events
+local function InitializeMapFeatures()
+    local eventFrame = CreateFrame("Frame")
+    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+    eventFrame:SetScript("OnEvent", function(self, event, ...)
+        ResizeWorldMap()
+        
+    end)
+end
+
 WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
 WorldMapFrame:SetMovable(true)
 WorldMapFrame:EnableMouse(true)
@@ -66,23 +75,12 @@ WorldMapFrame:RegisterForDrag("LeftButton")
 WorldMapFrame:SetScript("OnDragStart", WorldMapFrame.StartMoving)
 WorldMapFrame:SetScript("OnDragStop", function()
     WorldMapFrame:StopMovingOrSizing()
-    SaveMapPosition() 
+    SaveMapPosition()
 end)
-
-local function InitializeMapFeatures()
-    local eventFrame = CreateFrame("Frame")
-  
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    eventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")  
-    
-    eventFrame:SetScript("OnEvent", function(self, event, ...)
-       
-        ResizeWorldMap()
-    end)
-end
 
 addonNamespace.ResizeWorldMap = ResizeWorldMap
 InitializeMapFeatures()
+
 
 
 

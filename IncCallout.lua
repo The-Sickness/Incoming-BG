@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.3 - 10.2.6
+-- v5.6 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -47,7 +47,6 @@ local defaults = {
  
 local buttonTexts = {}
 local buttons = {}
- 
 local playerFaction
  
 local buttonMessageIndices = {
@@ -256,6 +255,8 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
 
+
+
 local fontSize = 14
 
 -- Create a container frame for the Conquest Points label
@@ -414,7 +415,6 @@ local function ScaleGUI()
     end
 end
 
-
 local mapSizeOptions = {
     { name = "Very Small", value = 0.4 },
     { name = "Small", value = 0.5 },
@@ -557,43 +557,54 @@ previewHMD = {
     name = "Appearance Settings",
     order = 2,
     args = {
-        buttonColor = {
-            type = "color",
-            name = "Button Color",
-            desc = "Select the color of the buttons.",
-            order = 1,
-            hasAlpha = true,
-            get = function() return IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a end,
-            set = function(_, r, g, b, a)
-                IncDB.buttonColor = {r = r, g = g, b = b, a = a}
-                -- Function to apply button color changes
-            end,
-        },
         fontColor = {
-            type = "color",
-            name = "Font Color",
-            desc = "Select the color of the button text.",
-            order = 2,
-            hasAlpha = true,
-            get = function() return IncDB.fontColor.r, IncDB.fontColor.g, IncDB.fontColor.b, IncDB.fontColor.a end,
-            set = function(_, r, g, b, a)
-                IncDB.fontColor = {r = r, g = g, b = b, a = a}
-                -- Function to apply font color changes
-            end,
+                    type = "color",
+                                     name = "Button Font Color",
+                                     desc = "Set the color of the button text.",
+                                     order = 2,
+                                     hasAlpha = true, 
+                                     get = function()
+                                         local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+                                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                                      end,
+                                      set = function(_, r, g, b, a)
+                                          local color = {r = r, g = g, b = b, a = a}
+                                          IncDB.fontColor = color
+                                          for _, text in ipairs(buttonTexts) do
+                                             text:SetTextColor(r, g, b, a)
+                                       end
+                                     end                 
+                                    },
+                    buttonColor = {
+                                type = "color",
+                                name = "Button Color",
+                                desc = "Select the color of the buttons.",
+                                order = 3,
+                                hasAlpha = true, 
+                                get = function()
+                                    local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+                                    return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                                 end,
+                                 set = function(_, r, g, b, a)
+                                 local color = {r = r, g = g, b = b, a = a}
+                                 IncDB.buttonColor = color
+                                 applyButtonColor()
+                                 end,
         },
         scaleOption = {
-            type = "range",
-            name = "GUI Window Scale",
-            desc = "Adjust the scale of the GUI window.",
-            order = 3,
-            min = 0.5,
-            max = 2.0,
-            step = 0.05,
-            get = function() return IncDB.scale end,
-            set = function(_, value)
-                IncDB.scale = value
-                -- Function to apply GUI scale changes
-            end,
+                    type = "range",
+                    name = "GUI Window Scale",
+                    desc = "Adjust the scale of the GUI.",
+                    min = 0.5, 
+                    max = 2.0, 
+                    step = 0.05, 
+                    get = function()
+                    return IncDB.scale or 1 
+                 end,
+                   set = function(_, value)
+                   IncDB.scale = value
+                   ScaleGUI(value) 
+                end,
         },
         borderStyle = {
             type = "select",
@@ -683,7 +694,7 @@ previewHMD = {
             name = "Map Settings",
             order = 3,
             args = {
-                			mapSizeChoice = {
+                	mapSizeChoice = {
                     type = "select",
                     name = "Map Size",
                     desc = "Select the preferred size of the WorldMap.",
@@ -921,7 +932,6 @@ local healerButton = createButton(
     
 )
 
-
 local healsButton = createButton(
     "healsButton",
     70, 22,
@@ -1002,6 +1012,7 @@ IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:SetScript("OnEvent", function(self, event, ...)
     if event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         UpdatePoints()
+		ApplyFontSettings()
     end
 end)
 
@@ -1079,7 +1090,6 @@ local function AllClearButtonOnClick()
     ShowRaidWarning(message, 2)
 end
 
- 
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
     
@@ -1100,7 +1110,6 @@ local function SendMoreButtonOnClick()
     ShowRaidWarning(message, 2)
 end
 
- 
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
     
@@ -1127,6 +1136,26 @@ local function onChatMessage(message)
     end
 end
 
+local function ApplyFontSettings()
+    if not IncDB then return end
+
+    for _, text in ipairs(buttonTexts) do
+        text:SetFont(LSM:Fetch("font", IncDB.font), IncDB.fontSize)
+    end
+
+    if conquestPointsLabel then
+        local color = IncDB.conquestFontColor
+        conquestPointsLabel:SetFont(LSM:Fetch("font", IncDB.conquestFont), IncDB.conquestFontSize)
+        conquestPointsLabel:SetTextColor(color.r, color.g, color.b, color.a) -- Explicitly pass RGBA values
+    end
+
+    if honorPointsLabel then
+        local color = IncDB.honorFontColor
+        honorPointsLabel:SetFont(LSM:Fetch("font", IncDB.honorFont), IncDB.honorFontSize)
+        honorPointsLabel:SetTextColor(color.r, color.g, color.b, color.a) -- Explicitly pass RGBA values
+    end
+end
+
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
         db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
@@ -1136,7 +1165,7 @@ local function OnEvent(self, event, ...)
         buttonMessageIndices.hmd = IncDB.hmdIndex or 1
         applyBorderChange()
 		applyColorChange()
-        
+        ApplyFontSettings()
 
         if not IncDB.minimap then
             IncDB.minimap = {
@@ -1167,6 +1196,7 @@ local function OnEvent(self, event, ...)
         end
         UpdatePoints()
         ScaleGUI()
+		ApplyFontSettings()
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         UpdatePoints()

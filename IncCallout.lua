@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.6 - 10.2.6
+-- v5.7 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -30,21 +30,23 @@ local addon = AceAddon:NewAddon(addonName)
 local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
-        fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white 
+        fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white
         opacity = 1,
-		hmdIndex = 1,
-		scale = 1,
-		isLocked = false,
-		worldMapScale = 1,
+        hmdIndex = 1,
+        logoColor = {r = 1, g = 1, b = 1, a = 1}, -- Default logo color
+        scale = 1,
+        isLocked = false,
+        worldMapScale = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
         conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
         honorFont = "Friz Quadrata TT",
         honorFontSize = 14,
         honorFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
+        selectedLogo = "None", -- Default logo selection
     },
 }
- 
+
 local buttonTexts = {}
 local buttons = {}
 local playerFaction
@@ -255,7 +257,40 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
 
+-- Define available logos
+local logos = {
+    None = "",
+    BearClaw = "Interface\\AddOns\\IncCallout\\Textures\\BearClaw.png",
+    BreatheFire = "Interface\\AddOns\\IncCallout\\Textures\\BreatheFire.png",
+    Bloody = "Interface\\AddOns\\IncCallout\\Textures\\Bloody.png",
+    Impact = "Interface\\AddOns\\IncCallout\\Textures\\Impact.png",
+    Shock = "Interface\\AddOns\\IncCallout\\Textures\\Shock.png",
+    Rifle = "Interface\\AddOns\\IncCallout\\Textures\\Rifle.png",
+    Condiment = "Interface\\AddOns\\IncCallout\\Textures\\Condiment.png",
+    Duplex = "Interface\\AddOns\\IncCallout\\Textures\\Duplex.png",
+    Eraser = "Interface\\AddOns\\IncCallout\\Textures\\Eraser.png",
+    Ogre = "Interface\\AddOns\\IncCallout\\Textures\\Ogre.png",
+}
 
+-- Initial logo setup
+local logo = IncCallout:CreateTexture(nil, "ARTWORK")
+logo:SetSize(180, 30)
+logo:SetPoint("TOP", IncCallout, "TOP", -5, 30)
+logo:SetTexture(logos.BearClaw) -- Default logo
+
+function IncCallout:SetLogo(selectedLogo)
+    if selectedLogo == "None" then
+        logo:Hide()  
+    else
+        local path = logos[selectedLogo]
+        if path then
+            logo:SetTexture(path)
+            logo:Show()
+        else
+            print("Logo path not found for:", selectedLogo)
+        end
+    end
+end
 
 local fontSize = 14
 
@@ -335,7 +370,6 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
         end
     end)
     
-    -- Updated OnClick script
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
             if useCustomSound then
@@ -517,7 +551,7 @@ previewAllClear = {
     name = "Buff Request Message",
     desc = "Select the message for the 'Request Buffs' button",
     values = buttonMessages.buffRequest,
-    get = function() return buttonMessageIndices.buffRequest end,
+    get = function() return IncDB.buffRequestIndex end,
     set = function(_, newValue)
         buttonMessageIndices.buffRequest = newValue
         IncDB.buffRequestIndex = newValue
@@ -536,7 +570,7 @@ hmd = {
     name = "H.M.D. Message",
     desc = "Select the message for the 'H.M.D.' button",
     values = buttonMessages.hmd,
-    get = function() return buttonMessageIndices.hmd end,
+    get = function() return IncDB.hmdIndex end,
     set = function(_, newValue)
         buttonMessageIndices.hmd = newValue
         IncDB.hmdIndex = newValue
@@ -548,7 +582,7 @@ previewHMD = {
     type = "description",
     name = function() return addonNamespace.getPreviewText("hmd") end,
     fontSize = "medium",
-    order = 5.1, -- Place it after your last message selection option
+    order = 5.1, 
                 },
             },
         },
@@ -558,28 +592,28 @@ previewHMD = {
     order = 2,
     args = {
         fontColor = {
-                    type = "color",
-                                     name = "Button Font Color",
-                                     desc = "Set the color of the button text.",
-                                     order = 2,
-                                     hasAlpha = true, 
-                                     get = function()
-                                         local currentColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                                      end,
-                                      set = function(_, r, g, b, a)
-                                          local color = {r = r, g = g, b = b, a = a}
-                                          IncDB.fontColor = color
-                                          for _, text in ipairs(buttonTexts) do
-                                             text:SetTextColor(r, g, b, a)
-                                       end
-                                     end                 
+    type = "color",
+    name = "Button Font Color",
+    desc = "Set the color of the button text.",
+    hasAlpha = true,
+    get = function()
+        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- default white
+        return color.r, color.g, color.b, color.a
+    end,
+    set = function(_, r, g, b, a)
+        IncDB.fontColor = {r = r, g = g, b = b, a = a}
+        -- Apply the color immediately
+        for _, buttonText in ipairs(buttonTexts) do
+            buttonText:SetTextColor(r, g, b, a)
+        end
+    end, 
+    order = 1, 	
                                     },
                     buttonColor = {
                                 type = "color",
                                 name = "Button Color",
                                 desc = "Select the color of the buttons.",
-                                order = 3,
+                                order = 2,
                                 hasAlpha = true, 
                                 get = function()
                                     local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
@@ -611,7 +645,7 @@ previewHMD = {
             name = "Border Style",
             desc = "Select the border style for the frame.",
             style = "dropdown",
-            order = 4,
+            order = 3,
             values = function()
                 local values = {}
                 for i, option in ipairs(borderOptions) do
@@ -633,7 +667,7 @@ previewHMD = {
             name = "Backdrop Color",
             desc = "Select the backdrop color and transparency for the frame.",
             style = "dropdown",
-            order = 5,
+            order = 4,
             values = function()
                 local values = {}
                 for i, option in ipairs(colorOptions) do
@@ -653,7 +687,7 @@ previewHMD = {
             type = "toggle",
             name = "Enable Raid Warnings",
             desc = "Toggle Raid Warning Messages on or off.",
-            order = 6,
+            order = 5,
             get = function() return IncDB.enableRaidWarnings end,
             set = function(_, value)
                 IncDB.enableRaidWarnings = value
@@ -664,7 +698,7 @@ previewHMD = {
             type = "select",
             name = "Raid Warning Sound",
             desc = "Select the sound to play for Raid Warnings.",
-            order = 7,
+            order = 6,
             values = soundOptions,
             get = function() return IncDB.raidWarningSound end,
             set = function(_, selectedValue)
@@ -679,12 +713,54 @@ previewHMD = {
             type = "toggle",
             name = "Lock GUI Window",
             desc = "Lock or unlock the GUI window's position.",
-            order = 8,
+            order = 7,
             get = function() return IncDB.isLocked end,
             set = function(_, value)
                 IncDB.isLocked = value
                 -- Function to lock or unlock the GUI window
             end,
+			},
+			logoSelection = {
+    type = "select",
+    name = "Logo Selection",
+    desc = "Choose a logo to display at the top of the frame.",
+    style = "dropdown",
+    order = 8,
+    values = {
+        ["None"] = "None",
+        ["BearClaw"] = "BearClaw",
+        ["BreatheFire"] = "BreatheFire",
+        ["Bloody"] = "Bloody",
+        ["Impact"] = "Impact",
+        ["Shock"] = "Shock",
+        ["Rifle"] = "Rifle",
+        ["Condiment"] = "Condiment",
+        ["Duplex"] = "Duplex",
+        ["Eraser"] = "Eraser",
+        ["Ogre"] = "Ogre",
+        
+    },
+    get = function(info) return IncDB.selectedLogo end,
+    set = function(info, value)
+        IncDB.selectedLogo = value
+        IncCallout:SetLogo(value)  
+    end,
+	},
+	logoColor = {
+    type = "color",
+    name = "Logo Color",
+    desc = "Set the color of the title logo.",
+    hasAlpha = true, 
+    get = function(info)
+        local color = IncDB.logoColor or {1, 1, 1, 1} -- Default to white if not set
+        return color.r, color.g, color.b, color.a
+    end,
+    set = function(info, r, g, b, a)
+        IncDB.logoColor = {r = r, g = g, b = b, a = a}
+        
+        logo:SetVertexColor(r, g, b, a)
+    end,
+    order = 9, 
         },
     },
 },
@@ -916,7 +992,6 @@ local function ListHealers()
     end
 end
 
--- For the Healer button, you likely want to play the custom sound
 local healerButton = createButton(
     "healerButton",
     70, 22,
@@ -924,7 +999,7 @@ local healerButton = createButton(
     {"BOTTOMLEFT", IncCallout, "BOTTOMLEFT"},
     0, -27,
     function(self, button)
-        -- Ensure the default sound plays
+       
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
         
         ListHealers()
@@ -948,7 +1023,16 @@ local healsButton = createButton(
 local function HMDButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.hmd[buttonMessageIndices.hmd]
-    SendChatMessage(message, "INSTANCE_CHAT")  
+       
+    local isInInstance, instanceType = IsInInstance()
+    
+    if isInInstance then
+       
+        local chatType = IsInRaid(LE_PARTY_CATEGORY_INSTANCE) and "RAID" or "PARTY"
+        SendChatMessage(message, chatType)
+    else
+        print("You're not in an instance group.")
+    end
 end
 
 healsButton:SetScript("OnClick", HMDButtonOnClick)
@@ -1139,55 +1223,65 @@ end
 local function ApplyFontSettings()
     if not IncDB then return end
 
+    IncDB.font = IncDB.font or "Friz Quadrata TT"  
+    IncDB.fontSize = IncDB.fontSize or 14  -- Default font size
+
+    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT  -- Fallback to a default font if nil
+    local fontSize = IncDB.fontSize
+
     for _, text in ipairs(buttonTexts) do
-        text:SetFont(LSM:Fetch("font", IncDB.font), IncDB.fontSize)
+        if fontPath and fontSize then
+            text:SetFont(fontPath, fontSize)
+        end
     end
 
-    if conquestPointsLabel then
-        local color = IncDB.conquestFontColor
-        conquestPointsLabel:SetFont(LSM:Fetch("font", IncDB.conquestFont), IncDB.conquestFontSize)
-        conquestPointsLabel:SetTextColor(color.r, color.g, color.b, color.a) -- Explicitly pass RGBA values
+    -- Check for valid conquest and honor font settings
+    local conquestFontPath = LSM:Fetch("font", IncDB.conquestFont) or STANDARD_TEXT_FONT
+    local honorFontPath = LSM:Fetch("font", IncDB.honorFont) or STANDARD_TEXT_FONT
+
+    if conquestPointsLabel and conquestFontPath and IncDB.conquestFontSize then
+        conquestPointsLabel:SetFont(conquestFontPath, IncDB.conquestFontSize)
+        conquestPointsLabel:SetTextColor(IncDB.conquestFontColor.r, IncDB.conquestFontColor.g, IncDB.conquestFontColor.b, IncDB.conquestFontColor.a)
     end
 
-    if honorPointsLabel then
-        local color = IncDB.honorFontColor
-        honorPointsLabel:SetFont(LSM:Fetch("font", IncDB.honorFont), IncDB.honorFontSize)
-        honorPointsLabel:SetTextColor(color.r, color.g, color.b, color.a) -- Explicitly pass RGBA values
+    if honorPointsLabel and honorFontPath and IncDB.honorFontSize then
+        honorPointsLabel:SetFont(honorFontPath, IncDB.honorFontSize)
+        honorPointsLabel:SetTextColor(IncDB.honorFontColor.r, IncDB.honorFontColor.g, IncDB.honorFontColor.b, IncDB.honorFontColor.a)
     end
 end
 
-local function OnEvent(self, event, ...)
-    if event == "PLAYER_LOGIN" then
-        db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
+local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
+    if event == "ADDON_LOADED" and arg1 == "IncCallout" then
+        db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
         IncDB = db.profile
-        playerFaction = UnitFactionGroup("player")
-        isDBInitialized = true
-        buttonMessageIndices.hmd = IncDB.hmdIndex or 1
+
+        if IncCallout.SetLogo then
+            IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw")
+        end
+
+        if IncDB.logoColor then
+            local color = IncDB.logoColor
+            logo:SetVertexColor(color.r, color.g, color.b, color.a)
+        end
+
+        if IncDB.fontColor then
+            local color = IncDB.fontColor
+            for _, buttonText in ipairs(buttonTexts) do
+                buttonText:SetTextColor(color.r, color.g, color.b, color.a)
+            end
+        end
+
         applyBorderChange()
-		applyColorChange()
+        applyColorChange()
         ApplyFontSettings()
 
         if not IncDB.minimap then
-            IncDB.minimap = {
-                hide = false,
-                minimapPos = 45,
-            }
+            IncDB.minimap = { hide = false, minimapPos = 45 }
         end
-
-        buttonMessageIndices.sendMore = IncDB.sendMoreIndex or 1
-        buttonMessageIndices.inc = IncDB.incIndex or 1
-        buttonMessageIndices.allClear = IncDB.allClearIndex or 1
-        buttonMessageIndices.buffRequest = IncDB.buffRequestIndex or 1
-
-        bgTexture:SetAlpha(IncDB.opacity or 1)
-
-        applyButtonColor()
 
         icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
 
-        UpdatePoints()
-
-    elseif event == "PLAYER_ENTERING_WORLD" then
+    elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
             IncCallout:Show()
@@ -1196,29 +1290,48 @@ local function OnEvent(self, event, ...)
         end
         UpdatePoints()
         ScaleGUI()
-		ApplyFontSettings()
+        ApplyFontSettings()
+        applyButtonColor()
+
+    elseif event == "PLAYER_LEAVING_WORLD" then
+        IncCallout:Hide()
+        applyButtonColor() 
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         UpdatePoints()
 
     elseif event == "CHAT_MSG_INSTANCE_CHAT" then
-        local message = ...
+        local message = arg1
         onChatMessage(message)
     end
 end
 
+-- Register the function to the frame and events
+IncCallout:SetScript("OnEvent", OnEvent)
+IncCallout:RegisterEvent("ADDON_LOADED")
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
+IncCallout:RegisterEvent("PLAYER_LEAVING_WORLD")  
 IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
-IncCallout:SetScript("OnEvent", OnEvent)
 
--- Buff Request Button OnClick Function
+
 local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
-    SendChatMessage(message, "INSTANCE_CHAT")  
+  
+    local chatType
+    if IsInRaid() then
+        chatType = "RAID"
+    elseif IsInGroup() then
+        chatType = "PARTY"
+    else
+        print("You're not in a group.")
+        return 
+    end
+
+    SendChatMessage(message, chatType)
 end
 
 -- Create the buttons

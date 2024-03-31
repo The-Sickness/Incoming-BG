@@ -1,0 +1,22 @@
+3/30/24:
+Dynamic Color Customization for UI Elements:
+
+Introduced functionality allowing users to dynamically change the color of the addon's title logo through user settings. This involved manipulating the SetVertexColor method to adjust the RGBA values based on user preferences stored in an AceDB profile.
+Error Handling in Automated Chat Messaging:
+
+Resolved Lua errors encountered when attempting to use SendChatMessage by ensuring the addon checks for proper group and instance context. This was achieved by verifying the player's group status and instance type before executing chat commands, preventing errors related to invalid message channels.
+Persistent UI Settings Across Sessions:
+
+Addressed issues with UI elements (buttons, text) not retaining their customized settings after a UI reload or relog. This involved correctly saving user preferences to the AceDB profile and applying these settings through event handlers triggered by the ADDON_LOADED and PLAYER_LOGIN events.
+Enhanced User Customization Options:
+
+Expanded the addon's customization capabilities to include not only the logo color but also the text and button colors. Implemented AceConfig options for these settings, providing a GUI interface for user adjustments. Additionally, provided an option to hide the logo for users preferring a minimalistic design.
+Context-Sensitive UI Visibility:
+
+Refined the logic for showing or hiding the addon UI based on the player's current environment, particularly focusing on PvP instances. Leveraged the IsInInstance API call to determine the addon's visibility state, ensuring it aligns with the player's presence in PvP or PvE content.
+Code Optimization and Streamlining:
+
+Performed code refactoring to remove redundant or obsolete code paths, optimizing event handling and state management. This involved consolidating event listeners and streamlining the execution flow to reduce overhead and improve performance.
+Bug Fixes and Error Resolution:
+
+Conducted thorough debugging to identify and resolve various issues affecting the addon's functionality and user experience. This included addressing Lua errors, fixing logical errors in event handling, and ensuring consistent application of user preferences.

@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.7 - 10.2.6
+-- v5.8 - 10.2.6
 
 local addonName, addonNamespace = ...
 

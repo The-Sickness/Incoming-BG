@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.7 - 10.2.6
+-- v5.8 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -21,7 +21,6 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
 local addonName, addonNamespace = ...
-addonNamespace = addonNamespace or {} 
 IncDB = IncDB or {}
 
 local IncDB, db 
@@ -33,6 +32,9 @@ local defaults = {
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white
         opacity = 1,
         hmdIndex = 1,
+		sendMoreIndex = 1,
+        incIndex = 1,
+        allClearIndex = 1,
         logoColor = {r = 1, g = 1, b = 1, a = 1}, -- Default logo color
         scale = 1,
         isLocked = false,
@@ -270,6 +272,16 @@ local logos = {
     Duplex = "Interface\\AddOns\\IncCallout\\Textures\\Duplex.png",
     Eraser = "Interface\\AddOns\\IncCallout\\Textures\\Eraser.png",
     Ogre = "Interface\\AddOns\\IncCallout\\Textures\\Ogre.png",
+	Seagram = "Interface\\AddOns\\IncCallout\\Textures\\Seagram.png",
+	SuperSunday = "Interface\\AddOns\\IncCallout\\Textures\\SuperSunday.png",
+	Minion = "Interface\\AddOns\\IncCallout\\Textures\\Minion.png",
+	Fire = "Interface\\AddOns\\IncCallout\\Textures\\Fire.png",
+	GOW = "Interface\\AddOns\\IncCallout\\Textures\\GOW.png",
+	Maiden = "Interface\\AddOns\\IncCallout\\Textures\\Maiden.png",
+	Metal = "Interface\\AddOns\\IncCallout\\Textures\\Metal.png",
+	Alligator = "Interface\\AddOns\\IncCallout\\Textures\\Alligator.png",
+	SourceCode = "Interface\\AddOns\\IncCallout\\Textures\\SourceCode.png",
+	InkFree = "Interface\\AddOns\\IncCallout\\Textures\\InkFree.png",
 }
 
 -- Initial logo setup
@@ -494,10 +506,9 @@ local options = {
     name = "Send More Message",
     desc = "Select the message for the 'Send More' button",
     values = buttonMessages.sendMore,
-    get = function() return buttonMessageIndices.sendMore end,
+    get = function() return IncDB.sendMoreIndex end,  -- Directly use IncDB to get the current value
     set = function(_, newValue)
-        buttonMessageIndices.sendMore = newValue
-        IncDB.sendMoreIndex = newValue
+        IncDB.sendMoreIndex = newValue  -- Directly use IncDB to save the new value
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 1,
@@ -513,10 +524,9 @@ inc = {
     name = "INC Message",
     desc = "Select the message for the 'INC' button",
     values = buttonMessages.inc,
-    get = function() return buttonMessageIndices.inc end,
+    get = function() return IncDB.incIndex end,  -- Directly use IncDB to get the current value
     set = function(_, newValue)
-        buttonMessageIndices.inc = newValue
-        IncDB.incIndex = newValue
+        IncDB.incIndex = newValue  -- Directly use IncDB to save the new value
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 2,
@@ -532,10 +542,9 @@ allClear = {
     name = "All Clear Message",
     desc = "Select the message for the 'All Clear' button",
     values = buttonMessages.allClear,
-    get = function() return buttonMessageIndices.allClear end,
+    get = function() return IncDB.allClearIndex end,  -- Directly use IncDB to get the current value
     set = function(_, newValue)
-        buttonMessageIndices.allClear = newValue
-        IncDB.allClearIndex = newValue
+        IncDB.allClearIndex = newValue  -- Directly use IncDB to save the new value
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 3,
@@ -738,7 +747,16 @@ previewHMD = {
         ["Duplex"] = "Duplex",
         ["Eraser"] = "Eraser",
         ["Ogre"] = "Ogre",
-        
+        ["Seagram"] = "Seagram",
+		["SuperSunday"] = "SuperSunday",
+		["Minion"] = "Minion",
+		["Alligator"] = "Alligator",
+		["Fire"] = "Fire",
+		["GOW"] = "GOW",
+		["Maiden"] = "Maiden",
+		["Metal"] = "Metal",
+		["SourceCode"] = "SourceCode",
+		["InkFree"] = "InkFree",
     },
     get = function(info) return IncDB.selectedLogo end,
     set = function(info, value)
@@ -944,19 +962,21 @@ configPanel.default = function()
 end
 
 function addonNamespace.getPreviewText(messageType)
-    local previewText = "|cff00ff00[Incoming-BG] " 
-    if messageType == "sendMore" and buttonMessageIndices.sendMore and buttonMessages.sendMore[buttonMessageIndices.sendMore] then
-        previewText = previewText .. buttonMessages.sendMore[buttonMessageIndices.sendMore]
-    elseif messageType == "inc" and buttonMessageIndices.inc and buttonMessages.inc[buttonMessageIndices.inc] then
-        previewText = previewText .. buttonMessages.inc[buttonMessageIndices.inc]
-    elseif messageType == "allClear" and buttonMessageIndices.allClear and buttonMessages.allClear[buttonMessageIndices.allClear] then
-        previewText = previewText .. buttonMessages.allClear[buttonMessageIndices.allClear]
-    elseif messageType == "buffRequest" and buttonMessageIndices.buffRequest and buttonMessages.buffRequest[buttonMessageIndices.buffRequest] then
-        previewText = previewText .. buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
-    elseif messageType == "hmd" and buttonMessageIndices.hmd and buttonMessages.hmd[buttonMessageIndices.hmd] then
-        previewText = previewText .. buttonMessages.hmd[buttonMessageIndices.hmd]
+    local previewText = "|cff00ff00[Incoming-BG] "
+
+    if messageType == "sendMore" and IncDB.sendMoreIndex and buttonMessages.sendMore[IncDB.sendMoreIndex] then
+        previewText = previewText .. buttonMessages.sendMore[IncDB.sendMoreIndex]
+    elseif messageType == "inc" and IncDB.incIndex and buttonMessages.inc[IncDB.incIndex] then
+        previewText = previewText .. buttonMessages.inc[IncDB.incIndex]
+    elseif messageType == "allClear" and IncDB.allClearIndex and buttonMessages.allClear[IncDB.allClearIndex] then
+        previewText = previewText .. buttonMessages.allClear[IncDB.allClearIndex]
+    elseif messageType == "buffRequest" and IncDB.buffRequestIndex and buttonMessages.buffRequest[IncDB.buffRequestIndex] then
+        previewText = previewText .. buttonMessages.buffRequest[IncDB.buffRequestIndex]
+    elseif messageType == "hmd" and IncDB.hmdIndex and buttonMessages.hmd[IncDB.hmdIndex] then
+        previewText = previewText .. buttonMessages.hmd[IncDB.hmdIndex]
     end
-    return previewText .. "|r" -- End color
+
+    return previewText .. "|r"  
 end
 
 local function ListHealers()
@@ -1252,8 +1272,19 @@ end
 
 local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
+        -- Ensure db and IncDB are initialized properly
         db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
-        IncDB = db.profile
+        IncDB = db.profile or {}
+        
+        -- Initialize IncDB if it doesn't exist
+        if not IncDB then
+            IncDB = {
+                -- Set your default values here
+                buttonColor = {r = 1, g = 0, b = 0, a = 1},
+                fontColor = {r = 1, g = 1, b = 1, a = 1},
+                -- Add other default settings as needed
+            }
+        end
 
         if IncCallout.SetLogo then
             IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw")
@@ -1295,7 +1326,7 @@ local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, ar
 
     elseif event == "PLAYER_LEAVING_WORLD" then
         IncCallout:Hide()
-        applyButtonColor() 
+        applyButtonColor()
 
     elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
         UpdatePoints()
@@ -1315,7 +1346,6 @@ IncCallout:RegisterEvent("PLAYER_LEAVING_WORLD")
 IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
-
 
 local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)

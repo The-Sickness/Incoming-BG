@@ -1,3 +1,33 @@
+4/6/24:
+Event Handling Improvements:
+
+Enhanced the addon's initialization and event response mechanisms.
+Unified event registration and handling for seamless startup and operation.
+Extended support for key game events including ADDON_LOADED, PLAYER_LOGIN, PLAYER_ENTERING_WORLD, PLAYER_LEAVING_WORLD, CURRENCY_DISPLAY_UPDATE, HONOR_XP_UPDATE, and CHAT_MSG_INSTANCE_CHAT.
+
+Configuration Persistence:
+
+Introduced persistent storage for button message settings across sessions.
+Implemented AceDB library integration for efficient data management and storage.
+Adjusted the options table to utilize IncDB for storing user preferences on messages like "Send More", "INC", and "All Clear".
+
+User Interface Enhancements:
+
+Refined the GUI for improved user interaction, with dynamic scaling and layout adjustments.
+Added functionality for customizable button texts and colors through the interface options.
+Improved visual feedback and configurability for raid warnings and sound notifications.
+
+Additional Features and Fixes:
+
+Addressed issues with message settings not saving correctly across sessions.
+Streamlined the logic for displaying custom raid warning messages.
+Enhanced the logic for button click events to ensure proper message broadcasting and sound playback.
+
+Miscellaneous:
+
+Code optimization for better performance and memory usage.
+Minor bug fixes and stability improvements.
+
 3/30/24:
 Dynamic Color Customization for UI Elements:
 

@@ -20,9 +20,6 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 
-local addonName = "Incoming-BG"
-local addon = LibStub("AceAddon-3.0"):NewAddon(addonName, "AceConsole-3.0", "AceEvent-3.0")
-
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
 
@@ -76,43 +73,105 @@ customRaidWarningFrame.text:SetJustifyV("MIDDLE")
 
 customRaidWarningFrame:Hide() 
 
+local CONQUEST_CURRENCY_ID = 1602
+local HONOR_CURRENCY_ID = 1792
+
+local UpdatePvPStatsFrame
+local UpdateConquestCap
+
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
-pvpStatsFrame:SetSize(220, 200)  
+pvpStatsFrame:SetSize(220, 180)  -- Adjusted height
 pvpStatsFrame:SetPoint("CENTER") 
 pvpStatsFrame:SetMovable(true)
 pvpStatsFrame:EnableMouse(true)
 pvpStatsFrame:RegisterForDrag("LeftButton")
 pvpStatsFrame:SetScript("OnDragStart", pvpStatsFrame.StartMoving)
 pvpStatsFrame:SetScript("OnDragStop", pvpStatsFrame.StopMovingOrSizing)
-pvpStatsFrame:Hide()  
+pvpStatsFrame:Hide() 
+
+pvpStatsFrame:SetScript("OnShow", function()
+    UpdatePvPStatsFrame()
+    
+end)
+
+-- Initialize UI elements
+pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY")
+pvpStatsFrame.title:SetFontObject("GameFontHighlight")
+pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -5)
+pvpStatsFrame.title:SetText("PVP Stats")
+
+function UpdatePvPStatsFrame()
+    -- Get currency info for Conquest and Honor Points
+    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
+    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+
+    -- Safely extract the values with default fallbacks
+    local conquestPoints = conquestInfo and conquestInfo.quantity or 0
+    local honorPoints = honorInfo and honorInfo.quantity or 0
+    local honorLevel = UnitHonorLevel("player") or 0  -- Adding fallback for honor level
+    local lifetimeHonorableKills, _ = GetPVPLifetimeStats()  -- Assuming this API call is correct and you handle the possible returns appropriately
+
+    -- Set the text for the UI elements
+    pvpStatsFrame.conquestValue:SetText(conquestPoints)
+    pvpStatsFrame.honorValue:SetText(honorPoints)
+    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
+end
 
 -- Title for the PVP Stats window
 pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY")
 pvpStatsFrame.title:SetFontObject("GameFontHighlight")
-pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -10)
+pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -5)
 pvpStatsFrame.title:SetText("PVP Stats")
 
-pvpStatsFrame.honorableKillsText = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorableKillsText:SetPoint("TOPLEFT", pvpStatsFrame, "TOPLEFT", 10, -40)  
-pvpStatsFrame.honorableKillsText:SetText("Lifetime Honorable Kills: ")
+-- Create labels with green color
+pvpStatsFrame.honorableKillsLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.honorableKillsLabel:SetPoint("TOPLEFT", pvpStatsFrame, "TOPLEFT", 10, -40)
+pvpStatsFrame.honorableKillsLabel:SetText("Lifetime Honorable Kills: ")
+pvpStatsFrame.honorableKillsLabel:SetTextColor(0, 1, 0)  -- Green color
 
+-- Create values in gold color
+pvpStatsFrame.honorableKillsValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.honorableKillsValue:SetPoint("LEFT", pvpStatsFrame.honorableKillsLabel, "RIGHT", 0, 0)
+pvpStatsFrame.honorableKillsValue:SetTextColor(1, 0.84, 0)  -- Gold color
 
-pvpStatsFrame.maxPVPRankText = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.maxPVPRankText:SetPoint("TOPLEFT", pvpStatsFrame.honorableKillsText, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.maxPVPRankText:SetText("Lifetime Max PvP Rank: ")
+-- Repeat for Conquest Points
+pvpStatsFrame.conquestLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.conquestLabel:SetPoint("TOPLEFT", pvpStatsFrame.honorableKillsLabel, "BOTTOMLEFT", 0, -10)
+pvpStatsFrame.conquestLabel:SetText("Conquest Points: ")
+pvpStatsFrame.conquestLabel:SetTextColor(0, 1, 0)  -- Green color
 
-pvpStatsFrame.conquestText = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.conquestText:SetPoint("TOPLEFT", pvpStatsFrame.maxPVPRankText, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.conquestText:SetText("Conquest Points: ")
+pvpStatsFrame.conquestValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.conquestValue:SetPoint("LEFT", pvpStatsFrame.conquestLabel, "RIGHT", 0, 0)
+pvpStatsFrame.conquestValue:SetTextColor(1, 0.84, 0)  -- Gold color
 
-pvpStatsFrame.honorText = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorText:SetPoint("TOPLEFT", pvpStatsFrame.conquestText, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.honorText:SetText("Honor Points: ")
+-- Repeat for Honor Points
+pvpStatsFrame.honorLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.honorLabel:SetPoint("TOPLEFT", pvpStatsFrame.conquestLabel, "BOTTOMLEFT", 0, -10)
+pvpStatsFrame.honorLabel:SetText("Honor Points: ")
+pvpStatsFrame.honorLabel:SetTextColor(0, 1, 0)  -- Green color
 
-pvpStatsFrame.honorLevelText = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorLevelText:SetPoint("TOPLEFT", pvpStatsFrame.honorText, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.honorLevelText:SetText("Honor Level: ")
+pvpStatsFrame.honorValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.honorValue:SetPoint("LEFT", pvpStatsFrame.honorLabel, "RIGHT", 0, 0)
+pvpStatsFrame.honorValue:SetTextColor(1, 0.84, 0)  -- Gold color
+
+-- Honor Level with green label and gold value
+pvpStatsFrame.honorLevelLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.honorLevelLabel:SetPoint("TOPLEFT", pvpStatsFrame.honorLabel, "BOTTOMLEFT", 0, -10)
+pvpStatsFrame.honorLevelLabel:SetText("Honor Level: ")
+pvpStatsFrame.honorLevelLabel:SetTextColor(0, 1, 0)  -- Green color
+
+pvpStatsFrame.honorLevelValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+pvpStatsFrame.honorLevelValue:SetPoint("LEFT", pvpStatsFrame.honorLevelLabel, "RIGHT", 0, 0)
+pvpStatsFrame.honorLevelValue:SetTextColor(1, 0.84, 0)  -- Gold color
+
+pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")  -- Ensure updates when player logs in or zones
+
+pvpStatsFrame:SetScript("OnShow", function()
+    UpdatePvPStatsFrame()
+    
+end)
 
 local function ShowRaidWarning(message, duration)
    
@@ -263,30 +322,30 @@ local buttonMessages = {
         
     },
     buffRequest = {
-    "Need buffs please!",
-    "Buff up, team!",
-    "Could use some buffs here!",
-    "Calling for all buffs, let's gear up!",
-    "Looking for that magical boost, buffs needed!",
-    "Time to get enchanted, where are those buffs?",
-    "Let’s get buffed for the battle ahead!",
-    "Buffs are our best friends, let’s have them!",
-    "Ready for buffs, let's enhance our strength!",
-    "Buffs needed for extra might and magic!",
-    "Gimme some buffs, let’s not fall behind!"
+    "[Incoming-BG] Need buffs please!",
+    "[Incoming-BG] Buff up, team!",
+    "[Incoming-BG] Could use some buffs here!",
+    "[Incoming-BG] Calling for all buffs, let's gear up!",
+    "[Incoming-BG] Looking for that magical boost, buffs needed!",
+    "[Incoming-BG] Time to get enchanted, where are those buffs?",
+    "[Incoming-BG] Let’s get buffed for the battle ahead!",
+    "[Incoming-BG] Buffs are our best friends, let’s have them!",
+    "[Incoming-BG] Ready for buffs, let's enhance our strength!",
+    "[Incoming-BG] Buffs needed for extra might and magic!",
+    "[Incoming-BG] Gimme some buffs, let’s not fall behind!"
     
 	},
 	hmd = {
-    "Focus healers!",
-    "Take down healers!",
-    "Target healers to win!",
-    "Healers must die!",
-    "Eliminate healers fast!",
-    "Healers top priority!",
-    "Attack healers!",
-    "Healers spotted, engage!",
-    "Priority: healers!",
-    "Remove healers for win!"
+    "[Incoming-BG] Focus healers!",
+    "[Incoming-BG] Take down healers!",
+    "[Incoming-BG] Target healers to win!",
+    "[Incoming-BG] Healers must die!",
+    "[Incoming-BG] Eliminate healers fast!",
+    "[Incoming-BG] Healers top priority!",
+    "[Incoming-BG] Attack healers!",
+    "[Incoming-BG] Healers spotted, engage!",
+    "[Incoming-BG] Priority: healers!",
+    "[Incoming-BG] Remove healers for win!"
     
    }
  } 
@@ -468,7 +527,7 @@ local function ScaleGUI()
     IncCallout:SetScale(scaleFactor);
     
     local adjustedFontSize = math.floor(fontSize * scaleFactor);
-        
+      
     for _, buttonText in ipairs(buttonTexts) do
         buttonText:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
     end
@@ -519,9 +578,9 @@ local options = {
     name = "Send More Message",
     desc = "Select the message for the 'Send More' button",
     values = buttonMessages.sendMore,
-    get = function() return IncDB.sendMoreIndex end,  
+    get = function() return IncDB.sendMoreIndex end,  -- Directly use IncDB to get the current value
     set = function(_, newValue)
-        IncDB.sendMoreIndex = newValue  
+        IncDB.sendMoreIndex = newValue  -- Directly use IncDB to save the new value
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 1,
@@ -537,9 +596,9 @@ inc = {
     name = "INC Message",
     desc = "Select the message for the 'INC' button",
     values = buttonMessages.inc,
-    get = function() return IncDB.incIndex end,  
+    get = function() return IncDB.incIndex end,  -- Directly use IncDB to get the current value
     set = function(_, newValue)
-        IncDB.incIndex = newValue  
+        IncDB.incIndex = newValue  -- Directly use IncDB to save the new value
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 2,
@@ -555,9 +614,9 @@ allClear = {
     name = "All Clear Message",
     desc = "Select the message for the 'All Clear' button",
     values = buttonMessages.allClear,
-    get = function() return IncDB.allClearIndex end,  
+    get = function() return IncDB.allClearIndex end,  -- Directly use IncDB to get the current value
     set = function(_, newValue)
-        IncDB.allClearIndex = newValue  
+        IncDB.allClearIndex = newValue  -- Directly use IncDB to save the new value
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 3,
@@ -624,6 +683,7 @@ previewHMD = {
     end,
     set = function(_, r, g, b, a)
         IncDB.fontColor = {r = r, g = g, b = b, a = a}
+        -- Apply the color immediately
         for _, buttonText in ipairs(buttonTexts) do
             buttonText:SetTextColor(r, g, b, a)
         end
@@ -712,7 +772,7 @@ previewHMD = {
             get = function() return IncDB.enableRaidWarnings end,
             set = function(_, value)
                 IncDB.enableRaidWarnings = value
-                
+                -- Function to toggle raid warnings
             end,
         },
         raidWarningSound = {
@@ -724,7 +784,7 @@ previewHMD = {
             get = function() return IncDB.raidWarningSound end,
             set = function(_, selectedValue)
                 IncDB.raidWarningSound = selectedValue
-                
+                -- Play the sound here as a preview using SoundKit ID
                 if selectedValue and type(selectedValue) == "number" then
                     PlaySound(selectedValue, "master")
                 end
@@ -738,7 +798,7 @@ previewHMD = {
             get = function() return IncDB.isLocked end,
             set = function(_, value)
                 IncDB.isLocked = value
-                
+                -- Function to lock or unlock the GUI window
             end,
 			},
 			logoSelection = {
@@ -873,15 +933,93 @@ previewHMD = {
                         end
                     end,
                     order = 2,
-                
-                
+                },
+                conquestFont = {
+                    type = "select",
+                    name = "Conquest Font",
+                    desc = "Select the font for Conquest Points",
+                    dialogControl = "LSM30_Font",
+                    values = LSM:HashTable("font"),
+                    get = function() return IncDB.conquestFont end,
+                    set = function(_, newValue)
+                        IncDB.conquestFont = newValue
+                        conquestPointsLabel:SetFont(LSM:Fetch("font", newValue), IncDB.conquestFontSize)
+                    end,
+                    order = 3,
+                },
+                conquestFontColor = {
+                    type = "color",
+                    name = "Conquest Font Color",
+                    desc = "Select the color for Conquest Points font",
+                    hasAlpha = true,
+                    get = function()
+                        local color = IncDB.conquestFontColor
+                        return color.r, color.g, color.b, color.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        IncDB.conquestFontColor = { r = r, g = g, b = b, a = a }
+                        conquestPointsLabel:SetTextColor(r, g, b, a)
+                    end,
+                    order = 4,
+                },
+                honorFont = {
+                    type = "select",
+                    name = "Honor Font",
+                    desc = "Select the font for Honor Points",
+                    dialogControl = "LSM30_Font",
+                    values = LSM:HashTable("font"),
+                    get = function() return IncDB.honorFont end,
+                    set = function(_, newValue)
+                        IncDB.honorFont = newValue
+                        honorPointsLabel:SetFont(LSM:Fetch("font", newValue), IncDB.honorFontSize)
+                    end,
+                    order = 5,
+                },
+                honorFontColor = {
+                    type = "color",
+                    name = "Honor Font Color",
+                    desc = "Select the color for Honor Points font",
+                    hasAlpha = true,
+                    get = function()
+                        local color = IncDB.honorFontColor
+                        return color.r, color.g, color.b, color.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        IncDB.honorFontColor = { r = r, g = g, b = b, a = a }
+                        honorPointsLabel:SetTextColor(r, g, b, a)
+                    end,
+                    order = 6,
+					},
+					conquestFontSize = {
+                    type = "range",
+                    name = "Conquest Font Size",
+                    desc = "Adjust the font size for Conquest Points.",
+                    min = 8, max = 24, step = 1,
+                    get = function() return IncDB.conquestFontSize or 14 end,
+                    set = function(_, newValue)
+                        IncDB.conquestFontSize = newValue
+                        conquestPointsLabel:SetFont(LSM:Fetch("font", IncDB.conquestFont), newValue)
+                    end,
+                    order = 7,
+                },
+                honorFontSize = {
+                    type = "range",
+                    name = "Honor Font Size",
+                    desc = "Adjust the font size for Honor Points.",
+                    min = 8, max = 24, step = 1,
+                    get = function() return IncDB.honorFontSize or 14 end,
+                    set = function(_, newValue)
+                        IncDB.honorFontSize = newValue
+                        honorPointsLabel:SetFont(LSM:Fetch("font", IncDB.honorFont), newValue)
+                    end,
+                    order = 8,
                 },
             },
         },
     },
 }
 -- Register the options table
-LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, options)
+AceConfig:RegisterOptionsTable(addonName, options)
 
 -- Create a config panel
 local configPanel = AceConfigDialog:AddToBlizOptions(addonName, "Incoming-BG")
@@ -937,11 +1075,11 @@ local function ListHealers()
 
     if #healerNames > 0 then
         local healerList = table.concat(healerNames, ", ")
-        SendChatMessage("Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
+        SendChatMessage("[Incoming-BG] Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
 
     else
         if IsInGroup() or IsInRaid() then
-            SendChatMessage("We have no heals, lol..", "INSTANCE_CHAT")
+            SendChatMessage("[Incoming-BG] We have no heals, lol..", "INSTANCE_CHAT")
         end
     end
 end
@@ -1034,7 +1172,7 @@ local function UpdatePoints()
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
 
-  
+   
 end
 
 IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
@@ -1172,7 +1310,7 @@ local function ApplyFontSettings()
     IncDB.font = IncDB.font or "Friz Quadrata TT"  
     IncDB.fontSize = IncDB.fontSize or 14  -- Default font size
 
-    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT  
+    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT  -- Fallback to a default font if nil
     local fontSize = IncDB.fontSize
 
     for _, text in ipairs(buttonTexts) do
@@ -1198,16 +1336,17 @@ end
 
 local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
-       
+        -- Ensure db and IncDB are initialized properly
         db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
         IncDB = db.profile or {}
         
+        -- Initialize IncDB if it doesn't exist
         if not IncDB then
             IncDB = {
-               
+                -- Set your default values here
                 buttonColor = {r = 1, g = 0, b = 0, a = 1},
                 fontColor = {r = 1, g = 1, b = 1, a = 1},
-                
+                -- Add other default settings as needed
             }
         end
 
@@ -1316,26 +1455,26 @@ local pvpStatsButton = createButton("pvpStatsButton", 100, 22, "PVP Stats", {"BO
     print(format("Conquest Points: %s, Honor Points: %s", conquestPoints, honorPoints)) -- Example output
 end)
 
--- Set the "OnClick" event for the PVP Stats button
 pvpStatsButton:SetScript("OnClick", function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
     local conquestPoints = conquestInfo and conquestInfo.quantity or 0
     local honorPoints = honorInfo and honorInfo.quantity or 0
-	local honorLevel = UnitHonorLevel("player")
-	local lifetimeHonorableKills, lifetimeMaxPVPRank = GetPVPLifetimeStats()
-    
-    -- Update the text for Conquest and Honor points
-    pvpStatsFrame.conquestText:SetText("Conquest Points: " .. conquestPoints)
-    pvpStatsFrame.honorText:SetText("Honor Points: " .. honorPoints)
-	pvpStatsFrame.honorLevelText:SetText("Honor Level: " .. honorLevel)
-	pvpStatsFrame.honorableKillsText:SetText("Lifetime Honorable Kills: " .. lifetimeHonorableKills)
-    pvpStatsFrame.maxPVPRankText:SetText("Lifetime Max PvP Rank: " .. lifetimeMaxPVPRank)
-    
+    local honorLevel = UnitHonorLevel("player")
+    local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
+
+    -- Set the numeric values
+    pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
+    pvpStatsFrame.conquestValue:SetText(conquestPoints)
+    pvpStatsFrame.honorValue:SetText(honorPoints)
+    pvpStatsFrame.honorLevelValue:SetText(honorLevel)  -- Update honor level value here
+
+    -- Show the PVP Stats window
     pvpStatsFrame:Show()
 end)
 
+-- Apply the color to all the buttons
 applyButtonColor()
 
 -- Set OnClick functions for the buttons

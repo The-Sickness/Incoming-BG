@@ -1,32 +1,23 @@
-4/6/24:
-Event Handling Improvements:
+4/12/24 Update:
 
-Enhanced the addon's initialization and event response mechanisms.
-Unified event registration and handling for seamless startup and operation.
-Extended support for key game events including ADDON_LOADED, PLAYER_LOGIN, PLAYER_ENTERING_WORLD, PLAYER_LEAVING_WORLD, CURRENCY_DISPLAY_UPDATE, HONOR_XP_UPDATE, and CHAT_MSG_INSTANCE_CHAT.
 
-Configuration Persistence:
+All Your PvP Stats in One Place: Jump right into the fray with all your crucial stats—Honor Points, Conquest Points, and Honor Level—neatly displayed in one dedicated window. It’s all the info you need, right at your fingertips. Will be adding more......
 
-Introduced persistent storage for button message settings across sessions.
-Implemented AceDB library integration for efficient data management and storage.
-Adjusted the options table to utilize IncDB for storing user preferences on messages like "Send More", "INC", and "All Clear".
+Quick Access from the Main GUI: We’ve added a handy button on the Incoming-BG main interface. A single click pulls up your PvP stats, letting you check your progress on the fly, without ever leaving the battlefield.
 
-User Interface Enhancements:
+Sleek Design: We’ve ditched the clutter. The new window cuts through the chaos, offering you a clean, easy-to-read display. It’s all about making your playtime more efficient and a lot more fun.
 
-Refined the GUI for improved user interaction, with dynamic scaling and layout adjustments.
-Added functionality for customizable button texts and colors through the interface options.
-Improved visual feedback and configurability for raid warnings and sound notifications.
+Updates As You Play: The window updates your stats in real-time. Watch your points rise and your rank increase as you conquer your opponents, all updated live as you play.
 
-Additional Features and Fixes:
+Make It Yours: Customize the look of your PvP Stats Window to match your setup. Size, position, color—you call the shots, making sure your UI looks just as good as it performs.
 
-Addressed issues with message settings not saving correctly across sessions.
-Streamlined the logic for displaying custom raid warning messages.
-Enhanced the logic for button click events to ensure proper message broadcasting and sound playback.
+ 
 
-Miscellaneous:
+Removed: Removed the Conquest and Honor points from the GUI. They were replaced with the PVP Stats button.
 
-Code optimization for better performance and memory usage.
-Minor bug fixes and stability improvements.
+ 
+
+Added new images to see the new GUI
 
 3/30/24:
 Dynamic Color Customization for UI Elements:

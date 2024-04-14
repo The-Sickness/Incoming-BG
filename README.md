@@ -1,36 +1,41 @@
-The MUST-HAVE addon for calling INC's in Battlegrounds, Rated BG's, Brawls, And Rated Brawls, (soon to be SRBG's)
+Incoming-BG: Master Your Communication in WoW PvP
 
+Elevate Your PvP Experience: Crafted meticulously by Sharpedge_Gaming, Incoming-BG is your premier addon for mastering the battlegrounds in World of Warcraft. Whether you’re defending the honor of the Alliance in Stormwind or launching an assault in Orgrimmar, Incoming-BG transforms your gameplay into a strategic, well-communicated victory.
+
+Comprehensive Features:
+
+Centralized PvP Stats Dashboard: Keep vital PvP statistics at your fingertips. This dedicated window displays Honor Points, Conquest Points, and Honor Level, all updated live as you engage in combat. Perfect for those who want to track their progress without pausing the action.
+One-Click Accessibility: Integrated directly into the Incoming-BG’s main user interface, a new, easily accessible button allows you to swiftly pull up your PvP stats overview. This feature ensures that you’re always informed and ready, even mid-battle.
+Refined User Interface Design: With a focus on usability, the new interface design strips away any unnecessary elements. The result is a clean, minimalist layout that not only looks good but enhances your gameplay by reducing distractions.
+Real-Time Stat Updates: As you earn points and climb the ranks, the addon window dynamically updates. Watch your statistics change in real time, reflecting your on-field successes instantaneously.
+Extensive Message Options: Choose from an arsenal of 68 preset messages, designed to cover every conceivable battleground scenario. Preview your message before sending to ensure clarity and precision.
+Audible Alerts: Elevate your alerts with 15 distinctive sounds that can be previewed and selected to suit different tactical calls. This feature ensures that your messages cut through the noise of battle, reaching your allies effectively.
+Adaptive Map Integration: Customize your tactical view with 10 different map sizes. Whether you need a broad overview or a detailed close-up of a specific area, adjust your map dynamically to suit the encounter’s demands.
+Deep Customization Tools: Tailor the Incoming-BG interface to fit your personal or team style:
+Borders & Backgrounds: Choose from a variety of designs—from sleek and modern to rugged and bold.
+Fonts & Colors: Experiment with an array of fonts and color palettes to find what best suits the intensity of PvP encounters or matches your existing UI.
+Size Adjustments: Modify font and button sizes for optimal readability and aesthetic preference.
  
 
-Incoming-Bg: Master Your Communication in WoW PvP
+Detailed Node Coverage: Incoming-BG provides strategic insights into each battleground’s critical areas, meticulously covering all key locations to ensure superior strategic planning:
 
- 
+Arathi Basin: Stables, Blacksmith, Lumber Mill, Gold Mine, Farm
+Alterac Valley: Stormpike Graveyard, Irondeep Mine, Dun Baldar, Hall of the Stormpike, Icewing Pass, Stonehearth Outpost, Iceblood Graveyard, Iceblood Garrison, Tower Point, Coldtooth Mine, Dun Baldar Pass, Icewing Bunker, Field of Strife, Stonehearth Graveyard, Stonehearth Bunker, Frost Dagger Pass, Snowfall Graveyard, Winterax Hold, Frostwolf Graveyard, Frostwolf Village, Frostwolf Keep, Hall of the Frostwolf
+Eye of the Storm: Mage Tower, Draenei Ruins, Blood Elf Tower, Fel Reaver Ruins
+Battle for Gilneas: Lighthouse, Waterworks, Mines
+Isle of Conquest: Docks, Workshop, Hangar, Refinery, Quarry
+Twin Peaks: Wildhammer Stronghold, Dragonmaw Stronghold
+Warsong Gulch: Silverwing Hold, Warsong Flag Room
+Wintergrasp: The Broken Temple, Cauldron of Flames, Central Bridge, The Chilled Quagemire, Eastern Bridge, Flamewatch Tower, The Forest of Shadows, Glacial Falls, The Steppe of Life, The Sunken Ring, Western Bridge, Winter's Edge Tower, Wintergrasp Fortress, Eastpark Workshop, Westpark Workshop
+Deepwind Gorge: Market, Horde Keep, Alliance Keep
+Silvershard Mines: Lava Crater, Topaz Quarry, Diamond Mine
+Temple of Kotmogu: Generally the whole area is treated as a node for orb control.
+Ashran: Emberfall Tower, Volrath's Advance, Archmage Overwatch, Tremblade's Vanguard
+Southshore vs. Tarren Mill: Not typically a node-based battleground but includes major town areas: Southshore and Tarren Mill.
+Stormshield: Part of Ashran, serving as the Alliance base.
+Step Into Strategy with Incoming-BG: In WoW PvP, the thin line between triumph and defeat hinges on your ability to communicate clearly and respond swiftly. With Incoming-BG, empower your team with streamlined communication tools, real-time data, and customizable features that bring tactical advantage to your fingertips.
 
-Attention, defenders of Azeroth! Whether you're storming the gates of Stormwind or holding the line at Orgrimmar, Incoming-BG is the ultimate addon to command the chaos of PvP battlegrounds. Created by Sharpedge_Gaming, this addon is your first step towards legendary status, transforming your strategy into victory with the click of a button.
 
-Unleash the Power of Incoming-BG:
-
-Expansive Message Arsenal: Choose from a whopping 68 messages tailored for every possible scenario. Whether you need reinforcements at a base or want to declare a strategic location safe, Incoming-BG has a message ready to go. And with a preview feature, you always know exactly what you're sending to your team.
-
-Sound the Alarm: Elevate your raid warnings with 15 different sounds, each designed to cut through the heat of battle. Selecting a Raid Warning sound? Enjoy a preview to ensure it's the perfect fit for your call to arms.
-
-Map Mastery: With 10 different map sizes at your disposal, Incoming-BG ensures you always have the best strategic overview, no matter the battlefield. Tailor your map to meet the demands of each encounter and lead with precision.
-
-Raid Warning Precision: Key to Incoming-BG's arsenal is the ability to send crucial raid warnings. Every other feature of Incoming-BG stands strong on its own, providing unmatched communication flexibility. Note: This powerful feature and its distinct sounds are exclusive to your allies equipped with Incoming-BG, ensuring your most critical messages are broadcasted loud and clear to those ready to act on them.
-
-Ultimate Customization: Dive into a sea of customization options:
-
-Borders & Backgrounds: Sleek, bold, or just badass—we have a look that matches your style.
-Fonts Galore: Change up the font type to match your UI’s vibe or whatever's easiest on your eyes during those intense PvP moments.
-Color It Your Way: From font colors that pop to button shades that fit your mood, colorize your IncCallout interface to be uniquely yours.
-Size Matters: Adjust font sizes for clarity or subtlety, ensuring you can always read the room—or the battlefield.
-Track and Triumph: Stay informed with real-time updates on your conquest and honor points directly within the Incoming-BG interface. Your path to glory has never been clearer.
-
-Elevate Your Strategy with Incoming-BG:
-
-In the fast-paced world of WoW PvP, the difference between victory and defeat often hinges on clear, concise communication. Incoming-BG ensures your voice is heard, your strategies understood, and your victories celebrated. Equip your team with Incoming-BG and step into each battle ready to dominate with the power of unified communication.
-
-Ready to transform your PvP experience? Add Incoming-BG to your arsenal today and lead your team to glory with confidence. The battle awaits, and with Incoming-BG, you're already one step ahead.
 
 
  

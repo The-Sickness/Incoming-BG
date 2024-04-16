@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v5.9 - 10.2.6
+-- v6.0 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -76,102 +76,76 @@ customRaidWarningFrame:Hide()
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 
-local UpdatePvPStatsFrame
-local UpdateConquestCap
-
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
-pvpStatsFrame:SetSize(220, 180)  -- Adjusted height
-pvpStatsFrame:SetPoint("CENTER") 
+pvpStatsFrame:SetSize(220, 200)
+pvpStatsFrame:SetPoint("CENTER")
 pvpStatsFrame:SetMovable(true)
 pvpStatsFrame:EnableMouse(true)
 pvpStatsFrame:RegisterForDrag("LeftButton")
 pvpStatsFrame:SetScript("OnDragStart", pvpStatsFrame.StartMoving)
 pvpStatsFrame:SetScript("OnDragStop", pvpStatsFrame.StopMovingOrSizing)
-pvpStatsFrame:Hide() 
-
-pvpStatsFrame:SetScript("OnShow", function()
-    UpdatePvPStatsFrame()
-    
-end)
+pvpStatsFrame:Hide()
 
 -- Initialize UI elements
 pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY")
 pvpStatsFrame.title:SetFontObject("GameFontHighlight")
-pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -5)
+pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -7)
 pvpStatsFrame.title:SetText("PVP Stats")
 
-function UpdatePvPStatsFrame()
-    -- Get currency info for Conquest and Honor Points
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+local LEFT_MARGIN = -70  
+local VERTICAL_GAP = -15  
 
-    -- Safely extract the values with default fallbacks
-    local conquestPoints = conquestInfo and conquestInfo.quantity or 0
-    local honorPoints = honorInfo and honorInfo.quantity or 0
-    local honorLevel = UnitHonorLevel("player") or 0  -- Adding fallback for honor level
-    local lifetimeHonorableKills, _ = GetPVPLifetimeStats()  -- Assuming this API call is correct and you handle the possible returns appropriately
+local function createStatLabelAndValue(parent, labelText, previousElement, yOffset)
+    local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    if previousElement == parent.title then
+        label:SetPoint("TOPLEFT", previousElement, "BOTTOMLEFT", LEFT_MARGIN, yOffset)  
+    else
+        label:SetPoint("TOPLEFT", previousElement, "BOTTOMLEFT", 0, yOffset)  
+    end
+    label:SetText(labelText)
+    label:SetTextColor(0, 1, 0)
 
-    -- Set the text for the UI elements
-    pvpStatsFrame.conquestValue:SetText(conquestPoints)
-    pvpStatsFrame.honorValue:SetText(honorPoints)
-    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
+    local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    value:SetPoint("LEFT", label, "RIGHT", 5, 0)  -- Small gap between label and value
+    value:SetTextColor(1, 0.84, 0)
+
+    return label, value
 end
 
--- Title for the PVP Stats window
-pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY")
-pvpStatsFrame.title:SetFontObject("GameFontHighlight")
-pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -5)
-pvpStatsFrame.title:SetText("PVP Stats")
+pvpStatsFrame.honorableKillsLabel, pvpStatsFrame.honorableKillsValue = createStatLabelAndValue(pvpStatsFrame, "Lifetime Honorable Kills:", pvpStatsFrame.title, VERTICAL_GAP)
+pvpStatsFrame.conquestLabel, pvpStatsFrame.conquestValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Points:", pvpStatsFrame.honorableKillsLabel, VERTICAL_GAP)
+pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValue(pvpStatsFrame, "Honor Points:", pvpStatsFrame.conquestLabel, VERTICAL_GAP)
+pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValue(pvpStatsFrame, "Honor Level:", pvpStatsFrame.honorLabel, VERTICAL_GAP)
+pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP)
 
--- Create labels with green color
-pvpStatsFrame.honorableKillsLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorableKillsLabel:SetPoint("TOPLEFT", pvpStatsFrame, "TOPLEFT", 10, -40)
-pvpStatsFrame.honorableKillsLabel:SetText("Lifetime Honorable Kills: ")
-pvpStatsFrame.honorableKillsLabel:SetTextColor(0, 1, 0)  -- Green color
+-- Function to update PvP stats
+local function UpdatePvPStatsFrame()
+    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
+    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+    local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
+    local honorLevel = UnitHonorLevel("player")
 
--- Create values in gold color
-pvpStatsFrame.honorableKillsValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorableKillsValue:SetPoint("LEFT", pvpStatsFrame.honorableKillsLabel, "RIGHT", 0, 0)
-pvpStatsFrame.honorableKillsValue:SetTextColor(1, 0.84, 0)  -- Gold color
+    pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
+    pvpStatsFrame.conquestValue:SetText(conquestInfo.quantity)
+    pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
+    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
 
--- Repeat for Conquest Points
-pvpStatsFrame.conquestLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.conquestLabel:SetPoint("TOPLEFT", pvpStatsFrame.honorableKillsLabel, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.conquestLabel:SetText("Conquest Points: ")
-pvpStatsFrame.conquestLabel:SetTextColor(0, 1, 0)  -- Green color
+    local weeklyMaxConquest = conquestInfo.maxWeeklyQuantity
+    local conquestCapText = conquestInfo.quantity .. " / " .. weeklyMaxConquest
+    pvpStatsFrame.conquestCapValue:SetText(conquestCapText)
+end
 
-pvpStatsFrame.conquestValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.conquestValue:SetPoint("LEFT", pvpStatsFrame.conquestLabel, "RIGHT", 0, 0)
-pvpStatsFrame.conquestValue:SetTextColor(1, 0.84, 0)  -- Gold color
-
--- Repeat for Honor Points
-pvpStatsFrame.honorLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorLabel:SetPoint("TOPLEFT", pvpStatsFrame.conquestLabel, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.honorLabel:SetText("Honor Points: ")
-pvpStatsFrame.honorLabel:SetTextColor(0, 1, 0)  -- Green color
-
-pvpStatsFrame.honorValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorValue:SetPoint("LEFT", pvpStatsFrame.honorLabel, "RIGHT", 0, 0)
-pvpStatsFrame.honorValue:SetTextColor(1, 0.84, 0)  -- Gold color
-
--- Honor Level with green label and gold value
-pvpStatsFrame.honorLevelLabel = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorLevelLabel:SetPoint("TOPLEFT", pvpStatsFrame.honorLabel, "BOTTOMLEFT", 0, -10)
-pvpStatsFrame.honorLevelLabel:SetText("Honor Level: ")
-pvpStatsFrame.honorLevelLabel:SetTextColor(0, 1, 0)  -- Green color
-
-pvpStatsFrame.honorLevelValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pvpStatsFrame.honorLevelValue:SetPoint("LEFT", pvpStatsFrame.honorLevelLabel, "RIGHT", 0, 0)
-pvpStatsFrame.honorLevelValue:SetTextColor(1, 0.84, 0)  -- Gold color
-
+-- Event handling
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")  -- Ensure updates when player logs in or zones
+pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+pvpStatsFrame:SetScript("OnEvent", UpdatePvPStatsFrame)
+pvpStatsFrame:SetScript("OnShow", UpdatePvPStatsFrame)
 
-pvpStatsFrame:SetScript("OnShow", function()
+pvpStatsFrame:SetScript("OnEvent", function(self, event, ...)
     UpdatePvPStatsFrame()
-    
 end)
+pvpStatsFrame:SetScript("OnShow", UpdatePvPStatsFrame)
 
 local function ShowRaidWarning(message, duration)
    
@@ -1080,8 +1054,7 @@ end
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
-local CONQUEST_CURRENCY_ID = 1602
-local HONOR_CURRENCY_ID = 1792
+
 
 local function UpdatePoints()
 
@@ -1331,6 +1304,7 @@ IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
 
+
 local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
@@ -1393,6 +1367,8 @@ pvpStatsButton:SetScript("OnClick", function()
     -- Show the PVP Stats window
     pvpStatsFrame:Show()
 end)
+   
+
 
 -- Apply the color to all the buttons
 applyButtonColor()

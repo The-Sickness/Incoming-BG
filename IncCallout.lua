@@ -23,8 +23,9 @@ local AceGUI = LibStub("AceGUI-3.0")
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
 
-local IncDB, db 
-local addon = AceAddon:NewAddon(addonName)
+addonNamespace.addon = addon
+addonNamespace.db = IncDB
+
 
 local defaults = {
     profile = {
@@ -96,30 +97,27 @@ pvpStatsFrame.title:SetText("PVP Stats")
 local LEFT_MARGIN = -70  
 local VERTICAL_GAP = -15  
 
-local function createStatLabelAndValue(parent, labelText, previousElement, yOffset)
+local function createStatLabelAndValue(parent, labelText, previousElement, yOffset, textColor)
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    if previousElement == parent.title then
-        label:SetPoint("TOPLEFT", previousElement, "BOTTOMLEFT", LEFT_MARGIN, yOffset)  
-    else
-        label:SetPoint("TOPLEFT", previousElement, "BOTTOMLEFT", 0, yOffset)  
-    end
+    label:SetPoint("TOPLEFT", previousElement, "BOTTOMLEFT", previousElement == parent.title and LEFT_MARGIN or 0, yOffset)
     label:SetText(labelText)
-    label:SetTextColor(0, 1, 0)
+    label:SetTextColor(unpack(textColor))
 
     local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    value:SetPoint("LEFT", label, "RIGHT", 5, 0)  -- Small gap between label and value
-    value:SetTextColor(1, 0.84, 0)
+    value:SetPoint("LEFT", label, "RIGHT", 5, 0)
+    value:SetTextColor(1, 0.84, 0)  -- Gold color for value
 
     return label, value
 end
 
-pvpStatsFrame.honorableKillsLabel, pvpStatsFrame.honorableKillsValue = createStatLabelAndValue(pvpStatsFrame, "Lifetime Honorable Kills:", pvpStatsFrame.title, VERTICAL_GAP)
-pvpStatsFrame.conquestLabel, pvpStatsFrame.conquestValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Points:", pvpStatsFrame.honorableKillsLabel, VERTICAL_GAP)
-pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValue(pvpStatsFrame, "Honor Points:", pvpStatsFrame.conquestLabel, VERTICAL_GAP)
-pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValue(pvpStatsFrame, "Honor Level:", pvpStatsFrame.honorLabel, VERTICAL_GAP)
-pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP)
+-- Creating labels and values with custom colors for each category
+pvpStatsFrame.honorableKillsLabel, pvpStatsFrame.honorableKillsValue = createStatLabelAndValue(pvpStatsFrame, "Lifetime Honorable Kills:", pvpStatsFrame.title, VERTICAL_GAP, {0, 1, 0})  -- Green
+pvpStatsFrame.conquestLabel, pvpStatsFrame.conquestValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Points:", pvpStatsFrame.honorableKillsLabel, VERTICAL_GAP, {0, 0.75, 1})  -- Light blue
+pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValue(pvpStatsFrame, "Honor Points:", pvpStatsFrame.conquestLabel, VERTICAL_GAP, {1, 0.5, 0})  -- Orange
+pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValue(pvpStatsFrame, "Honor Level:", pvpStatsFrame.honorLabel, VERTICAL_GAP, {0.58, 0, 0.82})  -- Purple
+pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP, {1, 0, 0})  -- Red
 
--- Function to update PvP stats
+-- Update Function for PvP Stats
 local function UpdatePvPStatsFrame()
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
@@ -130,21 +128,13 @@ local function UpdatePvPStatsFrame()
     pvpStatsFrame.conquestValue:SetText(conquestInfo.quantity)
     pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
     pvpStatsFrame.honorLevelValue:SetText(honorLevel)
-
-    local weeklyMaxConquest = conquestInfo.maxWeeklyQuantity
-    local conquestCapText = conquestInfo.quantity .. " / " .. weeklyMaxConquest
-    pvpStatsFrame.conquestCapValue:SetText(conquestCapText)
+    pvpStatsFrame.conquestCapValue:SetText(conquestInfo.quantity .. " / " .. conquestInfo.maxWeeklyQuantity)
 end
 
--- Event handling
+-- Event Handling
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pvpStatsFrame:SetScript("OnEvent", UpdatePvPStatsFrame)
-pvpStatsFrame:SetScript("OnShow", UpdatePvPStatsFrame)
-
-pvpStatsFrame:SetScript("OnEvent", function(self, event, ...)
-    UpdatePvPStatsFrame()
-end)
 pvpStatsFrame:SetScript("OnShow", UpdatePvPStatsFrame)
 
 local function ShowRaidWarning(message, duration)

@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.0 - 10.2.6
+-- v6.1 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -26,13 +26,11 @@ IncDB = IncDB or {}
 addonNamespace.addon = addon
 addonNamespace.db = IncDB
 
-
 local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white
         opacity = 1,
-        hmdIndex = 1,
 		sendMoreIndex = 1,
         incIndex = 1,
         allClearIndex = 1,
@@ -297,20 +295,7 @@ local buttonMessages = {
     "[Incoming-BG] Ready for buffs, let's enhance our strength!",
     "[Incoming-BG] Buffs needed for extra might and magic!",
     "[Incoming-BG] Gimme some buffs, let’s not fall behind!"
-    
-	},
-	hmd = {
-    "[Incoming-BG] Focus healers!",
-    "[Incoming-BG] Take down healers!",
-    "[Incoming-BG] Target healers to win!",
-    "[Incoming-BG] Healers must die!",
-    "[Incoming-BG] Eliminate healers fast!",
-    "[Incoming-BG] Healers top priority!",
-    "[Incoming-BG] Attack healers!",
-    "[Incoming-BG] Healers spotted, engage!",
-    "[Incoming-BG] Priority: healers!",
-    "[Incoming-BG] Remove healers for win!"
-    
+       
    }
  } 
  
@@ -609,25 +594,8 @@ previewBuffRequest = {
     name = function() return addonNamespace.getPreviewText("buffRequest") end,
     fontSize = "medium",
     order = 4.1,
-},
-hmd = {
-    type = "select",
-    name = "H.M.D. Message",
-    desc = "Select the message for the 'H.M.D.' button",
-    values = buttonMessages.hmd,
-    get = function() return IncDB.hmdIndex end,
-    set = function(_, newValue)
-        buttonMessageIndices.hmd = newValue
-        IncDB.hmdIndex = newValue
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 5,
-},
-previewHMD = {
-    type = "description",
-    name = function() return addonNamespace.getPreviewText("hmd") end,
-    fontSize = "medium",
-    order = 5.1, 
+
+ 
                 },
             },
         },
@@ -912,7 +880,6 @@ configPanel.default = function()
     buttonMessageIndices.inc = 1
     buttonMessageIndices.allClear = 1
 	buttonMessageIndices.buffRequest = 1
-	buttonMessageIndices.hmd = IncDB.hmdIndex or 1
 	IncDB.selectedBorderIndex = 1
 
 end
@@ -928,8 +895,7 @@ function addonNamespace.getPreviewText(messageType)
         previewText = previewText .. buttonMessages.allClear[IncDB.allClearIndex]
     elseif messageType == "buffRequest" and IncDB.buffRequestIndex and buttonMessages.buffRequest[IncDB.buffRequestIndex] then
         previewText = previewText .. buttonMessages.buffRequest[IncDB.buffRequestIndex]
-    elseif messageType == "hmd" and IncDB.hmdIndex and buttonMessages.hmd[IncDB.hmdIndex] then
-        previewText = previewText .. buttonMessages.hmd[IncDB.hmdIndex]
+    
     end
 
     return previewText .. "|r"  
@@ -983,36 +949,6 @@ local healerButton = createButton(
     
 )
 
-local healsButton = createButton(
-    "healsButton",
-    70, 22,
-    "H.M.D.",
-    {"BOTTOMLEFT", healerButton, "BOTTOMRIGHT"},
-    20, 0,
-    function() 
-        
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    end,
-    false 
-)
-
-local function HMDButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local message = buttonMessages.hmd[buttonMessageIndices.hmd]
-       
-    local isInInstance, instanceType = IsInInstance()
-    
-    if isInInstance then
-       
-        local chatType = IsInRaid(LE_PARTY_CATEGORY_INSTANCE) and "RAID" or "PARTY"
-        SendChatMessage(message, chatType)
-    else
-        print("You're not in an instance group.")
-    end
-end
-
-healsButton:SetScript("OnClick", HMDButtonOnClick)
-
 -- Create a table to map each location to itself
 local locationTable = {}
 for _, location in ipairs(battlegroundLocations) do
@@ -1054,8 +990,7 @@ local function UpdatePoints()
 
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-
-   
+  
 end
 
 IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
@@ -1202,19 +1137,7 @@ local function ApplyFontSettings()
         end
     end
 
-    -- Check for valid conquest and honor font settings
-    local conquestFontPath = LSM:Fetch("font", IncDB.conquestFont) or STANDARD_TEXT_FONT
-    local honorFontPath = LSM:Fetch("font", IncDB.honorFont) or STANDARD_TEXT_FONT
-
-    if conquestPointsLabel and conquestFontPath and IncDB.conquestFontSize then
-        conquestPointsLabel:SetFont(conquestFontPath, IncDB.conquestFontSize)
-        conquestPointsLabel:SetTextColor(IncDB.conquestFontColor.r, IncDB.conquestFontColor.g, IncDB.conquestFontColor.b, IncDB.conquestFontColor.a)
-    end
-
-    if honorPointsLabel and honorFontPath and IncDB.honorFontSize then
-        honorPointsLabel:SetFont(honorFontPath, IncDB.honorFontSize)
-        honorPointsLabel:SetTextColor(IncDB.honorFontColor.r, IncDB.honorFontColor.g, IncDB.honorFontColor.b, IncDB.honorFontColor.a)
-    end
+   
 end
 
 local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
@@ -1358,8 +1281,6 @@ pvpStatsButton:SetScript("OnClick", function()
     pvpStatsFrame:Show()
 end)
    
-
-
 -- Apply the color to all the buttons
 applyButtonColor()
 

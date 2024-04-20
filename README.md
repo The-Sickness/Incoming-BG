@@ -5,12 +5,18 @@ Elevate Your PvP Experience: Crafted meticulously by Sharpedge_Gaming, Incoming-
 Comprehensive Features:
 
 Centralized PvP Stats Dashboard: Keep vital PvP statistics at your fingertips. This dedicated window displays Honor Points, Conquest Points, and Honor Level, all updated live as you engage in combat. Perfect for those who want to track their progress without pausing the action.
+
 One-Click Accessibility: Integrated directly into the Incoming-BG’s main user interface, a new, easily accessible button allows you to swiftly pull up your PvP stats overview. This feature ensures that you’re always informed and ready, even mid-battle.
 Refined User Interface Design: With a focus on usability, the new interface design strips away any unnecessary elements. The result is a clean, minimalist layout that not only looks good but enhances your gameplay by reducing distractions.
+
 Real-Time Stat Updates: As you earn points and climb the ranks, the addon window dynamically updates. Watch your statistics change in real time, reflecting your on-field successes instantaneously.
+
 Extensive Message Options: Choose from an arsenal of 68 preset messages, designed to cover every conceivable battleground scenario. Preview your message before sending to ensure clarity and precision.
+
 Audible Alerts: Elevate your alerts with 15 distinctive sounds that can be previewed and selected to suit different tactical calls. This feature ensures that your messages cut through the noise of battle, reaching your allies effectively.
+
 Adaptive Map Integration: Customize your tactical view with 10 different map sizes. Whether you need a broad overview or a detailed close-up of a specific area, adjust your map dynamically to suit the encounter’s demands.
+
 Deep Customization Tools: Tailor the Incoming-BG interface to fit your personal or team style:
 Borders & Backgrounds: Choose from a variety of designs—from sleek and modern to rugged and bold.
 Fonts & Colors: Experiment with an array of fonts and color palettes to find what best suits the intensity of PvP encounters or matches your existing UI.
@@ -33,6 +39,7 @@ Temple of Kotmogu: Generally the whole area is treated as a node for orb control
 Ashran: Emberfall Tower, Volrath's Advance, Archmage Overwatch, Tremblade's Vanguard
 Southshore vs. Tarren Mill: Not typically a node-based battleground but includes major town areas: Southshore and Tarren Mill.
 Stormshield: Part of Ashran, serving as the Alliance base.
+
 Step Into Strategy with Incoming-BG: In WoW PvP, the thin line between triumph and defeat hinges on your ability to communicate clearly and respond swiftly. With Incoming-BG, empower your team with streamlined communication tools, real-time data, and customizable features that bring tactical advantage to your fingertips.
 
 

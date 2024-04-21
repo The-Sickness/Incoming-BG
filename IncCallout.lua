@@ -75,6 +75,35 @@ customRaidWarningFrame:Hide()
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 
+-- Main GUI Frame
+local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
+IncCallout:SetSize(225, 220)  -- Increased height to accommodate the Healers button inside
+IncCallout:SetPoint("CENTER")
+IncCallout:SetMovable(true)
+IncCallout:EnableMouse(true)
+IncCallout:RegisterForDrag("LeftButton")
+IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
+IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
+
+-- Close Button ("X")
+local closeButton = CreateFrame("Button", nil, IncCallout, "UIPanelCloseButton")
+closeButton:SetPoint("TOPRIGHT", IncCallout, "TOPRIGHT", -5, -5)
+closeButton:SetSize(24, 24)  -- Standard size for close buttons
+closeButton:SetScript("OnClick", function()
+    IncCallout:Hide()  -- Hide the frame when the close button is clicked
+end)
+
+-- Set tooltip for additional user guidance (optional)
+closeButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("Close the Window", nil, nil, nil, nil, true)
+    GameTooltip:Show()
+end)
+closeButton:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
+
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
 pvpStatsFrame:SetSize(220, 200)
@@ -295,18 +324,22 @@ local buttonMessages = {
     "[Incoming-BG] Ready for buffs, let's enhance our strength!",
     "[Incoming-BG] Buffs needed for extra might and magic!",
     "[Incoming-BG] Gimme some buffs, let’s not fall behind!"
-       
+     },
+     healRequest = {
+    "[Incoming-BG] Need heals ASAP!",
+    "[Incoming-BG] Healing needed at my position!",
+    "[Incoming-BG] Can someone heal me, please?",
+    "[Incoming-BG] Healers, your assistance is required!",
+    "[Incoming-BG] I'm in dire need of healing!",
+    "[Incoming-BG] Could use some healing here!",
+    "[Incoming-BG] Healers, please focus on our location!",
+    "[Incoming-BG] Urgent healing needed to stay in the fight!",
+    "[Incoming-BG] Heal me up to keep the pressure on!",
+    "[Incoming-BG] Healers, attention needed here now!"	 
    }
  } 
  
-local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 255)
-IncCallout:SetPoint("CENTER")
-IncCallout:SetMovable(true)
-IncCallout:EnableMouse(true)
-IncCallout:RegisterForDrag("LeftButton")
-IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
-IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
+
 
 -- Define available logos
 local logos = {
@@ -594,7 +627,25 @@ previewBuffRequest = {
     name = function() return addonNamespace.getPreviewText("buffRequest") end,
     fontSize = "medium",
     order = 4.1,
-
+    },
+	healRequest = {
+    type = "select",
+    name = "Heal Request Message",
+    desc = "Select the message for the 'Need Heals' button",
+    values = buttonMessages.healRequest,
+    get = function() return IncDB.healRequestIndex end,
+    set = function(_, newValue)
+        buttonMessageIndices.healRequest = newValue
+        IncDB.healRequestIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 5,
+},
+previewHealRequest = {
+    type = "description",
+    name = function() return addonNamespace.getPreviewText("healRequest") end,
+    fontSize = "medium",
+    order = 5.1,
  
                 },
             },
@@ -895,11 +946,13 @@ function addonNamespace.getPreviewText(messageType)
         previewText = previewText .. buttonMessages.allClear[IncDB.allClearIndex]
     elseif messageType == "buffRequest" and IncDB.buffRequestIndex and buttonMessages.buffRequest[IncDB.buffRequestIndex] then
         previewText = previewText .. buttonMessages.buffRequest[IncDB.buffRequestIndex]
-    
+    elseif messageType == "healRequest" and IncDB.healRequestIndex and buttonMessages.healRequest[IncDB.healRequestIndex] then
+        previewText = previewText .. buttonMessages.healRequest[IncDB.healRequestIndex]
     end
 
-    return previewText .. "|r"  
+    return previewText .. "|r"
 end
+
 
 local function ListHealers()
     local groupType, groupSize
@@ -933,21 +986,6 @@ local function ListHealers()
         end
     end
 end
-
-local healerButton = createButton(
-    "healerButton",
-    70, 22,
-    "Healers",
-    {"BOTTOMLEFT", IncCallout, "BOTTOMLEFT"},
-    0, -27,
-    function(self, button)
-       
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-        
-        ListHealers()
-    end
-    
-)
 
 -- Create a table to map each location to itself
 local locationTable = {}
@@ -1116,6 +1154,59 @@ local function IncButtonOnClick()
     ShowRaidWarning(message, 2)
 end
 
+local function HealsButtonOnClick()
+    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
+        PlaySound(IncDB.raidWarningSound, "master")
+    else
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
+
+    local location = GetSubZoneText()
+    if not location then
+        print("You are not in a Battleground.")
+        return
+    end
+
+    if not IncDB.healRequestIndex or not buttonMessages.healRequest[IncDB.healRequestIndex] then
+        print("Heal request message not set.")
+        return
+    end
+
+    local message = buttonMessages.healRequest[IncDB.healRequestIndex] .. " Needed at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
+    ShowRaidWarning(message, 2)
+end
+
+local function BuffRequestButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+
+    local messageIndex = buttonMessageIndices.buffRequest or 1
+    local message = buttonMessages.buffRequest[messageIndex]
+    
+    if not message then
+        print("No buff request message available.")
+        return
+    end
+
+    local inInstance, instanceType = IsInInstance()
+    local chatType
+
+    -- Check for PvP instance first
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        chatType = "INSTANCE_CHAT"
+    elseif IsInRaid() then
+        chatType = "RAID"
+    elseif IsInGroup() then
+        chatType = "PARTY"
+    else
+        print("You're not in a PvP instance.")
+        return
+    end
+
+    -- Send the chat message
+    SendChatMessage(message, chatType)
+end
+
 local function onChatMessage(message)
     if string.find(message, "%[Incoming%-BG%]") then
         PlaySound(SOUNDKIT.RAID_WARNING, "master")
@@ -1218,51 +1309,35 @@ IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
 
 
-local function BuffRequestButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local message = buttonMessages.buffRequest[buttonMessageIndices.buffRequest]
-  
-    local chatType
-    if IsInRaid() then
-        chatType = "RAID"
-    elseif IsInGroup() then
-        chatType = "PARTY"
-    else
-        print("You're not in a group.")
-        return 
-    end
 
-    SendChatMessage(message, chatType)
-end
 
--- Create the buttons
-local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 15, -20, ButtonOnClick)
-local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 3, 0, ButtonOnClick)
-local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 3, 0, ButtonOnClick)
-local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 3, 0, ButtonOnClick)
-local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 3, 0, ButtonOnClick)
-local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
-local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
-local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
-local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local showMapButton = createButton("showMapButton", 100, 22, "Show Map", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function()
+local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 35, -40, ButtonOnClick)
+local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 10, 0, ButtonOnClick)
+local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 10, 0, ButtonOnClick)
+local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 10, 0, ButtonOnClick)
+local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 10, 0, ButtonOnClick)
+
+-- Second Row: INC and Send More (Centered under "3" button)
+local incButton = createButton("incButton", 95, 22, "Inc", {"TOP", button3, "BOTTOM"}, -45, -10, IncButtonOnClick)
+local sendMoreButton = createButton("sendMoreButton", 95, 22, "Send More", {"LEFT", incButton, "RIGHT"}, 10, 0, SendMoreButtonOnClick)
+
+-- Third Row: All Clear and Heals (Centered under "3" button)
+local allClearButton = createButton("allClearButton", 95, 22, "All Clear", {"TOP", incButton, "BOTTOM"}, 0, -10, AllClearButtonOnClick)
+local healsButton = createButton("healsButton", 95, 22, "Heals", {"LEFT", allClearButton, "RIGHT"}, 10, 0, HealsButtonOnClick)
+
+-- Fourth Row: Buffs and Map (Centered under "3" button)
+local buffButton = createButton("buffButton", 95, 22, "Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -10, BuffRequestButtonOnClick)
+local mapButton = createButton("mapButton", 95, 22, "Map", {"LEFT", buffButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     ToggleWorldMap()
-end, false)
-
-local exitButton = createButton("exitButton", 100, 22, "Exit", {"BOTTOM", IncCallout, "BOTTOM"}, 0, 10, function()
-    IncCallout:Hide() -- Function to hide the GUI
 end)
 
-local pvpStatsButton = createButton("pvpStatsButton", 100, 22, "PVP Stats", {"BOTTOM", exitButton, "TOP"}, 0, 20, function()
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-    local conquestPoints = conquestInfo and conquestInfo.quantity or 0
-    local honorPoints = honorInfo and honorInfo.quantity or 0
-    print(format("Conquest Points: %s, Honor Points: %s", conquestPoints, honorPoints)) -- Example output
+-- Fifth Row: Healers and PVP Stats (Centered under "3" button)
+local healerButton = createButton("healerButton", 95, 22, "Healers", {"TOP", buffButton, "BOTTOM"}, 0, -10, function()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    ListHealers()
 end)
-
-pvpStatsButton:SetScript("OnClick", function()
+local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
@@ -1270,17 +1345,13 @@ pvpStatsButton:SetScript("OnClick", function()
     local honorPoints = honorInfo and honorInfo.quantity or 0
     local honorLevel = UnitHonorLevel("player")
     local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
-
-    -- Set the numeric values
     pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
     pvpStatsFrame.conquestValue:SetText(conquestPoints)
     pvpStatsFrame.honorValue:SetText(honorPoints)
-    pvpStatsFrame.honorLevelValue:SetText(honorLevel)  -- Update honor level value here
-
-    -- Show the PVP Stats window
+    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
     pvpStatsFrame:Show()
 end)
-   
+
 -- Apply the color to all the buttons
 applyButtonColor()
 
@@ -1288,7 +1359,7 @@ applyButtonColor()
 allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 incButton:SetScript("OnClick", IncButtonOnClick)
-buffRequestButton:SetScript("OnClick", BuffRequestButtonOnClick)
+
 
 -- Apply the PostClick script to each button
 for _, button in ipairs(buttons) do

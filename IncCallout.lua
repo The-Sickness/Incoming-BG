@@ -77,7 +77,7 @@ local HONOR_CURRENCY_ID = 1792
 
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(225, 220)  -- Increased height to accommodate the Healers button inside
+IncCallout:SetSize(225, 240)  -- Increased height to accommodate the Healers button inside
 IncCallout:SetPoint("CENTER")
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
@@ -85,15 +85,13 @@ IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
 
--- Close Button ("X")
 local closeButton = CreateFrame("Button", nil, IncCallout, "UIPanelCloseButton")
 closeButton:SetPoint("TOPRIGHT", IncCallout, "TOPRIGHT", -5, -5)
-closeButton:SetSize(24, 24)  -- Standard size for close buttons
+closeButton:SetSize(24, 24)  
 closeButton:SetScript("OnClick", function()
-    IncCallout:Hide()  -- Hide the frame when the close button is clicked
+    IncCallout:Hide()  
 end)
 
--- Set tooltip for additional user guidance (optional)
 closeButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText("Close the Window", nil, nil, nil, nil, true)
@@ -102,7 +100,6 @@ end)
 closeButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
-
 
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
@@ -336,11 +333,21 @@ local buttonMessages = {
     "[Incoming-BG] Urgent healing needed to stay in the fight!",
     "[Incoming-BG] Heal me up to keep the pressure on!",
     "[Incoming-BG] Healers, attention needed here now!"	 
+	},
+	efcRequest = {
+    "[Incoming-BG] Get the EFC!!",
+    "[Incoming-BG] EFC spotted, group up to kill and recover our flag!",
+    "[Incoming-BG] Kill the EFC on sight, let's bring that flag home!",
+    "[Incoming-BG] EFC is vulnerable, kill them now!",
+    "[Incoming-BG] Everyone on the EFC!",
+    "[Incoming-BG] Close in and kill the EFC, no escape allowed!",
+    "[Incoming-BG] EFC heading towards their base—kill them before they cap!",
+    "[Incoming-BG] The EFC is weak, finish them off!",
+    "[Incoming-BG] Kill the EFC now, they're almost at their base!",
+    "[Incoming-BG] It’s a race against time, kill the EFC and secure our victory!"
    }
  } 
  
-
-
 -- Define available logos
 local logos = {
     None = "",
@@ -493,8 +500,7 @@ local function applyBorderChange()
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     }
 
-    IncCallout:SetBackdrop(backdropSettings)
-	
+    IncCallout:SetBackdrop(backdropSettings)	
 end
 
 local function applyColorChange()
@@ -578,9 +584,9 @@ inc = {
     name = "INC Message",
     desc = "Select the message for the 'INC' button",
     values = buttonMessages.inc,
-    get = function() return IncDB.incIndex end,  -- Directly use IncDB to get the current value
+    get = function() return IncDB.incIndex end,  
     set = function(_, newValue)
-        IncDB.incIndex = newValue  -- Directly use IncDB to save the new value
+        IncDB.incIndex = newValue  
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 2,
@@ -596,9 +602,9 @@ allClear = {
     name = "All Clear Message",
     desc = "Select the message for the 'All Clear' button",
     values = buttonMessages.allClear,
-    get = function() return IncDB.allClearIndex end,  -- Directly use IncDB to get the current value
+    get = function() return IncDB.allClearIndex end,  
     set = function(_, newValue)
-        IncDB.allClearIndex = newValue  -- Directly use IncDB to save the new value
+        IncDB.allClearIndex = newValue  
         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
     end,
     order = 3,
@@ -646,6 +652,25 @@ previewHealRequest = {
     name = function() return addonNamespace.getPreviewText("healRequest") end,
     fontSize = "medium",
     order = 5.1,
+},
+efcRequest = {
+    type = "select",
+    name = "EFC Request Message",
+    desc = "Select the message for the 'EFC' button",
+    values = buttonMessages.efcRequest,
+    get = function() return IncDB.efcRequestIndex end,
+    set = function(_, newValue)
+        buttonMessageIndices.efcRequest = newValue
+        IncDB.efcRequestIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 6,
+},
+previewEFCRequest = {
+    type = "description",
+    name = function() return addonNamespace.getPreviewText("efcRequest") end,
+    fontSize = "medium",
+    order = 6.1,
  
                 },
             },
@@ -666,7 +691,7 @@ previewHealRequest = {
     end,
     set = function(_, r, g, b, a)
         IncDB.fontColor = {r = r, g = g, b = b, a = a}
-        -- Apply the color immediately
+        
         for _, buttonText in ipairs(buttonTexts) do
             buttonText:SetTextColor(r, g, b, a)
         end
@@ -767,7 +792,7 @@ previewHealRequest = {
             get = function() return IncDB.raidWarningSound end,
             set = function(_, selectedValue)
                 IncDB.raidWarningSound = selectedValue
-                -- Play the sound here as a preview using SoundKit ID
+                
                 if selectedValue and type(selectedValue) == "number" then
                     PlaySound(selectedValue, "master")
                 end
@@ -781,7 +806,7 @@ previewHealRequest = {
             get = function() return IncDB.isLocked end,
             set = function(_, value)
                 IncDB.isLocked = value
-                -- Function to lock or unlock the GUI window
+                
             end,
 			},
 			logoSelection = {
@@ -948,11 +973,12 @@ function addonNamespace.getPreviewText(messageType)
         previewText = previewText .. buttonMessages.buffRequest[IncDB.buffRequestIndex]
     elseif messageType == "healRequest" and IncDB.healRequestIndex and buttonMessages.healRequest[IncDB.healRequestIndex] then
         previewText = previewText .. buttonMessages.healRequest[IncDB.healRequestIndex]
+    elseif messageType == "efcRequest" and IncDB.efcRequestIndex and buttonMessages.efcRequest[IncDB.efcRequestIndex] then
+        previewText = previewText .. buttonMessages.efcRequest[IncDB.efcRequestIndex]
     end
 
     return previewText .. "|r"
 end
-
 
 local function ListHealers()
     local groupType, groupSize
@@ -1017,8 +1043,6 @@ end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-
-
 
 local function UpdatePoints()
 
@@ -1154,6 +1178,60 @@ local function IncButtonOnClick()
     ShowRaidWarning(message, 2)
 end
 
+-- Define the OnClick function for EFC
+local function EFCButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local inInstance, instanceType = IsInInstance()
+    local chatType
+
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        chatType = "INSTANCE_CHAT"
+    elseif IsInRaid() then
+        chatType = "RAID"
+    elseif IsInGroup() then
+        chatType = "PARTY"
+    else
+        print("You're not in a PvP instance.")
+        return
+    end
+
+    local message = buttonMessages.efcRequest[buttonMessageIndices.efcRequest]  -- Get the current selected EFC message
+
+    if message and chatType then
+        SendChatMessage(message, chatType)
+		ShowRaidWarning(message, 2)
+    else
+        print("You are not in a group or in a battleground.")
+    end
+end
+
+-- Define the OnClick function for FC
+local function FCButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local inInstance, instanceType = IsInInstance()
+    local chatType
+
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        chatType = "INSTANCE_CHAT"
+    elseif IsInRaid() then
+        chatType = "RAID"
+    elseif IsInGroup() then
+        chatType = "PARTY"
+    else
+        print("You're not in a PvP instance.")
+        return
+    end
+
+    local message = buttonMessages.fcRequest[buttonMessageIndices.fcRequest]  -- Get the current selected FC message
+
+    if message and chatType then
+        SendChatMessage(message, chatType)
+		ShowRaidWarning(message, 2)
+    else
+        print("You are not in a group or in a battleground.")
+    end
+end
+
 local function HealsButtonOnClick()
     if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
         PlaySound(IncDB.raidWarningSound, "master")
@@ -1191,7 +1269,6 @@ local function BuffRequestButtonOnClick()
     local inInstance, instanceType = IsInInstance()
     local chatType
 
-    -- Check for PvP instance first
     if inInstance and (instanceType == "pvp" or instanceType == "arena") then
         chatType = "INSTANCE_CHAT"
     elseif IsInRaid() then
@@ -1309,34 +1386,28 @@ IncCallout:RegisterEvent("HONOR_XP_UPDATE")
 IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
 
 
-
-
 local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 35, -40, ButtonOnClick)
 local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 10, 0, ButtonOnClick)
 local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 10, 0, ButtonOnClick)
 local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 10, 0, ButtonOnClick)
 local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 10, 0, ButtonOnClick)
-
--- Second Row: INC and Send More (Centered under "3" button)
 local incButton = createButton("incButton", 95, 22, "Inc", {"TOP", button3, "BOTTOM"}, -45, -10, IncButtonOnClick)
 local sendMoreButton = createButton("sendMoreButton", 95, 22, "Send More", {"LEFT", incButton, "RIGHT"}, 10, 0, SendMoreButtonOnClick)
-
--- Third Row: All Clear and Heals (Centered under "3" button)
 local allClearButton = createButton("allClearButton", 95, 22, "All Clear", {"TOP", incButton, "BOTTOM"}, 0, -10, AllClearButtonOnClick)
 local healsButton = createButton("healsButton", 95, 22, "Heals", {"LEFT", allClearButton, "RIGHT"}, 10, 0, HealsButtonOnClick)
-
--- Fourth Row: Buffs and Map (Centered under "3" button)
-local buffButton = createButton("buffButton", 95, 22, "Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -10, BuffRequestButtonOnClick)
+local efcButton = createButton("efcButton", 95, 22, "EFC", {"TOP", allClearButton, "BOTTOM"}, 0, -10, EFCButtonOnClick)
+local fcButton = createButton("fcButton", 95, 22, "FC", {"LEFT", efcButton, "RIGHT"}, 10, 0, FCButtonOnClick)
+local buffButton = createButton("buffButton", 95, 22, "Buffs", {"TOP", efcButton, "BOTTOM"}, 0, -10, BuffRequestButtonOnClick)
 local mapButton = createButton("mapButton", 95, 22, "Map", {"LEFT", buffButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     ToggleWorldMap()
 end)
 
--- Fifth Row: Healers and PVP Stats (Centered under "3" button)
 local healerButton = createButton("healerButton", 95, 22, "Healers", {"TOP", buffButton, "BOTTOM"}, 0, -10, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     ListHealers()
 end)
+
 local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
@@ -1359,7 +1430,6 @@ applyButtonColor()
 allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 incButton:SetScript("OnClick", IncButtonOnClick)
-
 
 -- Apply the PostClick script to each button
 for _, button in ipairs(buttons) do

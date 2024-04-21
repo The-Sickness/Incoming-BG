@@ -345,6 +345,14 @@ local buttonMessages = {
     "[Incoming-BG] The EFC is weak, finish them off!",
     "[Incoming-BG] Kill the EFC now, they're almost at their base!",
     "[Incoming-BG] It’s a race against time, kill the EFC and secure our victory!"
+	},
+	fcRequest = {
+    "[Incoming-BG] Protect our FC!",
+    "[Incoming-BG] FC needs help!!",
+    "[Incoming-BG] Heals on FC!",
+    "[Incoming-BG] Need some help with the FC.",
+    "[Incoming-BG] Someone needs to get the flag.",
+    
    }
  } 
  
@@ -671,6 +679,25 @@ previewEFCRequest = {
     name = function() return addonNamespace.getPreviewText("efcRequest") end,
     fontSize = "medium",
     order = 6.1,
+	},
+	fcRequest = {
+    type = "select",
+    name = "FC Request Message",
+    desc = "Select the message for the 'FC' button",
+    values = buttonMessages.fcRequest,
+    get = function() return IncDB.fcRequestIndex end,
+    set = function(_, newValue)
+        buttonMessageIndices.fcRequest = newValue
+        IncDB.fcRequestIndex = newValue
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+    order = 7,
+},
+previewFCRequest = {
+    type = "description",
+    name = function() return addonNamespace.getPreviewText("fcRequest") end,
+    fontSize = "medium",
+    order = 7.1,
  
                 },
             },
@@ -975,10 +1002,13 @@ function addonNamespace.getPreviewText(messageType)
         previewText = previewText .. buttonMessages.healRequest[IncDB.healRequestIndex]
     elseif messageType == "efcRequest" and IncDB.efcRequestIndex and buttonMessages.efcRequest[IncDB.efcRequestIndex] then
         previewText = previewText .. buttonMessages.efcRequest[IncDB.efcRequestIndex]
+    elseif messageType == "fcRequest" and IncDB.fcRequestIndex and buttonMessages.fcRequest[IncDB.fcRequestIndex] then
+        previewText = previewText .. buttonMessages.fcRequest[IncDB.fcRequestIndex]
     end
 
     return previewText .. "|r"
 end
+
 
 local function ListHealers()
     local groupType, groupSize
@@ -1180,7 +1210,10 @@ end
 
 -- Define the OnClick function for EFC
 local function EFCButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    if not InCombatLockdown() then
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
+    
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -1188,26 +1221,23 @@ local function EFCButtonOnClick()
         chatType = "INSTANCE_CHAT"
     elseif IsInRaid() then
         chatType = "RAID"
-    elseif IsInGroup() then
+    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
         chatType = "PARTY"
     else
-        print("You're not in a PvP instance.")
+        print("You're not in a PvP instance or any group.")
         return
     end
 
-    local message = buttonMessages.efcRequest[buttonMessageIndices.efcRequest]  -- Get the current selected EFC message
-
-    if message and chatType then
-        SendChatMessage(message, chatType)
-		ShowRaidWarning(message, 2)
-    else
-        print("You are not in a group or in a battleground.")
-    end
+    local message = buttonMessages.efcRequest[IncDB.efcRequestIndex]
+    SendChatMessage(message, chatType)
 end
 
 -- Define the OnClick function for FC
 local function FCButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    if not InCombatLockdown() then
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
+    
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -1215,22 +1245,17 @@ local function FCButtonOnClick()
         chatType = "INSTANCE_CHAT"
     elseif IsInRaid() then
         chatType = "RAID"
-    elseif IsInGroup() then
+    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
         chatType = "PARTY"
     else
-        print("You're not in a PvP instance.")
+        print("You're not in a PvP instance or any group.")
         return
     end
 
-    local message = buttonMessages.fcRequest[buttonMessageIndices.fcRequest]  -- Get the current selected FC message
-
-    if message and chatType then
-        SendChatMessage(message, chatType)
-		ShowRaidWarning(message, 2)
-    else
-        print("You are not in a group or in a battleground.")
-    end
+    local message = buttonMessages.fcRequest[IncDB.fcRequestIndex]
+    SendChatMessage(message, chatType)
 end
+
 
 local function HealsButtonOnClick()
     if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then

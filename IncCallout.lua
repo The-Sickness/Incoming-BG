@@ -141,23 +141,29 @@ pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValue(pvp
 pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValue(pvpStatsFrame, "Honor Level:", pvpStatsFrame.honorLabel, VERTICAL_GAP, {0.58, 0, 0.82})  -- Purple
 pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP, {1, 0, 0})  -- Red
 
--- Update Function for PvP Stats
 local function UpdatePvPStatsFrame()
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
+    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
+    local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
     local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
     local honorLevel = UnitHonorLevel("player")
+    local currentConquestPoints = conquestInfo.quantity
+    local conquestCap = weeklyProgress.maxProgress or 1350  
+
+    if conquestCap == 1250 then
+        conquestCap = 1350  
+    end
 
     pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
-    pvpStatsFrame.conquestValue:SetText(conquestInfo.quantity)
+    pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
+    pvpStatsFrame.conquestCapValue:SetText(currentConquestPoints .. " / " .. conquestCap)
     pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
     pvpStatsFrame.honorLevelValue:SetText(honorLevel)
-    pvpStatsFrame.conquestCapValue:SetText(conquestInfo.quantity .. " / " .. conquestInfo.maxWeeklyQuantity)
 end
 
--- Event Handling
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")  -- Event that might indicate changes in conquest progress
 pvpStatsFrame:SetScript("OnEvent", UpdatePvPStatsFrame)
 pvpStatsFrame:SetScript("OnShow", UpdatePvPStatsFrame)
 
@@ -1230,6 +1236,7 @@ local function EFCButtonOnClick()
 
     local message = buttonMessages.efcRequest[IncDB.efcRequestIndex]
     SendChatMessage(message, chatType)
+	ShowRaidWarning(message, 2)
 end
 
 -- Define the OnClick function for FC
@@ -1254,6 +1261,7 @@ local function FCButtonOnClick()
 
     local message = buttonMessages.fcRequest[IncDB.fcRequestIndex]
     SendChatMessage(message, chatType)
+	ShowRaidWarning(message, 2)
 end
 
 

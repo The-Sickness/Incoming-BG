@@ -3,7 +3,7 @@ name: Package AddOn
 on:
   push:
     branches:
-      - main  # Ensure this matches the branch name you use
+      - main  
 
 jobs:
   build:

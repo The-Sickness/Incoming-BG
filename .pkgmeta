@@ -3,7 +3,7 @@ name: Package AddOn
 on:
   push:
     branches:
-      - main  
+      - main  # Ensure this matches the branch name you use
 
 jobs:
   build:
@@ -13,25 +13,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Cache Lua
-      uses: actions/cache@v2
-      with:
-        path: |
-          /opt/lua/
-        key: ${{ runner.os }}-lua
-
-    - name: Cache LuaRocks
-      uses: actions/cache@v2
-      with:
-        path: |
-          /opt/luarocks/
-        key: ${{ runner.os }}-luarocks
-
-    - name: Setup Lua
-      uses: leafo/gh-actions-lua@v1
-
-    - name: Setup LuaRocks
-      uses: leafo/gh-actions-luarocks@v1
+    - name: Setup Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lua5.3
 
     - name: Install Packager
       run: |
@@ -43,6 +28,10 @@ jobs:
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
+      with:
+        name: packaged-addon
+        path: ./releases
+
       with:
         name: packaged-addon
         path: ./releases

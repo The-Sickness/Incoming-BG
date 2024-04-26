@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.1 - 10.2.6
+-- v6.2 - 10.2.6
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -112,25 +112,23 @@ pvpStatsFrame:SetScript("OnDragStart", pvpStatsFrame.StartMoving)
 pvpStatsFrame:SetScript("OnDragStop", pvpStatsFrame.StopMovingOrSizing)
 pvpStatsFrame:Hide()
 
--- Initialize UI elements
 pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY")
 pvpStatsFrame.title:SetFontObject("GameFontHighlight")
 pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -7)
 pvpStatsFrame.title:SetText("PVP Stats")
 
-local LEFT_MARGIN = -70  
-local VERTICAL_GAP = -15  
+local LEFT_MARGIN = -70
+local VERTICAL_GAP = -15
 
 local function createStatLabelAndValue(parent, labelText, previousElement, yOffset, textColor)
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("TOPLEFT", previousElement, "BOTTOMLEFT", previousElement == parent.title and LEFT_MARGIN or 0, yOffset)
     label:SetText(labelText)
     label:SetTextColor(unpack(textColor))
-
+    
     local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     value:SetPoint("LEFT", label, "RIGHT", 5, 0)
-    value:SetTextColor(1, 0.84, 0)  -- Gold color for value
-
+    value:SetTextColor(1, 0.84, 0)
     return label, value
 end
 
@@ -140,6 +138,9 @@ pvpStatsFrame.conquestLabel, pvpStatsFrame.conquestValue = createStatLabelAndVal
 pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValue(pvpStatsFrame, "Honor Points:", pvpStatsFrame.conquestLabel, VERTICAL_GAP, {1, 0.5, 0})  -- Orange
 pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValue(pvpStatsFrame, "Honor Level:", pvpStatsFrame.honorLabel, VERTICAL_GAP, {0.58, 0, 0.82})  -- Purple
 pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP, {1, 0, 0})  -- Red
+pvpStatsFrame.soloShuffleRatingLabel, pvpStatsFrame.soloShuffleRatingValue = createStatLabelAndValue(pvpStatsFrame, "Solo Shuffle Rating:", pvpStatsFrame.conquestCapLabel, VERTICAL_GAP, {1, 0.84, 0})  -- Gold color for value)
+
+local SOLO_SHUFFLE_INDEX = 7  
 
 local function UpdatePvPStatsFrame()
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
@@ -148,22 +149,27 @@ local function UpdatePvPStatsFrame()
     local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
     local honorLevel = UnitHonorLevel("player")
     local currentConquestPoints = conquestInfo.quantity
-    local conquestCap = weeklyProgress.maxProgress or 1350  
+    local conquestCap = weeklyProgress.maxProgress or 1350
 
     if conquestCap == 1250 then
-        conquestCap = 1350  
+        conquestCap = 1350
     end
+
+    
+    local rating = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+    local soloShuffleRating = rating or "N/A"
 
     pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
     pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
     pvpStatsFrame.conquestCapValue:SetText(currentConquestPoints .. " / " .. conquestCap)
     pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
     pvpStatsFrame.honorLevelValue:SetText(honorLevel)
+    pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)  
 end
 
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")  -- Event that might indicate changes in conquest progress
+pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
 pvpStatsFrame:SetScript("OnEvent", UpdatePvPStatsFrame)
 pvpStatsFrame:SetScript("OnShow", UpdatePvPStatsFrame)
 
@@ -1016,6 +1022,23 @@ function addonNamespace.getPreviewText(messageType)
 end
 
 
+local messageQueue = {}
+local timeLastMessageSent = 0
+local MESSAGE_DELAY = 1.5 -- Delay in seconds between messages
+
+local function SendMessage()
+    if #messageQueue == 0 then return end
+    if time() - timeLastMessageSent < MESSAGE_DELAY then return end -- Check if delay has passed
+
+    local message = table.remove(messageQueue, 1)
+    SendChatMessage(message.text, message.channel)
+    timeLastMessageSent = time()
+end
+
+local function QueueMessage(text, channel)
+    table.insert(messageQueue, {text = text, channel = channel})
+end
+
 local function ListHealers()
     local groupType, groupSize
     if IsInRaid() then
@@ -1040,14 +1063,20 @@ local function ListHealers()
 
     if #healerNames > 0 then
         local healerList = table.concat(healerNames, ", ")
-        SendChatMessage("[Incoming-BG] Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
-
+        QueueMessage("[Incoming-BG] Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
     else
         if IsInGroup() or IsInRaid() then
-            SendChatMessage("[Incoming-BG] We have no heals, lol..", "INSTANCE_CHAT")
+            QueueMessage("[Incoming-BG] We have no heals, lol..", "INSTANCE_CHAT")
         end
     end
 end
+
+-- Setup a frame to periodically attempt to send messages
+local frame = CreateFrame("Frame")
+frame:SetScript("OnUpdate", function(self, elapsed)
+    SendMessage()
+end)
+
 
 -- Create a table to map each location to itself
 local locationTable = {}

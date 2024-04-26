@@ -1,23 +1,23 @@
-4/12/24 Update:
+4/26/24:
+1. Solo Shuffle Rating with Delay Timer
+I implemented a mechanism to fetch and display the Solo Shuffle Rating in your PvP stats frame. Here's what I did:
 
+Delayed Data Fetching: I used C_Timer.After() to introduce a delay of 2 seconds before fetching the Solo Shuffle rating. This delay ensures that the necessary game data is fully loaded and available, especially since accessing this information immediately upon login or UI load might result in incomplete data.
+Dynamic Update: The rating is dynamically updated in the PvP stats frame whenever the relevant data becomes available. This update occurs in response to specific game events or when the player manually checks their PvP stats.
+2. Resolution of Chat Message Limit Issues
+I addressed a problem related to exceeding the chat message limit by optimizing how messages are queued and sent:
 
-All Your PvP Stats in One Place: Jump right into the fray with all your crucial stats—Honor Points, Conquest Points, and Honor Level—neatly displayed in one dedicated window. It’s all the info you need, right at your fingertips. Will be adding more......
+Message Queueing: Improved the system for queueing messages to ensure that messages are sent out at intervals that respect the game's rate limits, thus avoiding the issue where too many messages would trigger warnings or blocks.
+Efficient Handling: Adjusted the code to better manage the frequency of messages, especially in scenarios where multiple events might trigger a burst of messages. This included implementing controls to space out messages appropriately.
+Technical Details of the Fixes:
+For Solo Shuffle Rating:
+I ensured that the addon waits for the Blizzard PvP UI to load properly and for the data to be fetched with a slight delay, which is crucial right after logging in or when switching characters.
+For Chat Message Limits:
+I refined the logic that handles the sending of chat messages, particularly for functions tied to events that could generate multiple messages in quick succession, by implementing a queueing system that sends messages at a set interval rather than all at once.
 
-Quick Access from the Main GUI: We’ve added a handy button on the Incoming-BG main interface. A single click pulls up your PvP stats, letting you check your progress on the fly, without ever leaving the battlefield.
-
-Sleek Design: We’ve ditched the clutter. The new window cuts through the chaos, offering you a clean, easy-to-read display. It’s all about making your playtime more efficient and a lot more fun.
-
-Updates As You Play: The window updates your stats in real-time. Watch your points rise and your rank increase as you conquer your opponents, all updated live as you play.
-
-Make It Yours: Customize the look of your PvP Stats Window to match your setup. Size, position, color—you call the shots, making sure your UI looks just as good as it performs.
-
- 
-
-Removed: Removed the Conquest and Honor points from the GUI. They were replaced with the PVP Stats button.
-
- 
-
-Added new images to see the new GUI
+4/11/24:
+The "PVP Stats" button is a cool new feature in the "Incoming-BG" addon for World of Warcraft, designed specifically for PvP enthusiasts. When you click this button, it pops open a slick new window right in the middle of your screen, showcasing all your PvP stats in one spot.
+ You can check out how many honorable kills you've racked up over your career, see your highest PvP rank, and keep tabs on your current Conquest and Honor Points. It even displays your Honor Level, so you can easily gauge your progress in the PvP scene.
 
 3/30/24:
 Dynamic Color Customization for UI Elements:

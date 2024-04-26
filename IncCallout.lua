@@ -140,31 +140,49 @@ pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAn
 pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP, {1, 0, 0})  -- Red
 pvpStatsFrame.soloShuffleRatingLabel, pvpStatsFrame.soloShuffleRatingValue = createStatLabelAndValue(pvpStatsFrame, "Solo Shuffle Rating:", pvpStatsFrame.conquestCapLabel, VERTICAL_GAP, {1, 0.84, 0})  -- Gold color for value)
 
-local SOLO_SHUFFLE_INDEX = 7  
+local SOLO_SHUFFLE_INDEX = 7
 
 local function UpdatePvPStatsFrame()
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-    local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-    local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
-    local honorLevel = UnitHonorLevel("player")
-    local currentConquestPoints = conquestInfo.quantity
-    local conquestCap = weeklyProgress.maxProgress or 1350
-
-    if conquestCap == 1250 then
-        conquestCap = 1350
+    if not IsAddOnLoaded("Blizzard_PVPUI") then
+        LoadAddOn("Blizzard_PVPUI")
     end
 
-    
-    local rating = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
-    local soloShuffleRating = rating or "N/A"
+    C_Timer.After(2, function()  -- Delay for 2 seconds to ensure the AddOn is fully loaded and ready
+        local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
+        local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
+        local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+        local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
+        local honorLevel = UnitHonorLevel("player")
+        local currentConquestPoints = conquestInfo.quantity
+        local conquestCap = weeklyProgress.maxProgress or 1350
 
-    pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
-    pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
-    pvpStatsFrame.conquestCapValue:SetText(currentConquestPoints .. " / " .. conquestCap)
-    pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
-    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
-    pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)  
+        if conquestCap == 1250 then
+            conquestCap = 1350
+        end
+
+        local rating = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+        local soloShuffleRating = rating or "N/A"
+
+        pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
+        pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
+        pvpStatsFrame.conquestCapValue:SetText(currentConquestPoints .. " / " .. conquestCap)
+        pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
+        pvpStatsFrame.honorLevelValue:SetText(honorLevel)
+        pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)
+
+        local canUseRated = C_PvP.CanPlayerUseRatedPVPUI()
+        local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
+
+        if canUseRated then
+            PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton2, true)
+            PVPQueueFrame.CategoryButton2.tooltip = nil
+        end
+
+        if canUsePremade then
+            PVPQueueFrame.CategoryButton3.tooltip = nil
+            PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton3, true)
+        end
+    end)
 end
 
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
@@ -1478,12 +1496,18 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     local honorPoints = honorInfo and honorInfo.quantity or 0
     local honorLevel = UnitHonorLevel("player")
     local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
+
     pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
     pvpStatsFrame.conquestValue:SetText(conquestPoints)
     pvpStatsFrame.honorValue:SetText(honorPoints)
     pvpStatsFrame.honorLevelValue:SetText(honorLevel)
     pvpStatsFrame:Show()
+
+    -- Reload the UI to potentially fix UI issues or reset state
+    
 end)
+
+
 
 -- Apply the color to all the buttons
 applyButtonColor()

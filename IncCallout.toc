@@ -1,12 +1,14 @@
 ## Interface: 100206
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
-## Version: v.6.1
+## Version: v.6.2
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
 ## X-Wago-ID: as3Dfg57
 ## SavedVariables: IncCalloutDB
+## SavedVariablesPerCharacter: IncDB
+## Dependencies:  Blizzard_PVPMatch
 
 
 #@no-lib-strip@
@@ -28,6 +30,7 @@ libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 
 IncCallout.lua
 map.lua
+
 
 
 

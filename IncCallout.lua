@@ -138,7 +138,7 @@ pvpStatsFrame.conquestLabel, pvpStatsFrame.conquestValue = createStatLabelAndVal
 pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValue(pvpStatsFrame, "Honor Points:", pvpStatsFrame.conquestLabel, VERTICAL_GAP, {1, 0.5, 0})  -- Orange
 pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValue(pvpStatsFrame, "Honor Level:", pvpStatsFrame.honorLabel, VERTICAL_GAP, {0.58, 0, 0.82})  -- Purple
 pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValue(pvpStatsFrame, "Conquest Cap:", pvpStatsFrame.honorLevelLabel, VERTICAL_GAP, {1, 0, 0})  -- Red
-pvpStatsFrame.soloShuffleRatingLabel, pvpStatsFrame.soloShuffleRatingValue = createStatLabelAndValue(pvpStatsFrame, "Solo Shuffle Rating:", pvpStatsFrame.conquestCapLabel, VERTICAL_GAP, {1, 0.84, 0})  -- Gold color for value)
+pvpStatsFrame.soloShuffleRatingLabel, pvpStatsFrame.soloShuffleRatingValue = createStatLabelAndValue(pvpStatsFrame, "Solo Shuffle Rating:", pvpStatsFrame.conquestCapLabel, VERTICAL_GAP, {0, 0.75, 1})  -- Gold color for value)
 
 local SOLO_SHUFFLE_INDEX = 7
 
@@ -154,11 +154,12 @@ local function UpdatePvPStatsFrame()
         local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
         local honorLevel = UnitHonorLevel("player")
         local currentConquestPoints = conquestInfo.quantity
-        local conquestCap = weeklyProgress.maxProgress or 1350
+        local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID);
+        local conquestCap = currencyInfo.maxQuantity;  -- Dynamically fetch the current conquest cap
 
-        if conquestCap == 1250 then
-            conquestCap = 1350
-        end
+       if not conquestCap or conquestCap == 0 then
+       conquestCap = 1350  -- Default fallback if no valid data is retrieved
+end
 
         local rating = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
         local soloShuffleRating = rating or "N/A"
@@ -1496,16 +1497,48 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     local honorPoints = honorInfo and honorInfo.quantity or 0
     local honorLevel = UnitHonorLevel("player")
     local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
+    local ratingInfo = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+    local soloShuffleRating = ratingInfo or "N/A"
+    local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
+    local conquestCap = weeklyProgress.maxProgress or 1350
 
     pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
     pvpStatsFrame.conquestValue:SetText(conquestPoints)
     pvpStatsFrame.honorValue:SetText(honorPoints)
     pvpStatsFrame.honorLevelValue:SetText(honorLevel)
+    pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)
+    pvpStatsFrame.conquestCapValue:SetText(conquestPoints .. " / " .. conquestCap)
     pvpStatsFrame:Show()
-
-    -- Reload the UI to potentially fix UI issues or reset state
-    
 end)
+
+-- Tooltip setup for the pvpStatsButton with Conquest Cap included
+pvpStatsButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("PVP Stats Information", nil, nil, nil, nil, true)
+    GameTooltip:AddLine(" \nDisplays the following stats:\n", 1, 1, 1, true)  -- Extra line breaks for spacing
+    GameTooltip:AddLine("• Honor Points: ", 1, 0.5, 0, true)  -- Orange for title
+    GameTooltip:AddLine("Your current total.", 1, 1, 1, true)  -- White for description
+    GameTooltip:AddLine("• Conquest Points: ", 1, 0.5, 0, true)
+    GameTooltip:AddLine("Your current total.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Conquest Cap: ", 1, 0.5, 0, true)
+    GameTooltip:AddLine("The maximum Conquest points you can earn this week.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Honor Level: ", 1, 0.5, 0, true)
+    GameTooltip:AddLine("Your current level in the Honor system.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Lifetime Honorable Kills: ", 1, 0.5, 0, true)
+    GameTooltip:AddLine("Total kills over your character's lifetime.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Solo Shuffle Rating: ", 1, 0.5, 0, true)
+    GameTooltip:AddLine("Your current rating in Solo Shuffle.", 1, 1, 1, true)
+    GameTooltip:Show()
+end)
+
+pvpStatsButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()
+end)
+
+
+
+
+
 
 
 

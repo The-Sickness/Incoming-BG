@@ -26,6 +26,7 @@ IncDB = IncDB or {}
 addonNamespace.addon = addon
 addonNamespace.db = IncDB
 
+
 local defaults = {
     profile = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
@@ -149,28 +150,29 @@ local function UpdatePvPStatsFrame()
 
     C_Timer.After(2, function()  -- Delay for 2 seconds to ensure the AddOn is fully loaded and ready
         local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-        local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
         local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
         local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
         local honorLevel = UnitHonorLevel("player")
-        local currentConquestPoints = conquestInfo.quantity
-        local currencyInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID);
-        local conquestCap = currencyInfo.maxQuantity;  -- Dynamically fetch the current conquest cap
 
-       if not conquestCap or conquestCap == 0 then
-       conquestCap = 1350  -- Default fallback if no valid data is retrieved
-end
+        -- Updated conquest point calculations
+        local currentConquestPoints = conquestInfo.quantity
+        local totalEarnedConquest = conquestInfo.totalEarned  -- Total conquest points earned ever
+        local weeklyEarnedConquest = conquestInfo.quantityEarnedThisWeek  -- Total conquest points earned this week
+        local conquestCap = conquestInfo.maxQuantity  -- Dynamically fetch the current conquest cap
+        local displayedConquestProgress = math.min(totalEarnedConquest, conquestCap)  -- Ensure displayed value does not exceed cap
 
         local rating = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
         local soloShuffleRating = rating or "N/A"
 
+        -- Display data
         pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
         pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
-        pvpStatsFrame.conquestCapValue:SetText(currentConquestPoints .. " / " .. conquestCap)
+        pvpStatsFrame.conquestCapValue:SetText(displayedConquestProgress .. " / " .. conquestCap)
         pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
         pvpStatsFrame.honorLevelValue:SetText(honorLevel)
         pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)
 
+        -- Adjust buttons based on PvP availability
         local canUseRated = C_PvP.CanPlayerUseRatedPVPUI()
         local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
 
@@ -180,12 +182,13 @@ end
         end
 
         if canUsePremade then
-            PVPQueueFrame.CategoryButton3.tooltip = nil
             PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton3, true)
+            PVPQueueFrame.CategoryButton3.tooltip = nil
         end
     end)
 end
 
+-- Registering events to update PvP stats when relevant data changes
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
@@ -1491,23 +1494,24 @@ end)
 
 local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
+    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
     local conquestPoints = conquestInfo and conquestInfo.quantity or 0
+    local earnedThisWeek = conquestInfo and conquestInfo.quantityEarnedThisWeek or 0
+    local conquestCap = conquestInfo and conquestInfo.maxWeeklyQuantity or 1350
     local honorPoints = honorInfo and honorInfo.quantity or 0
     local honorLevel = UnitHonorLevel("player")
     local lifetimeHonorableKills, _ = GetPVPLifetimeStats()
     local ratingInfo = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
     local soloShuffleRating = ratingInfo or "N/A"
-    local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
-    local conquestCap = weeklyProgress.maxProgress or 1350
 
+    -- Set the text for the PvP stats frame
     pvpStatsFrame.honorableKillsValue:SetText(lifetimeHonorableKills)
     pvpStatsFrame.conquestValue:SetText(conquestPoints)
     pvpStatsFrame.honorValue:SetText(honorPoints)
     pvpStatsFrame.honorLevelValue:SetText(honorLevel)
     pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)
-    pvpStatsFrame.conquestCapValue:SetText(conquestPoints .. " / " .. conquestCap)
+    pvpStatsFrame.conquestCapValue:SetText(earnedThisWeek .. " / " .. conquestCap)
     pvpStatsFrame:Show()
 end)
 
@@ -1534,13 +1538,6 @@ end)
 pvpStatsButton:SetScript("OnLeave", function(self)
     GameTooltip:Hide()
 end)
-
-
-
-
-
-
-
 
 -- Apply the color to all the buttons
 applyButtonColor()

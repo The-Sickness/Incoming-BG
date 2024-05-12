@@ -297,23 +297,6 @@ pvpStatsFrame:SetScript("OnShow", function()
     UpdatePvPStatsFrame()
 end)
 
--- Register event handlers
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("PLAYER_LOGOUT")
-frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-frame:RegisterEvent("HONOR_XP_UPDATE")
-frame:RegisterEvent("PVP_RATED_STATS_UPDATE") 
-frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-
-frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" or event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
-        UpdatePvPStatsFrame()  -- Updates stats on relevant events
-    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
-        SavePvPStats()  -- Saves stats on logout or when currency/honor updates
-    end
-end)
-
 local function ShowRaidWarning(message, duration)
    
     if IncDB.enableRaidWarnings then
@@ -1511,12 +1494,26 @@ local function ApplyFontSettings()
    
 end
 
-	local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
+-- Create a single frame to handle all events
+local frame = CreateFrame("Frame", "IncCalloutFrame")
+frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("PLAYER_LOGOUT")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+frame:RegisterEvent("HONOR_XP_UPDATE")
+frame:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
+frame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
+frame:RegisterEvent("PVP_RATED_STATS_UPDATE")
+frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+
+local function OnEvent(self, event, arg1, ...)
+    
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
-        
-                db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
-                IncDB = db.profile or {}
-        
+        db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
+        IncDB = db.profile or {}
+
         -- Initialize IncDB if it doesn't exist
         if not IncDB then
             IncDB = {
@@ -1553,7 +1550,24 @@ end
 
         icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
 
-    elseif event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+    elseif event == "PLAYER_LOGIN" then
+        SavePvPStats()
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+            IncCallout:Show()
+        else
+            IncCallout:Hide()
+        end
+        UpdatePoints()
+        ScaleGUI()
+        ApplyFontSettings()
+        applyButtonColor()
+
+    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        UpdatePvPStatsFrame()
+        UpdatePoints()
+
+    elseif event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
             IncCallout:Show()
@@ -1569,30 +1583,25 @@ end
         IncCallout:Hide()
         applyButtonColor()
 
-    elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
-        UpdatePoints()
-
     elseif event == "CHAT_MSG_INSTANCE_CHAT" then
         local message = arg1
         onChatMessage(message)
+
+    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
+        local index = 7  
+        local rating = select(2, GetPersonalRatedInfo(index))  
+        
+        UpdatePvPStatsFrame(rating)
     end
 end
 
 -- Register the function to the frame and events
-IncCallout:SetScript("OnEvent", OnEvent)
-IncCallout:RegisterEvent("ADDON_LOADED")
-IncCallout:RegisterEvent("PLAYER_LOGIN")
-IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
-IncCallout:RegisterEvent("PLAYER_LEAVING_WORLD")  
-IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-IncCallout:RegisterEvent("HONOR_XP_UPDATE")
-IncCallout:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
-IncCallout:RegisterEvent("WEEKLY_REWARDS_UPDATE")
+frame:SetScript("OnEvent", OnEvent)
 
+-- Register additional events for pvpStatsFrame
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")	
-
+pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
 
 local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 35, -40, ButtonOnClick)
 local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 10, 0, ButtonOnClick)

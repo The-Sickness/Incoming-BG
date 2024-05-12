@@ -305,6 +305,8 @@ frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 frame:RegisterEvent("HONOR_XP_UPDATE")
 frame:RegisterEvent("PVP_RATED_STATS_UPDATE") 
 frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+frame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
+frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
 
 frame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "PLAYER_LOGIN" then 

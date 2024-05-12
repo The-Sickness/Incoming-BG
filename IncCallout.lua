@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.4 - 10.2.6
+-- v6.5 - 10.2.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -22,10 +22,9 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
-
+IncCalloutDB = IncCalloutDB or {}
 addonNamespace.addon = addon
 addonNamespace.db = IncDB
-
 
 local defaults = {
     profile = {
@@ -46,6 +45,10 @@ local defaults = {
         honorFontSize = 14,
         honorFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
         selectedLogo = "None", -- Default logo selection
+		buffRequestIndex = 1,
+		healRequestIndex = 1,
+		efcRequestIndex = 1,
+		fcRequestIndex = 1,
     },
 }
 
@@ -70,7 +73,6 @@ customRaidWarningFrame.text = customRaidWarningFrame:CreateFontString(nil, "OVER
 customRaidWarningFrame.text:SetAllPoints(true)
 customRaidWarningFrame.text:SetJustifyH("CENTER")
 customRaidWarningFrame.text:SetJustifyV("MIDDLE")
-
 customRaidWarningFrame:Hide() 
 
 local CONQUEST_CURRENCY_ID = 1602
@@ -90,6 +92,7 @@ local closeButton = CreateFrame("Button", nil, IncCallout, "UIPanelCloseButton")
 closeButton:SetPoint("TOPRIGHT", IncCallout, "TOPRIGHT", -5, -5)
 closeButton:SetSize(24, 24)  
 closeButton:SetScript("OnClick", function()
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     IncCallout:Hide()  
 end)
 
@@ -104,17 +107,21 @@ end)
 
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
-pvpStatsFrame:SetSize(750, 100)
+pvpStatsFrame:SetSize(750, 75)  -- Increased size to accommodate scrolling
 pvpStatsFrame:SetPoint("CENTER")
 pvpStatsFrame:SetMovable(true)
 pvpStatsFrame:EnableMouse(true)
 pvpStatsFrame:RegisterForDrag("LeftButton")
 pvpStatsFrame:SetScript("OnDragStart", pvpStatsFrame.StartMoving)
 pvpStatsFrame:SetScript("OnDragStop", pvpStatsFrame.StopMovingOrSizing)
-pvpStatsFrame:Hide() 
+pvpStatsFrame:Hide()
+
+pvpStatsFrame.playerNameValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+pvpStatsFrame.playerNameValue:SetPoint("TOP", pvpStatsFrame.title, "BOTTOM", 0, -10)  -- Adjust the offset as needed
+pvpStatsFrame.playerNameValue:SetText("Character Name")
 
 pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -5)  -- Adjust this value to move the title up or down
+pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -3)
 pvpStatsFrame.title:SetText("PvP Statistics")
 
 local TOP_MARGIN = -25
@@ -140,33 +147,36 @@ pvpStatsFrame.soloShuffleRatingLabel, pvpStatsFrame.soloShuffleRatingValue = cre
 
 local SOLO_SHUFFLE_INDEX = 7
 
+-- Update function to handle spec-specific PvP data
 local function UpdatePvPStatsFrame()
     if not IsAddOnLoaded("Blizzard_PVPUI") then
         LoadAddOn("Blizzard_PVPUI")
     end
 
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)        
-    local honorLevel = UnitHonorLevel("player")  
+    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+    local honorLevel = UnitHonorLevel("player")
 
-    -- Updated conquest point calculations
+    -- Fetch current specialization index
+    local specIndex = GetSpecialization()
+    local specId = specIndex and select(1, GetSpecializationInfo(specIndex)) or nil
+    local rating = specId and GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX) or "N/A"
+
+    -- Update conquest points
     local currentConquestPoints = conquestInfo.quantity
-    local totalEarnedConquest = conquestInfo.totalEarned  -- Total conquest points earned ever
-    local weeklyEarnedConquest = conquestInfo.quantityEarnedThisWeek  -- Total conquest points earned this week
-    local conquestCap = conquestInfo.maxQuantity  -- Dynamically fetch the current conquest cap
-    local displayedConquestProgress = math.min(totalEarnedConquest, conquestCap)  -- Ensure displayed value does not exceed cap
+    local totalEarnedConquest = conquestInfo.totalEarned
+    local weeklyEarnedConquest = conquestInfo.quantityEarnedThisWeek
+    local conquestCap = conquestInfo.maxQuantity
+    local displayedConquestProgress = math.min(totalEarnedConquest, conquestCap)
 
-    local rating = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
-    local soloShuffleRating = rating or "N/A"
-
-    -- Display data
+    -- Update PvP stats frame with fetched data
     pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
     pvpStatsFrame.conquestCapValue:SetText(displayedConquestProgress .. " / " .. conquestCap)
     pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
-    pvpStatsFrame.honorLevelValue:SetText(honorLevel)  
-    pvpStatsFrame.soloShuffleRatingValue:SetText(soloShuffleRating)
+    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
+    pvpStatsFrame.soloShuffleRatingValue:SetText(rating)
 
-    -- Adjust buttons based on PvP availability
+    -- Adjust PvP UI buttons based on current PvP availability
     local canUseRated = C_PvP.CanPlayerUseRatedPVPUI()
     local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
 
@@ -188,13 +198,121 @@ local function GetDefaultClassColor()
     end
 end
 
+local function CreateCharacterDropdown()
+
+    local dropdown = CreateFrame("FRAME", "SelectCharacterDropdown", pvpStatsFrame, "UIDropDownMenuTemplate")
+    dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
+
+    UIDropDownMenu_SetWidth(dropdown, 150)
+    UIDropDownMenu_SetText(dropdown, "Select Character")
+
+local function OnClick(self)
+    UIDropDownMenu_SetSelectedID(dropdown, self:GetID(), true)
+	PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local characterFullName = self:GetText()
+    local characterNameOnly = string.match(characterFullName, "^[^%-]+")  -- Extracting the character name before the hyphen
+    local stats = IncCalloutDB[characterFullName]
+
+    if stats then
+        local classColor = RAID_CLASS_COLORS[stats.class]
+        pvpStatsFrame.playerNameValue:SetText(characterNameOnly)
+        pvpStatsFrame.playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
+
+        pvpStatsFrame.conquestValue:SetText(stats.conquestValue or "N/A")
+        pvpStatsFrame.conquestCapValue:SetText(stats.conquestCapValue or "N/A")
+        pvpStatsFrame.honorValue:SetText(stats.honorValue or "N/A")
+        pvpStatsFrame.honorLevelValue:SetText(stats.honorLevelValue or "N/A")
+        pvpStatsFrame.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
+    else
+        pvpStatsFrame.playerNameValue:SetText(characterNameOnly)
+        pvpStatsFrame.playerNameValue:SetTextColor(1, 1, 1)  -- Default white color
+        pvpStatsFrame.conquestValue:SetText("N/A")
+        pvpStatsFrame.conquestCapValue:SetText("N/A")
+        pvpStatsFrame.honorValue:SetText("N/A")
+        pvpStatsFrame.honorLevelValue:SetText("N/A")
+        pvpStatsFrame.soloShuffleRatingValue:SetText("N/A")
+    end
+end
+
+local function Initialize(self, level)
+    local info = UIDropDownMenu_CreateInfo()
+    local selectedCharacter = UIDropDownMenu_GetText(dropdown)  
+
+    for k, v in pairs(IncCalloutDB) do
+        if string.match(k, "^[%w]+%-[%w]+$") then
+            info.text = k
+            info.menuList = k
+            info.func = OnClick
+            info.checked = (k == selectedCharacter)  
+            info.isNotRadio = true  
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end
+end
+
+    UIDropDownMenu_Initialize(dropdown, Initialize)
+end
+
+CreateCharacterDropdown()
+
+local function SavePvPStats()
+    IncCalloutDB = IncCalloutDB or {}
+    local character = UnitName("player") .. "-" .. GetRealmName()
+    local _, class = UnitClass("player")
+
+    if not IncCalloutDB[character] then
+        IncCalloutDB[character] = { class = class }  -- Store class info
+    end
+
+    local SavedSettings = IncCalloutDB[character]
+
+    if IsAddOnLoaded("Blizzard_PVPUI") or LoadAddOn("Blizzard_PVPUI") then
+        local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
+        local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+        local honorLevel = UnitHonorLevel("player")  
+
+        SavedSettings.conquestValue = conquestInfo.quantity
+        SavedSettings.conquestCapValue = math.min(conquestInfo.totalEarned, conquestInfo.maxQuantity) .. " / " .. conquestInfo.maxQuantity
+        SavedSettings.honorValue = honorInfo.quantity
+        SavedSettings.honorLevelValue = honorLevel  
+        SavedSettings.soloShuffleRatingValue = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX) or "N/A"
+    end
+end
+
 pvpStatsFrame:SetScript("OnShow", function()
     pvpStatsFrame.playerNameValue:SetText(UnitName("player") or "Unknown")
-    local classColor = GetDefaultClassColor()  -- Use the function to get the class color
+    local classColor = GetDefaultClassColor()
     if classColor then
-        pvpStatsFrame.playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)  -- Apply the color
+        pvpStatsFrame.playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
     end
-    UpdatePvPStatsFrame()  
+    local character = UnitName("player") .. "-" .. GetRealmName()
+    local stats = IncCalloutDB[character]
+    if stats then
+        pvpStatsFrame.conquestValue:SetText(stats.conquestValue)
+        pvpStatsFrame.conquestCapValue:SetText(stats.conquestCapValue)
+        pvpStatsFrame.honorValue:SetText(stats.honorValue)
+        pvpStatsFrame.honorLevelValue:SetText(stats.honorLevelValue)  
+        pvpStatsFrame.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue)
+    end
+    UpdatePvPStatsFrame()
+end)
+
+-- Register event handlers
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("PLAYER_LOGOUT")
+frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+frame:RegisterEvent("HONOR_XP_UPDATE")
+frame:RegisterEvent("PVP_RATED_STATS_UPDATE") 
+frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+
+frame:SetScript("OnEvent", function(self, event, arg1, ...)
+    if event == "PLAYER_LOGIN" then 
+        SavePvPStats()  
+        
+    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" or event == "PLAYER_PVP_KILLS_CHANGED" then
+        UpdatePvPStatsFrame()
+    end
 end)
 
 local function ShowRaidWarning(message, duration)
@@ -1095,7 +1213,6 @@ local function ListHealers()
     end
 end
 
-
 -- Setup a frame to periodically attempt to send messages
 local frame = CreateFrame("Frame")
 frame:SetScript("OnUpdate", function(self, elapsed)
@@ -1398,8 +1515,8 @@ end
 	local function OnEvent(self, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19, arg20)
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
         
-        db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
-        IncDB = db.profile or {}
+                db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
+                IncDB = db.profile or {}
         
         -- Initialize IncDB if it doesn't exist
         if not IncDB then

@@ -160,7 +160,10 @@ local function UpdatePvPStatsFrame()
     -- Fetch current specialization index
     local specIndex = GetSpecialization()
     local specId = specIndex and select(1, GetSpecializationInfo(specIndex)) or nil
-    local rating = specId and GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX) or "N/A"
+
+    -- Fetch Solo Shuffle rating using the index 7
+    local index = 7
+    local rating = select(2, GetPersonalRatedInfo(index)) or "N/A"
 
     -- Update conquest points
     local currentConquestPoints = conquestInfo.quantity
@@ -190,6 +193,8 @@ local function UpdatePvPStatsFrame()
         PVPQueueFrame.CategoryButton3.tooltip = nil
     end
 end
+
+
 
 local function GetDefaultClassColor()
     local _, class = UnitClass("player")
@@ -1627,6 +1632,7 @@ end)
 
 local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+	
     pvpStatsFrame:Show()
 end)
 

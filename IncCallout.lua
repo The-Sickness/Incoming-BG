@@ -305,15 +305,12 @@ frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 frame:RegisterEvent("HONOR_XP_UPDATE")
 frame:RegisterEvent("PVP_RATED_STATS_UPDATE") 
 frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-frame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
-frame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
 
-frame:SetScript("OnEvent", function(self, event, arg1, ...)
-    if event == "PLAYER_LOGIN" then 
-        SavePvPStats()  
-        
-    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" or event == "PLAYER_PVP_KILLS_CHANGED" then
-        UpdatePvPStatsFrame()
+frame:SetScript("OnEvent", function(self, event, ...)
+    if event == "PLAYER_LOGIN" or event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        UpdatePvPStatsFrame()  -- Updates stats on relevant events
+    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        SavePvPStats()  -- Saves stats on logout or when currency/honor updates
     end
 end)
 

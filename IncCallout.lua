@@ -64,16 +64,7 @@ local buttonMessageIndices = {
 
 SLASH_INC1 = "/inc"
 
-local customRaidWarningFrame = CreateFrame("Frame", "CustomRaidWarningFrame", UIParent)
-customRaidWarningFrame:SetHeight(50) 
-customRaidWarningFrame:SetPoint("TOP", UIParent, "TOP", 0, -200) 
-customRaidWarningFrame:SetWidth(UIParent:GetWidth()) 
-
-customRaidWarningFrame.text = customRaidWarningFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-customRaidWarningFrame.text:SetAllPoints(true)
-customRaidWarningFrame.text:SetJustifyH("CENTER")
-customRaidWarningFrame.text:SetJustifyV("MIDDLE")
-customRaidWarningFrame:Hide() 
+ 
 
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
@@ -194,8 +185,6 @@ local function UpdatePvPStatsFrame()
     end
 end
 
-
-
 local function GetDefaultClassColor()
     local _, class = UnitClass("player")
     if class then
@@ -301,19 +290,6 @@ pvpStatsFrame:SetScript("OnShow", function()
     end
     UpdatePvPStatsFrame()
 end)
-
-local function ShowRaidWarning(message, duration)
-   
-    if IncDB.enableRaidWarnings then
-        customRaidWarningFrame.text:SetText(message)
-        customRaidWarningFrame.text:SetTextColor(1, 0, 0) -- Set text color to red
-        customRaidWarningFrame:Show()
-    
-        C_Timer.After(duration or 5, function() 
-            customRaidWarningFrame:Hide()
-        end)
-    end
-end
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -683,24 +659,6 @@ local mapSizeOptions = {
     { name = "Colossal", value = 1.6 }
 }
 
-local soundOptions = {
-    [8959] = "Raid Warning", 
-    [8459] = "PVP Que ", 
-    [15266] = "Whistle", 
-    [12867] = "Horn", 
-    [9656] = "Laughing", 
-	[888] = "Level Up", 
-	[8960] = "Ready Check", 
-	[880] = "Drums", 
-	[9379] = "PVP Flag", 
-	[89880] = "Fireworks", 
-	[176304] = "Launcher", 
-	[34154] = "Challenge", 
-	[12867] = "Alarm", 
-	[161485] = "Lightning", 
-	["none"] = "No sound",
-}
-
 local options = {
     name = "Incoming-BG",
     type = "group",
@@ -939,32 +897,7 @@ previewFCRequest = {
                 IncDB.selectedColorIndex = selectedIndex
                 applyColorChange()
             end,
-        },
-        enableRaidWarnings = {
-            type = "toggle",
-            name = "Enable Raid Warnings",
-            desc = "Toggle Raid Warning Messages on or off.",
-            order = 5,
-            get = function() return IncDB.enableRaidWarnings end,
-            set = function(_, value)
-                IncDB.enableRaidWarnings = value
-                -- Function to toggle raid warnings
-            end,
-        },
-        raidWarningSound = {
-            type = "select",
-            name = "Raid Warning Sound",
-            desc = "Select the sound to play for Raid Warnings.",
-            order = 6,
-            values = soundOptions,
-            get = function() return IncDB.raidWarningSound end,
-            set = function(_, selectedValue)
-                IncDB.raidWarningSound = selectedValue
-                
-                if selectedValue and type(selectedValue) == "number" then
-                    PlaySound(selectedValue, "master")
-                end
-            end,
+        
         },
         lockGUI = {
             type = "toggle",
@@ -1150,7 +1083,6 @@ function addonNamespace.getPreviewText(messageType)
     return previewText .. "|r"
 end
 
-
 local messageQueue = {}
 local timeLastMessageSent = 0
 local MESSAGE_DELAY = 1.5 -- Delay in seconds between messages
@@ -1206,7 +1138,6 @@ frame:SetScript("OnUpdate", function(self, elapsed)
     SendMessage()
 end)
 
-
 -- Create a table to map each location to itself
 local locationTable = {}
 for _, location in ipairs(battlegroundLocations) do
@@ -1224,15 +1155,10 @@ local function ButtonOnClick(self)
         return
     end
 
-    if IncDB.raidWarningSound and type(IncDB.raidWarningSound) == "number" then
-        PlaySound(IncDB.raidWarningSound, "master")
-    end
-
     local currentLocation = GetSubZoneText()
    
     local message = "[Incoming-BG] " .. self:GetText() .. " Incoming at " .. currentLocation
     SendChatMessage(message, "INSTANCE_CHAT")
-    ShowRaidWarning(message, 2)
 end
 
 local f = CreateFrame("Frame")
@@ -1314,62 +1240,38 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
  
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
-    
-    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
-        PlaySound(IncDB.raidWarningSound, "master")
-    else
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    end
-
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
-
     local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
-    ShowRaidWarning(message, 2)
 end
 
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
-    
-    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
-        PlaySound(IncDB.raidWarningSound, "master")
-    else
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    end
-
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
-
     local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
-    ShowRaidWarning(message, 2)
 end
 
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
-    
-    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
-        PlaySound(IncDB.raidWarningSound, "master")
-    else
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    end
-
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
-
     local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
-    ShowRaidWarning(message, 2)
 end
 
 -- Define the OnClick function for EFC
@@ -1394,7 +1296,6 @@ local function EFCButtonOnClick()
 
     local message = buttonMessages.efcRequest[IncDB.efcRequestIndex]
     SendChatMessage(message, chatType)
-	ShowRaidWarning(message, 2)
 end
 
 -- Define the OnClick function for FC
@@ -1419,17 +1320,11 @@ local function FCButtonOnClick()
 
     local message = buttonMessages.fcRequest[IncDB.fcRequestIndex]
     SendChatMessage(message, chatType)
-	ShowRaidWarning(message, 2)
 end
 
-
+-- Function to handle the Heals button click event
 local function HealsButtonOnClick()
-    if IncDB.raidWarningSound and IncDB.raidWarningSound ~= "none" and type(IncDB.raidWarningSound) == "number" then
-        PlaySound(IncDB.raidWarningSound, "master")
-    else
-        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    end
-
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
@@ -1443,9 +1338,9 @@ local function HealsButtonOnClick()
 
     local message = buttonMessages.healRequest[IncDB.healRequestIndex] .. " Needed at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
-    ShowRaidWarning(message, 2)
 end
 
+-- Function to handle the Buff Request button click event
 local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 

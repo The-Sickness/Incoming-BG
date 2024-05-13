@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.5 - 10.2.7
+-- v6.6 - 10.2.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -572,13 +572,7 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
-            if useCustomSound then
-                if IncDB.raidWarningSound and type(IncDB.raidWarningSound) == "number" then
-                    PlaySound(IncDB.raidWarningSound, "master")
-                else
-                    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-                end
-            end
+            PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
             if onClick then 
                 onClick(self)
@@ -588,6 +582,7 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
 
     return button
 end
+
 
 local function applyButtonColor()
 
@@ -1370,11 +1365,7 @@ local function BuffRequestButtonOnClick()
     SendChatMessage(message, chatType)
 end
 
-local function onChatMessage(message)
-    if string.find(message, "%[Incoming%-BG%]") then
-        PlaySound(SOUNDKIT.RAID_WARNING, "master")
-    end
-end
+
 
 local function ApplyFontSettings()
     if not IncDB then return end

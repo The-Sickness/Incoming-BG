@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.6 - 10.2.7
+-- v6.7 - 10.2.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -31,7 +31,7 @@ local defaults = {
         buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
         fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white
         opacity = 1,
-		sendMoreIndex = 1,
+        sendMoreIndex = 1,
         incIndex = 1,
         allClearIndex = 1,
         logoColor = {r = 1, g = 1, b = 1, a = 1}, -- Default logo color
@@ -45,10 +45,19 @@ local defaults = {
         honorFontSize = 14,
         honorFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
         selectedLogo = "None", -- Default logo selection
-		buffRequestIndex = 1,
-		healRequestIndex = 1,
-		efcRequestIndex = 1,
-		fcRequestIndex = 1,
+        buffRequestIndex = 1,
+        healRequestIndex = 1,
+        efcRequestIndex = 1,
+        fcRequestIndex = 1,
+        customMessages = {
+            sendMore = "",
+            inc = "",
+            allClear = "",
+            buffRequest = "",
+            healRequest = "",
+            efcRequest = "",
+            fcRequest = "",
+        },
     },
 }
 
@@ -63,8 +72,6 @@ local buttonMessageIndices = {
 }
 
 SLASH_INC1 = "/inc"
-
- 
 
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
@@ -560,7 +567,7 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
 
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
-	
+    
     button:SetScript("OnMouseDown", function(self)
         self:SetBackdropColor(0, 0, 0, 0) 
     end)
@@ -583,6 +590,12 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     return button
 end
 
+-- Function to handle chat messages
+local function onChatMessage(message)
+    if string.find(message, "%[Incoming%-BG%]") then
+        
+    end
+end
 
 local function applyButtonColor()
 
@@ -664,138 +677,334 @@ local options = {
             order = 1,
             args = {
                 sendMore = {
-    type = "select",
-    name = "Send More Message",
-    desc = "Select the message for the 'Send More' button",
-    values = buttonMessages.sendMore,
-    get = function() return IncDB.sendMoreIndex end,  -- Directly use IncDB to get the current value
-    set = function(_, newValue)
-        IncDB.sendMoreIndex = newValue  -- Directly use IncDB to save the new value
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 1,
-},
-previewSendMore = {
-    type = "description",
-    name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("sendMore") .. "|r" end,
-    fontSize = "medium",
-    order = 1.1,
-},
-inc = {
-    type = "select",
-    name = "INC Message",
-    desc = "Select the message for the 'INC' button",
-    values = buttonMessages.inc,
-    get = function() return IncDB.incIndex end,  
-    set = function(_, newValue)
-        IncDB.incIndex = newValue  
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 2,
-},
-previewInc = {
-    type = "description",
-    name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("inc") .. "|r" end,
-    fontSize = "medium",
-    order = 2.1,
-},
-allClear = {
-    type = "select",
-    name = "All Clear Message",
-    desc = "Select the message for the 'All Clear' button",
-    values = buttonMessages.allClear,
-    get = function() return IncDB.allClearIndex end,  
-    set = function(_, newValue)
-        IncDB.allClearIndex = newValue  
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 3,
-},
-previewAllClear = {
-    type = "description",
-    name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("allClear") .. "|r" end,
-    fontSize = "medium",
-    order = 3.1,
+                    type = "group",
+                    name = "Send More Message",
+                    inline = true,
+                    order = 1,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'Send More' button",
+                            values = buttonMessages.sendMore,
+                            get = function() return IncDB.sendMoreIndex end,
+                            set = function(_, newValue)
+                                IncDB.sendMoreIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'Send More' button",
+                            get = function() return IncDB.customMessages.sendMore end,
+                            set = function(_, value)
+                                IncDB.customMessages.sendMore = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'Send More'",
+                            func = function()
+                                IncDB.customMessages.sendMore = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewSendMore = {
+                            type = "description",
+                            name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("sendMore") .. "|r" end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
+                },
+                inc = {
+                    type = "group",
+                    name = "INC Message",
+                    inline = true,
+                    order = 2,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'INC' button",
+                            values = buttonMessages.inc,
+                            get = function() return IncDB.incIndex end,
+                            set = function(_, newValue)
+                                IncDB.incIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'INC' button",
+                            get = function() return IncDB.customMessages.inc end,
+                            set = function(_, value)
+                                IncDB.customMessages.inc = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'INC'",
+                            func = function()
+                                IncDB.customMessages.inc = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewInc = {
+                            type = "description",
+                            name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("inc") .. "|r" end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
+                },
+                allClear = {
+                    type = "group",
+                    name = "All Clear Message",
+                    inline = true,
+                    order = 3,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'All Clear' button",
+                            values = buttonMessages.allClear,
+                            get = function() return IncDB.allClearIndex end,
+                            set = function(_, newValue)
+                                IncDB.allClearIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'All Clear' button",
+                            get = function() return IncDB.customMessages.allClear end,
+                            set = function(_, value)
+                                IncDB.customMessages.allClear = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'All Clear'",
+                            func = function()
+                                IncDB.customMessages.allClear = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewAllClear = {
+                            type = "description",
+                            name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("allClear") .. "|r" end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
                 },
                 buffRequest = {
-    type = "select",
-    name = "Buff Request Message",
-    desc = "Select the message for the 'Request Buffs' button",
-    values = buttonMessages.buffRequest,
-    get = function() return IncDB.buffRequestIndex end,
-    set = function(_, newValue)
-        buttonMessageIndices.buffRequest = newValue
-        IncDB.buffRequestIndex = newValue
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 4,
-},
-previewBuffRequest = {
-    type = "description",
-    name = function() return addonNamespace.getPreviewText("buffRequest") end,
-    fontSize = "medium",
-    order = 4.1,
-    },
-	healRequest = {
-    type = "select",
-    name = "Heal Request Message",
-    desc = "Select the message for the 'Need Heals' button",
-    values = buttonMessages.healRequest,
-    get = function() return IncDB.healRequestIndex end,
-    set = function(_, newValue)
-        buttonMessageIndices.healRequest = newValue
-        IncDB.healRequestIndex = newValue
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 5,
-},
-previewHealRequest = {
-    type = "description",
-    name = function() return addonNamespace.getPreviewText("healRequest") end,
-    fontSize = "medium",
-    order = 5.1,
-},
-efcRequest = {
-    type = "select",
-    name = "EFC Request Message",
-    desc = "Select the message for the 'EFC' button",
-    values = buttonMessages.efcRequest,
-    get = function() return IncDB.efcRequestIndex end,
-    set = function(_, newValue)
-        buttonMessageIndices.efcRequest = newValue
-        IncDB.efcRequestIndex = newValue
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 6,
-},
-previewEFCRequest = {
-    type = "description",
-    name = function() return addonNamespace.getPreviewText("efcRequest") end,
-    fontSize = "medium",
-    order = 6.1,
-	},
-	fcRequest = {
-    type = "select",
-    name = "FC Request Message",
-    desc = "Select the message for the 'FC' button",
-    values = buttonMessages.fcRequest,
-    get = function() return IncDB.fcRequestIndex end,
-    set = function(_, newValue)
-        buttonMessageIndices.fcRequest = newValue
-        IncDB.fcRequestIndex = newValue
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-    order = 7,
-},
-previewFCRequest = {
-    type = "description",
-    name = function() return addonNamespace.getPreviewText("fcRequest") end,
-    fontSize = "medium",
-    order = 7.1,
- 
+                    type = "group",
+                    name = "Buff Request Message",
+                    inline = true,
+                    order = 4,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'Request Buffs' button",
+                            values = buttonMessages.buffRequest,
+                            get = function() return IncDB.buffRequestIndex end,
+                            set = function(_, newValue)
+                                buttonMessageIndices.buffRequest = newValue
+                                IncDB.buffRequestIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'Request Buffs' button",
+                            get = function() return IncDB.customMessages.buffRequest end,
+                            set = function(_, value)
+                                IncDB.customMessages.buffRequest = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'Request Buffs'",
+                            func = function()
+                                IncDB.customMessages.buffRequest = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewBuffRequest = {
+                            type = "description",
+                            name = function() return addonNamespace.getPreviewText("buffRequest") end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
+                },
+                healRequest = {
+                    type = "group",
+                    name = "Heal Request Message",
+                    inline = true,
+                    order = 5,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'Need Heals' button",
+                            values = buttonMessages.healRequest,
+                            get = function() return IncDB.healRequestIndex end,
+                            set = function(_, newValue)
+                                buttonMessageIndices.healRequest = newValue
+                                IncDB.healRequestIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'Need Heals' button",
+                            get = function() return IncDB.customMessages.healRequest end,
+                            set = function(_, value)
+                                IncDB.customMessages.healRequest = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'Need Heals'",
+                            func = function()
+                                IncDB.customMessages.healRequest = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewHealRequest = {
+                            type = "description",
+                            name = function() return addonNamespace.getPreviewText("healRequest") end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
+                },
+                efcRequest = {
+                    type = "group",
+                    name = "EFC Request Message",
+                    inline = true,
+                    order = 6,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'EFC' button",
+                            values = buttonMessages.efcRequest,
+                            get = function() return IncDB.efcRequestIndex end,
+                            set = function(_, newValue)
+                                buttonMessageIndices.efcRequest = newValue
+                                IncDB.efcRequestIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'EFC' button",
+                            get = function() return IncDB.customMessages.efcRequest end,
+                            set = function(_, value)
+                                IncDB.customMessages.efcRequest = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'EFC'",
+                            func = function()
+                                IncDB.customMessages.efcRequest = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewEFCRequest = {
+                            type = "description",
+                            name = function() return addonNamespace.getPreviewText("efcRequest") end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
+                },
+                fcRequest = {
+                    type = "group",
+                    name = "FC Request Message",
+                    inline = true,
+                    order = 7,
+                    args = {
+                        predefined = {
+                            type = "select",
+                            name = "Predefined",
+                            desc = "Select the message for the 'FC' button",
+                            values = buttonMessages.fcRequest,
+                            get = function() return IncDB.fcRequestIndex end,
+                            set = function(_, newValue)
+                                buttonMessageIndices.fcRequest = newValue
+                                IncDB.fcRequestIndex = newValue
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 1,
+                        },
+                        custom = {
+                            type = "input",
+                            name = "Custom",
+                            desc = "Enter a custom message for the 'FC' button",
+                            get = function() return IncDB.customMessages.fcRequest end,
+                            set = function(_, value)
+                                IncDB.customMessages.fcRequest = value
+                            end,
+                            order = 2,
+                        },
+                        clear = {
+                            type = "execute",
+                            name = "Clear",
+                            desc = "Clear custom message for 'FC'",
+                            func = function()
+                                IncDB.customMessages.fcRequest = ""
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            end,
+                            order = 3,
+                        },
+                        previewFCRequest = {
+                            type = "description",
+                            name = function() return addonNamespace.getPreviewText("fcRequest") end,
+                            fontSize = "medium",
+                            order = 4,
+                        },
+                    },
                 },
             },
         },
+            
         appearanceSettings = {
     type = "group",
     name = "Appearance Settings",
@@ -1059,18 +1268,32 @@ end
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "
 
-    if messageType == "sendMore" and IncDB.sendMoreIndex and buttonMessages.sendMore[IncDB.sendMoreIndex] then
+    if messageType == "sendMore" and IncDB.customMessages.sendMore ~= "" then
+        previewText = previewText .. IncDB.customMessages.sendMore
+    elseif messageType == "sendMore" and IncDB.sendMoreIndex and buttonMessages.sendMore[IncDB.sendMoreIndex] then
         previewText = previewText .. buttonMessages.sendMore[IncDB.sendMoreIndex]
+    elseif messageType == "inc" and IncDB.customMessages.inc ~= "" then
+        previewText = previewText .. IncDB.customMessages.inc
     elseif messageType == "inc" and IncDB.incIndex and buttonMessages.inc[IncDB.incIndex] then
         previewText = previewText .. buttonMessages.inc[IncDB.incIndex]
+    elseif messageType == "allClear" and IncDB.customMessages.allClear ~= "" then
+        previewText = previewText .. IncDB.customMessages.allClear
     elseif messageType == "allClear" and IncDB.allClearIndex and buttonMessages.allClear[IncDB.allClearIndex] then
         previewText = previewText .. buttonMessages.allClear[IncDB.allClearIndex]
+    elseif messageType == "buffRequest" and IncDB.customMessages.buffRequest ~= "" then
+        previewText = previewText .. IncDB.customMessages.buffRequest
     elseif messageType == "buffRequest" and IncDB.buffRequestIndex and buttonMessages.buffRequest[IncDB.buffRequestIndex] then
         previewText = previewText .. buttonMessages.buffRequest[IncDB.buffRequestIndex]
+    elseif messageType == "healRequest" and IncDB.customMessages.healRequest ~= "" then
+        previewText = previewText .. IncDB.customMessages.healRequest
     elseif messageType == "healRequest" and IncDB.healRequestIndex and buttonMessages.healRequest[IncDB.healRequestIndex] then
         previewText = previewText .. buttonMessages.healRequest[IncDB.healRequestIndex]
+    elseif messageType == "efcRequest" and IncDB.customMessages.efcRequest ~= "" then
+        previewText = previewText .. IncDB.customMessages.efcRequest
     elseif messageType == "efcRequest" and IncDB.efcRequestIndex and buttonMessages.efcRequest[IncDB.efcRequestIndex] then
         previewText = previewText .. buttonMessages.efcRequest[IncDB.efcRequestIndex]
+    elseif messageType == "fcRequest" and IncDB.customMessages.fcRequest ~= "" then
+        previewText = previewText .. IncDB.customMessages.fcRequest
     elseif messageType == "fcRequest" and IncDB.fcRequestIndex and buttonMessages.fcRequest[IncDB.fcRequestIndex] then
         previewText = previewText .. buttonMessages.fcRequest[IncDB.fcRequestIndex]
     end
@@ -1241,7 +1464,8 @@ local function AllClearButtonOnClick()
         print("You are not in a Battleground.")
         return
     end
-    local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
+    local message = IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[buttonMessageIndices.allClear]
+    message = message .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -1253,7 +1477,8 @@ local function SendMoreButtonOnClick()
         print("You are not in a Battleground.")
         return
     end
-    local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
+    local message = IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[buttonMessageIndices.sendMore]
+    message = message .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -1265,7 +1490,8 @@ local function IncButtonOnClick()
         print("You are not in a Battleground.")
         return
     end
-    local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
+    local message = IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[buttonMessageIndices.inc]
+    message = message .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -1289,7 +1515,7 @@ local function EFCButtonOnClick()
         return
     end
 
-    local message = buttonMessages.efcRequest[IncDB.efcRequestIndex]
+    local message = IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex]
     SendChatMessage(message, chatType)
 end
 
@@ -1313,7 +1539,7 @@ local function FCButtonOnClick()
         return
     end
 
-    local message = buttonMessages.fcRequest[IncDB.fcRequestIndex]
+    local message = IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex]
     SendChatMessage(message, chatType)
 end
 
@@ -1326,12 +1552,8 @@ local function HealsButtonOnClick()
         return
     end
 
-    if not IncDB.healRequestIndex or not buttonMessages.healRequest[IncDB.healRequestIndex] then
-        print("Heal request message not set.")
-        return
-    end
-
-    local message = buttonMessages.healRequest[IncDB.healRequestIndex] .. " Needed at " .. location
+    local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex]
+    message = message .. " Needed at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
@@ -1340,7 +1562,7 @@ local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
     local messageIndex = buttonMessageIndices.buffRequest or 1
-    local message = buttonMessages.buffRequest[messageIndex]
+    local message = IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest or buttonMessages.buffRequest[messageIndex]
     
     if not message then
         print("No buff request message available.")
@@ -1365,8 +1587,6 @@ local function BuffRequestButtonOnClick()
     SendChatMessage(message, chatType)
 end
 
-
-
 local function ApplyFontSettings()
     if not IncDB then return end
 
@@ -1381,8 +1601,7 @@ local function ApplyFontSettings()
             text:SetFont(fontPath, fontSize)
         end
     end
-
-   
+  
 end
 
 -- Create a single frame to handle all events
@@ -1398,6 +1617,7 @@ frame:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
 frame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
 frame:RegisterEvent("PVP_RATED_STATS_UPDATE")
 frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 
 local function OnEvent(self, event, arg1, ...)
     

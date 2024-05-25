@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.7 - 10.2.7
+-- v6.8 - 10.2.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -75,6 +75,8 @@ SLASH_INC1 = "/inc"
 
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
+local blitzHonorGained = 0
+
 
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
@@ -105,7 +107,7 @@ end)
 
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
-pvpStatsFrame:SetSize(750, 75)  -- Increased size to accommodate scrolling
+pvpStatsFrame:SetSize(700, 320)  -- Adjusted size to fit to the left margin
 pvpStatsFrame:SetPoint("CENTER")
 pvpStatsFrame:SetMovable(true)
 pvpStatsFrame:EnableMouse(true)
@@ -114,155 +116,244 @@ pvpStatsFrame:SetScript("OnDragStart", pvpStatsFrame.StartMoving)
 pvpStatsFrame:SetScript("OnDragStop", pvpStatsFrame.StopMovingOrSizing)
 pvpStatsFrame:Hide()
 
-pvpStatsFrame.playerNameValue = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-pvpStatsFrame.playerNameValue:SetPoint("TOP", pvpStatsFrame.title, "BOTTOM", 0, -10)  -- Adjust the offset as needed
-pvpStatsFrame.playerNameValue:SetText("Character Name")
-
 pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
 pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -3)
 pvpStatsFrame.title:SetText("PvP Statistics")
 
 local TOP_MARGIN = -25
 
-local function createStatLabelAndValueHorizontal(parent, labelText, xOffset, textColor)
+local function createStatLabelAndValueHorizontal(parent, labelText, xOffset, yOffset, labelTextColor)
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    label:SetPoint("TOPLEFT", parent, "TOPLEFT", xOffset, TOP_MARGIN)
+    label:SetPoint("TOPLEFT", parent, "TOPLEFT", xOffset, yOffset)
     label:SetText(labelText)
-    label:SetTextColor(unpack(textColor))
+    label:SetTextColor(unpack(labelTextColor))
     
     local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    value:SetPoint("TOP", label, "BOTTOM", 0, -2)  
-    value:SetTextColor(1, 0.84, 0)
+    value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
+    value:SetTextColor(1, 0.84, 0) -- Default color for the value text
     return label, value
 end
 
-pvpStatsFrame.playerNameLabel, pvpStatsFrame.playerNameValue = createStatLabelAndValueHorizontal(pvpStatsFrame, "Player Name:", 10, {1, 1, 1})
-pvpStatsFrame.conquestLabel, pvpStatsFrame.conquestValue = createStatLabelAndValueHorizontal(pvpStatsFrame, "Conquest Points:", 130, {0, 0.75, 1})
-pvpStatsFrame.honorLabel, pvpStatsFrame.honorValue = createStatLabelAndValueHorizontal(pvpStatsFrame, "Honor Points:", 250, {1, 0.5, 0})
-pvpStatsFrame.honorLevelLabel, pvpStatsFrame.honorLevelValue = createStatLabelAndValueHorizontal(pvpStatsFrame, "Honor Level:", 370, {0.58, 0, 0.82})
-pvpStatsFrame.conquestCapLabel, pvpStatsFrame.conquestCapValue = createStatLabelAndValueHorizontal(pvpStatsFrame, "Conquest Cap:", 490, {1, 0, 0})
-pvpStatsFrame.soloShuffleRatingLabel, pvpStatsFrame.soloShuffleRatingValue = createStatLabelAndValueHorizontal(pvpStatsFrame, "Solo Shuffle Rating:", 610, {0, 0.75, 1})
+local tabs = {}
+
+local function HideAllTabs()
+    for _, tabFrame in pairs(tabs) do
+        tabFrame:Hide()
+    end
+end
+
+-- Create the tab frame
+local tabFrame = CreateFrame("Frame", nil, pvpStatsFrame)
+tabFrame:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -30)
+tabFrame:SetSize(700, 25)
+tabFrame.tabButtons = {}
+
+local function ResetTabColors()
+    for _, tabButton in pairs(tabFrame.tabButtons) do
+        tabButton:SetNormalFontObject("GameFontNormal")
+    end
+end
+
+-- Create a function to create tabs
+local function CreateTabButton(parent, text, id)
+    local tab = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    tab:SetText(text)
+    tab:SetID(id)
+    tab:SetSize(120, 25)
+    tab:SetScript("OnClick", function(self)
+        HideAllTabs()
+        tabs[self:GetID()]:Show()
+        ResetTabColors()
+        self:SetNormalFontObject("GameFontHighlight")
+    end)
+    return tab
+end
+
+-- Create the tabs
+local generalTab = CreateTabButton(tabFrame, "General", 1)
+generalTab:SetPoint("LEFT", tabFrame, "LEFT", 10, 0)
+table.insert(tabFrame.tabButtons, generalTab)
+
+local otherTab = CreateTabButton(tabFrame, "BG's", 2)
+otherTab:SetPoint("LEFT", generalTab, "RIGHT", 5, 0)
+table.insert(tabFrame.tabButtons, otherTab)
+
+local blitzTab = CreateTabButton(tabFrame, "Blitz", 3)
+blitzTab:SetPoint("LEFT", otherTab, "RIGHT", 5, 0)
+table.insert(tabFrame.tabButtons, blitzTab)
+
+local soloShuffleTab = CreateTabButton(tabFrame, "Solo Shuffle", 4)
+soloShuffleTab:SetPoint("LEFT", blitzTab, "RIGHT", 5, 0)
+table.insert(tabFrame.tabButtons, soloShuffleTab)
+
+local miscTab = CreateTabButton(tabFrame, "Misc", 5)
+miscTab:SetPoint("LEFT", soloShuffleTab, "RIGHT", 5, 0)
+table.insert(tabFrame.tabButtons, miscTab)
+
+-- Create tab frames
+tabs[1] = CreateFrame("Frame", nil, pvpStatsFrame)
+tabs[1]:SetSize(700, 300)
+tabs[1]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
+tabs[1]:Show()
+
+tabs[2] = CreateFrame("Frame", nil, pvpStatsFrame)
+tabs[2]:SetSize(700, 300)
+tabs[2]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
+tabs[2]:Hide()
+
+tabs[3] = CreateFrame("Frame", nil, pvpStatsFrame)
+tabs[3]:SetSize(700, 300)
+tabs[3]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
+tabs[3]:Hide()
+
+tabs[4] = CreateFrame("Frame", nil, pvpStatsFrame)
+tabs[4]:SetSize(700, 300)
+tabs[4]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
+tabs[4]:Hide()
+
+tabs[5] = CreateFrame("Frame", nil, pvpStatsFrame)
+tabs[5]:SetSize(700, 300)
+tabs[5]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
+tabs[5]:Hide()
+
+HideAllTabs()
+tabs[1]:Show()
+generalTab:SetNormalFontObject("GameFontHighlight") 
+
+-- Add PvP Stats to the General Tab
+local generalStats = {
+    {"Player Name:", "playerNameValue", {0, 1, 0}}, 
+    {"Conquest Points:", "conquestValue", {1, 0, 0}}, 
+    {"Honor Points:", "honorValue", {0, 0.75, 1}}, 
+    {"Honor Level:", "honorLevelValue", {0.58, 0, 0.82}}, 
+    {"Conquest Cap:", "conquestCapValue", {1, 0.5, 0}}, 
+    {"Solo Shuffle Rating:", "soloShuffleRatingValue", {0, 0.75, 1}}, 
+}
+
+for i, stat in ipairs(generalStats) do
+    local label, value = createStatLabelAndValueHorizontal(tabs[1], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    tabs[1][stat[2]] = value
+end
+
+-- Add BG Stats to the BG Tab
+local bgStats = {
+    {"BGs Played:", "bgPlayedValue", {0, 1, 0}}, 
+    {"BGs Won:", "bgWonValue", {1, 0, 0}}, 
+    {"BGs Lost:", "bgLostValue", {0, 0.75, 1}}, 
+    {"Total Honorable Kills:", "totalHonorableKillsValue", {0.58, 0, 0.82}}, 
+    {"Battleground Honorable Kills:", "battlegroundHonorableKillsValue", {1, 0.5, 0}}, 
+}
+
+for i, stat in ipairs(bgStats) do
+    local label, value = createStatLabelAndValueHorizontal(tabs[2], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    tabs[2][stat[2]] = value
+end
+
+-- Add Blitz Stats to the Blitz Tab
+local blitzStats = {
+    {"Vault Slot 1 ", "vaultSlot1", {0, 0.75, 1}},
+    {"Vault Slot 2 ", "vaultSlot2", {0.58, 0, 0.82}},
+    {"Vault Slot 3 ", "vaultSlot3", {0, 1, 0}},
+    {"Great Vault Slots Unlocked:", "greatVaultSlotsValue", {0, 0.75, 1}}, 
+}
+
+for i, stat in ipairs(blitzStats) do
+    local label, value = createStatLabelAndValueHorizontal(tabs[3], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    tabs[3][stat[2]] = value
+end
+
+-- Add Solo Shuffle Stats to the Solo Shuffle Tab
+local soloShuffleStats = {
+    {"Best Rating:", "bestRatingValue", {0, 1, 0}}, 
+    {"Rounds Won:", "roundsWonValue", {0, 0.75, 1}}, 
+    {"Rounds Played:", "roundsPlayedValue", {1, 0, 0}}, 
+    {"Most Played (Spec):", "mostPlayedSpecValue", {0.58, 0, 0.82}}, 
+}
+
+for i, stat in ipairs(soloShuffleStats) do
+    local label, value = createStatLabelAndValueHorizontal(tabs[4], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    tabs[4][stat[2]] = value
+end
+
+-- Add Misc Stats to the Misc Tab
+local miscStats = {
+    {"Total Kills (Exp or Honor):", "totalKillsValue", {0, 1, 0}}, 
+    {"Total Killing Blows:", "totalKillingBlowsValue", {1, 0, 0}}, 
+    {"Battleground Killing Blows:", "battlegroundKillingBlowsValue", {0, 0.75, 1}}, 
+    {"Total Deaths:", "totalDeathsValue", {0.58, 0, 0.82}}, 
+    {"Battleground Deaths:", "battlegroundDeathsValue", {1, 0.5, 0}}, 
+}
+
+for i, stat in ipairs(miscStats) do
+    local label, value = createStatLabelAndValueHorizontal(tabs[5], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    tabs[5][stat[2]] = value
+end
 
 local SOLO_SHUFFLE_INDEX = 7
 
--- Update function to handle spec-specific PvP data
-local function UpdatePvPStatsFrame()
-    if not IsAddOnLoaded("Blizzard_PVPUI") then
-        LoadAddOn("Blizzard_PVPUI")
-    end
-
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-    local honorLevel = UnitHonorLevel("player")
-
-    -- Fetch current specialization index
-    local specIndex = GetSpecialization()
-    local specId = specIndex and select(1, GetSpecializationInfo(specIndex)) or nil
-
-    -- Fetch Solo Shuffle rating using the index 7
-    local index = 7
-    local rating = select(2, GetPersonalRatedInfo(index)) or "N/A"
-
-    -- Update conquest points
-    local currentConquestPoints = conquestInfo.quantity
-    local totalEarnedConquest = conquestInfo.totalEarned
-    local weeklyEarnedConquest = conquestInfo.quantityEarnedThisWeek
-    local conquestCap = conquestInfo.maxQuantity
-    local displayedConquestProgress = math.min(totalEarnedConquest, conquestCap)
-
-    -- Update PvP stats frame with fetched data
-    pvpStatsFrame.conquestValue:SetText(currentConquestPoints)
-    pvpStatsFrame.conquestCapValue:SetText(displayedConquestProgress .. " / " .. conquestCap)
-    pvpStatsFrame.honorValue:SetText(honorInfo.quantity)
-    pvpStatsFrame.honorLevelValue:SetText(honorLevel)
-    pvpStatsFrame.soloShuffleRatingValue:SetText(rating)
-
-    -- Adjust PvP UI buttons based on current PvP availability
-    local canUseRated = C_PvP.CanPlayerUseRatedPVPUI()
-    local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
-
-    if canUseRated then
-        PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton2, true)
-        PVPQueueFrame.CategoryButton2.tooltip = nil
-    end
-
-    if canUsePremade then
-        PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton3, true)
-        PVPQueueFrame.CategoryButton3.tooltip = nil
-    end
-end
-
-local function GetDefaultClassColor()
-    local _, class = UnitClass("player")
-    if class then
-        return RAID_CLASS_COLORS[class]
-    end
-end
-
-local function CreateCharacterDropdown()
-
-    local dropdown = CreateFrame("FRAME", "SelectCharacterDropdown", pvpStatsFrame, "UIDropDownMenuTemplate")
-    dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
-
-    UIDropDownMenu_SetWidth(dropdown, 150)
-    UIDropDownMenu_SetText(dropdown, "Select Character")
-
-local function OnClick(self)
-    UIDropDownMenu_SetSelectedID(dropdown, self:GetID(), true)
-	PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local characterFullName = self:GetText()
-    local characterNameOnly = string.match(characterFullName, "^[^%-]+")  -- Extracting the character name before the hyphen
-    local stats = IncCalloutDB[characterFullName]
-
-    if stats then
-        local classColor = RAID_CLASS_COLORS[stats.class]
-        pvpStatsFrame.playerNameValue:SetText(characterNameOnly)
-        pvpStatsFrame.playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
-
-        pvpStatsFrame.conquestValue:SetText(stats.conquestValue or "N/A")
-        pvpStatsFrame.conquestCapValue:SetText(stats.conquestCapValue or "N/A")
-        pvpStatsFrame.honorValue:SetText(stats.honorValue or "N/A")
-        pvpStatsFrame.honorLevelValue:SetText(stats.honorLevelValue or "N/A")
-        pvpStatsFrame.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
+-- Function to fetch BG stats
+local function FetchBGStats()
+    local bgPlayed = GetStatistic(839) or "N/A" 
+    local bgWon = GetStatistic(840) or "N/A" 
+    local bgLost
+    if tonumber(bgPlayed) and tonumber(bgWon) then
+        bgLost = tonumber(bgPlayed) - tonumber(bgWon) 
     else
-        pvpStatsFrame.playerNameValue:SetText(characterNameOnly)
-        pvpStatsFrame.playerNameValue:SetTextColor(1, 1, 1)  -- Default white color
-        pvpStatsFrame.conquestValue:SetText("N/A")
-        pvpStatsFrame.conquestCapValue:SetText("N/A")
-        pvpStatsFrame.honorValue:SetText("N/A")
-        pvpStatsFrame.honorLevelValue:SetText("N/A")
-        pvpStatsFrame.soloShuffleRatingValue:SetText("N/A")
+        bgLost = "N/A"
     end
+    local totalHonorableKills = GetStatistic(588) or "N/A" 
+    local battlegroundHonorableKills = GetStatistic(382) or "N/A" 
+
+    return bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills
 end
 
-local function Initialize(self, level)
-    local info = UIDropDownMenu_CreateInfo()
-    local selectedCharacter = UIDropDownMenu_GetText(dropdown)  
+-- Function to fetch Great Vault slots
+local function FetchGreatVaultSlots()
+    local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
+    return weeklyProgress and weeklyProgress.unlocksCompleted or 0
+end
 
-    for k, v in pairs(IncCalloutDB) do
-        if string.match(k, "^[%w]+%-[%w]+$") then
-            info.text = k
-            info.menuList = k
-            info.func = OnClick
-            info.checked = (k == selectedCharacter)  
-            info.isNotRadio = true  
-            UIDropDownMenu_AddButton(info, level)
+-- Function to fetch weekly PvP honor
+local function FetchWeeklyPvPHonor()
+    local activities = C_WeeklyRewards.GetActivities(Enum.WeeklyRewardChestThresholdType.RankedPvP)
+    local progress = {0, 0, 0}
+    for _, activity in ipairs(activities) do
+        if activity.type == Enum.WeeklyRewardChestThresholdType.RankedPvP then
+            if activity.index == 1 then
+                progress[1] = activity.progress
+            elseif activity.index == 2 then
+                progress[2] = activity.progress
+            elseif activity.index == 3 then
+                progress[3] = activity.progress
+            end
         end
     end
+    return progress
 end
 
-    UIDropDownMenu_Initialize(dropdown, Initialize)
+-- Function to get vault progress
+local function GetVault(activity)
+    local progress = activity.progress or 0
+    local threshold = activity.threshold or 0
+    return string.format("%d/%d", progress, threshold)
 end
 
-CreateCharacterDropdown()
+-- Function to get spec name safely
+local function GetSpecName(specID)
+    if specID and specID > 0 then
+        return GetSpecializationNameForSpecID(specID) or "N/A"
+    end
+    return "N/A"
+end
 
+-- Function to save PvP stats
 local function SavePvPStats()
     IncCalloutDB = IncCalloutDB or {}
-    local character = UnitName("player") .. "-" .. GetRealmName()
+    local character = UnitName("player")
     local _, class = UnitClass("player")
 
     if not IncCalloutDB[character] then
-        IncCalloutDB[character] = { class = class }  -- Store class info
+        IncCalloutDB[character] = { class = class }
     end
 
     local SavedSettings = IncCalloutDB[character]
@@ -270,33 +361,413 @@ local function SavePvPStats()
     if IsAddOnLoaded("Blizzard_PVPUI") or LoadAddOn("Blizzard_PVPUI") then
         local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
         local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-        local honorLevel = UnitHonorLevel("player")  
+        local honorLevel = UnitHonorLevel("player")
+        local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
 
-        SavedSettings.conquestValue = conquestInfo.quantity
-        SavedSettings.conquestCapValue = math.min(conquestInfo.totalEarned, conquestInfo.maxQuantity) .. " / " .. conquestInfo.maxQuantity
-        SavedSettings.honorValue = honorInfo.quantity
-        SavedSettings.honorLevelValue = honorLevel  
-        SavedSettings.soloShuffleRatingValue = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX) or "N/A"
+        SavedSettings.conquestValue = conquestInfo and conquestInfo.quantity or 0
+        SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.maxQuantity > 0 and conquestInfo.quantity .. " / " .. conquestInfo.maxQuantity or conquestInfo.quantity .. " / No Cap") or "N/A"
+        SavedSettings.honorValue = honorInfo and honorInfo.quantity or "N/A"
+        SavedSettings.honorLevelValue = honorLevel
+        SavedSettings.soloShuffleRatingValue = soloShuffleRating
+
+        -- Save BG Stats
+        local bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills = FetchBGStats()
+        SavedSettings.bgPlayed = bgPlayed
+        SavedSettings.bgWon = bgWon
+        SavedSettings.bgLost = bgLost
+        SavedSettings.totalHonorableKills = totalHonorableKills
+        SavedSettings.battlegroundHonorableKills = battlegroundHonorableKills
+
+        -- Save Great Vault slots unlocked
+        SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
+
+        -- Save Blitz Honor
+        local blitzHonor = FetchWeeklyPvPHonor()
+        SavedSettings.blitzHonor = blitzHonor[1]
+        SavedSettings.blitzHonor2 = blitzHonor[2]
+        SavedSettings.blitzHonor3 = blitzHonor[3]
+
+        -- Save Solo Shuffle Stats
+        local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+        local specStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
+        local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
+        local mostPlayedSpecName = GetSpecName(mostPlayedSpecID)
+
+        SavedSettings.bestRatingValue = seasonBest or "N/A"
+        SavedSettings.roundsWonValue = roundsSeasonWon or "N/A"
+        SavedSettings.roundsPlayedValue = roundsSeasonPlayed or "N/A"
+        SavedSettings.mostPlayedSpecValue = mostPlayedSpecName
+
+        -- Save Misc Stats
+        local totalKills = GetStatistic(1198) or "N/A" 
+        local totalKillingBlows = GetStatistic(1487) or "N/A" 
+        local battlegroundKillingBlows = GetStatistic(1491) or "N/A" 
+        local totalDeaths = GetStatistic(60) or "N/A" 
+        local battlegroundDeaths = GetStatistic(14786) or "N/A" 
+
+        SavedSettings.totalKillsValue = totalKills
+        SavedSettings.totalKillingBlowsValue = totalKillingBlows
+        SavedSettings.battlegroundKillingBlowsValue = battlegroundKillingBlows
+        SavedSettings.totalDeathsValue = totalDeaths
+        SavedSettings.battlegroundDeathsValue = battlegroundDeaths
     end
 end
 
-pvpStatsFrame:SetScript("OnShow", function()
-    pvpStatsFrame.playerNameValue:SetText(UnitName("player") or "Unknown")
-    local classColor = GetDefaultClassColor()
-    if classColor then
-        pvpStatsFrame.playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
-    end
-    local character = UnitName("player") .. "-" .. GetRealmName()
+-- Function to update Blitz stats frame
+local function UpdateBlitzStatsFrame(character)
     local stats = IncCalloutDB[character]
     if stats then
-        pvpStatsFrame.conquestValue:SetText(stats.conquestValue)
-        pvpStatsFrame.conquestCapValue:SetText(stats.conquestCapValue)
-        pvpStatsFrame.honorValue:SetText(stats.honorValue)
-        pvpStatsFrame.honorLevelValue:SetText(stats.honorLevelValue)  
-        pvpStatsFrame.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue)
+        local blitzHonor = { stats.blitzHonor or 0, stats.blitzHonor2 or 0, stats.blitzHonor3 or 0 }
+        tabs[3].vaultSlot1:SetText(GetVault({progress = blitzHonor[1], threshold = 1250}))
+        tabs[3].vaultSlot2:SetText(GetVault({progress = blitzHonor[2], threshold = 2500}))
+        tabs[3].vaultSlot3:SetText(GetVault({progress = blitzHonor[3], threshold = 5000}))
+        tabs[3].greatVaultSlotsValue:SetText(stats.greatVaultSlots or "N/A")
+    else
+        tabs[3].vaultSlot1:SetText("0/1250")
+        tabs[3].vaultSlot2:SetText("0/2500")
+        tabs[3].vaultSlot3:SetText("0/5000")
+        tabs[3].greatVaultSlotsValue:SetText("N/A")
     end
-    UpdatePvPStatsFrame()
+end
+
+-- Function to update Solo Shuffle stats frame
+local function UpdateSoloShuffleStatsFrame(character)
+    local stats = IncCalloutDB[character]
+    if stats then
+        tabs[4].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+        tabs[4].roundsWonValue:SetText(stats.roundsWonValue or "N/A")
+        tabs[4].roundsPlayedValue:SetText(stats.roundsPlayedValue or "N/A")
+        tabs[4].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+    end
+end
+
+-- Function to update Misc stats frame
+local function UpdateMiscStatsFrame(character)
+    local stats = IncCalloutDB[character]
+    if stats then
+        tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
+        tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
+        tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
+        tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
+        tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
+    end
+end
+
+-- Function to update tab values
+local function UpdateTabValues(tab, stats)
+    tab.playerNameValue:SetText(stats.playerName or "N/A")
+    tab.playerNameValue:SetTextColor(stats.playerColor.r or 1, stats.playerColor.g or 1, stats.playerColor.b or 1)
+    tab.conquestValue:SetText(stats.conquestValue or "N/A")
+    tab.conquestCapValue:SetText(stats.conquestCapValue or "N/A")
+    tab.honorValue:SetText(stats.honorValue or "N/A")
+    tab.honorLevelValue:SetText(stats.honorLevelValue or "N/A")
+    tab.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
+end
+
+-- Function to update PvP stats frame
+local function UpdatePvPStatsFrame(character)
+    if not IsAddOnLoaded("Blizzard_PVPUI") then
+        LoadAddOn("Blizzard_PVPUI")
+    end
+
+    local stats = IncCalloutDB[character]
+    if stats then
+        local name = string.match(character, "^[^%-]+")  
+        local classColor = RAID_CLASS_COLORS[stats.class] or {r = 1, g = 1, b = 1}
+        local tabStats = {
+            playerName = name,
+            playerColor = classColor,
+            conquestValue = stats.conquestValue,
+            conquestCapValue = stats.conquestCapValue,
+            honorValue = stats.honorValue,
+            honorLevelValue = stats.honorLevelValue,
+            soloShuffleRatingValue = stats.soloShuffleRatingValue
+        }
+        UpdateTabValues(tabs[1], tabStats)
+    end
+
+    -- Adjust PvP UI buttons based on current PvP availability
+    local canUseRated = C_PvP.CanPlayerUseRatedPVPUI()
+    local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
+
+    if (canUseRated) then
+        PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton2, true)
+        PVPQueueFrame.CategoryButton2.tooltip = nil
+    end
+
+    if (canUsePremade) then
+        PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton3, true)
+        PVPQueueFrame.CategoryButton3.tooltip = nil
+    end
+end
+
+-- Function to update BG stats frame
+local function UpdateBGStatsFrame(character)
+    local stats = IncCalloutDB[character]
+    if stats then
+        tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
+        tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
+        tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
+        tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
+        tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
+    end
+end
+
+-- Function to create character dropdown
+local function CreateCharacterDropdown()
+    local dropdown = CreateFrame("FRAME", "SelectCharacterDropdown", pvpStatsFrame, "UIDropDownMenuTemplate")
+    dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
+
+    UIDropDownMenu_SetWidth(dropdown, 150)
+    UIDropDownMenu_SetText(dropdown, "Characters") 
+
+    local function OnClick(self)
+        UIDropDownMenu_SetSelectedID(dropdown, self:GetID(), true)
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+        local characterFullName = self:GetText()
+        local characterNameOnly = string.match(characterFullName, "^[^%-]+")
+        local stats = IncCalloutDB[characterFullName]
+
+        if stats then
+            local classColor = RAID_CLASS_COLORS[stats.class]
+            tabs[1].playerNameValue:SetText(characterNameOnly)
+            tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
+            
+            tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
+            tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
+            tabs[1].honorValue:SetText(stats.honorValue or "N/A")
+            tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
+            tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
+            
+            tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
+            tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
+            tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
+            tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
+            tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
+
+            tabs[3].vaultSlot1:SetText(stats.vaultSlot1 or "0/1250")
+            tabs[3].vaultSlot2:SetText(stats.vaultSlot2 or "0/2500")
+            tabs[3].vaultSlot3:SetText(stats.vaultSlot3 or "0/5000")
+            tabs[3].greatVaultSlotsValue:SetText(stats.greatVaultSlots or "N/A")
+
+            tabs[4].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+            tabs[4].roundsWonValue:SetText(stats.roundsWonValue or "N/A")
+            tabs[4].roundsPlayedValue:SetText(stats.roundsPlayedValue or "N/A")
+            tabs[4].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+
+            tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
+            tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
+            tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
+            tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
+            tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
+
+            UpdateBlitzStatsFrame(characterFullName)
+            UpdateSoloShuffleStatsFrame(characterFullName)
+            UpdateMiscStatsFrame(characterFullName)
+        else
+            tabs[1].playerNameValue:SetText(characterNameOnly)
+            tabs[1].playerNameValue:SetTextColor(1, 1, 1)
+
+            tabs[1].conquestValue:SetText("N/A")
+            tabs[1].conquestCapValue:SetText("N/A")
+            tabs[1].honorValue:SetText("N/A")
+            tabs[1].honorLevelValue:SetText("N/A")
+            tabs[1].soloShuffleRatingValue:SetText("N/A")
+            
+            tabs[2].bgPlayedValue:SetText("N/A")
+            tabs[2].bgWonValue:SetText("N/A")
+            tabs[2].bgLostValue:SetText("N/A")
+            tabs[2].totalHonorableKillsValue:SetText("N/A")
+            tabs[2].battlegroundHonorableKillsValue:SetText("N/A")
+
+            tabs[3].vaultSlot1:SetText("0/1250")
+            tabs[3].vaultSlot2:SetText("0/2500")
+            tabs[3].vaultSlot3:SetText("0/5000")
+            tabs[3].greatVaultSlotsValue:SetText("N/A")
+
+            tabs[4].bestRatingValue:SetText("N/A")
+            tabs[4].roundsWonValue:SetText("N/A")
+            tabs[4].roundsPlayedValue:SetText("N/A")
+            tabs[4].mostPlayedSpecValue:SetText("N/A")
+
+            tabs[5].totalKillsValue:SetText("N/A")
+            tabs[5].totalKillingBlowsValue:SetText("N/A")
+            tabs[5].battlegroundKillingBlowsValue:SetText("N/A")
+            tabs[5].totalDeathsValue:SetText("N/A")
+            tabs[5].battlegroundDeathsValue:SetText("N/A")
+
+            UpdateBlitzStatsFrame(characterFullName)
+            UpdateSoloShuffleStatsFrame(characterFullName)
+            UpdateMiscStatsFrame(characterFullName)
+        end
+    end
+
+    local function Initialize(self, level)
+        local info = UIDropDownMenu_CreateInfo()
+        local selectedCharacter = UIDropDownMenu_GetText(dropdown)
+
+        for k, v in pairs(IncCalloutDB) do
+            if type(k) == "string" and k ~= "profileKeys" and k ~= "settings" and k ~= "profiles" then
+                info.text = k
+                info.menuList = k
+                info.func = OnClick
+                info.checked = (k == selectedCharacter)
+                info.isNotRadio = true
+                UIDropDownMenu_AddButton(info, level)
+            end
+        end
+        UIDropDownMenu_SetText(dropdown, "Characters") 
+    end
+
+    UIDropDownMenu_Initialize(dropdown, Initialize)
+    UIDropDownMenu_SetText(dropdown, "Characters") 
+end
+
+CreateCharacterDropdown()
+
+-- Function to handle the OnShow event for the PvP stats frame
+pvpStatsFrame:SetScript("OnShow", function()
+    local character = UnitName("player")
+    UIDropDownMenu_SetText(SelectCharacterDropdown, character)
+    UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+    local stats = IncCalloutDB[character]
+    if stats then
+        tabs[1].playerNameValue:SetText(character or "Unknown")
+        local classColor = RAID_CLASS_COLORS[stats.class]
+        if classColor then
+            tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
+        end
+
+        tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
+        tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
+        tabs[1].honorValue:SetText(stats.honorValue or "N/A")
+        tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
+        tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
+        
+        tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
+        tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
+        tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
+        tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
+        tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
+
+        tabs[3].vaultSlot1:SetText(stats.vaultSlot1 or "0/1250")
+        tabs[3].vaultSlot2:SetText(stats.vaultSlot2 or "0/2500")
+        tabs[3].vaultSlot3:SetText(stats.vaultSlot3 or "0/5000")
+        tabs[3].greatVaultSlotsValue:SetText(stats.greatVaultSlots or "N/A")
+
+        tabs[4].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+        tabs[4].roundsWonValue:SetText(stats.roundsWonValue or "N/A")
+        tabs[4].roundsPlayedValue:SetText(stats.roundsPlayedValue or "N/A")
+        tabs[4].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+
+        tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
+        tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
+        tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
+        tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
+        tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
+
+        UpdateBlitzStatsFrame(character)
+        UpdateSoloShuffleStatsFrame(character)
+        UpdateMiscStatsFrame(character)
+    end
+    SavePvPStats()
+    UpdatePvPStatsFrame(character)
+    UpdateBGStatsFrame(character)
+    UpdateBlitzStatsFrame(character)
+    UpdateSoloShuffleStatsFrame(character)
+    UpdateMiscStatsFrame(character)
+    UIDropDownMenu_SetText(SelectCharacterDropdown, "Characters") 
 end)
+
+local function DelayedSaveAndUpdate()
+    C_Timer.After(2, function()
+        RequestRatedInfo()
+        SavePvPStats()
+        local character = UnitName("player")
+        UpdatePvPStatsFrame(character)
+        UpdateBGStatsFrame(character)
+        UpdateBlitzStatsFrame(character)
+        UpdateSoloShuffleStatsFrame(character)
+        UpdateMiscStatsFrame(character)
+    end)
+end
+
+local eventHandlers = {
+    ["PVP_RATED_STATS_UPDATE"] = function()
+        local character = UnitName("player")
+        SavePvPStats()
+        UpdatePvPStatsFrame(character)
+        UpdateBGStatsFrame(character)
+        UpdateBlitzStatsFrame(character)
+        UpdateSoloShuffleStatsFrame(character)
+        UpdateMiscStatsFrame(character)
+    end,
+    ["PVP_REWARDS_UPDATE"] = function()
+        local character = UnitName("player")
+        SavePvPStats()
+        UpdatePvPStatsFrame(character)
+        UpdateBGStatsFrame(character)
+        UpdateBlitzStatsFrame(character)
+        UpdateSoloShuffleStatsFrame(character)
+        UpdateMiscStatsFrame(character)
+    end,
+    ["ZONE_CHANGED_NEW_AREA"] = DelayedSaveAndUpdate,
+    ["PLAYER_ENTERING_WORLD"] = function()
+        DelayedSaveAndUpdate()
+        C_Timer.After(2, function()
+            local character = UnitName("player")
+            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
+            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+        end)
+    end,
+    ["ADDON_LOADED"] = function(addonName)
+        if addonName == "IncCallout" then
+            DelayedSaveAndUpdate()
+            C_Timer.After(2, function()
+                local character = UnitName("player")
+                UIDropDownMenu_SetText(SelectCharacterDropdown, character)
+                UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+            end)
+        end
+    end,
+    ["PLAYER_LOGIN"] = function()
+        DelayedSaveAndUpdate()
+        C_Timer.After(2, function()
+            local character = UnitName("player")
+            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
+            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+        end)
+    end,
+    ["CHAT_MSG_COMBAT_HONOR_GAIN"] = function(honorGained)
+        if isInBGBlitz then
+            local character = UnitName("player")
+            if IncCalloutDB[character] then
+                IncCalloutDB[character].blitzHonor = (IncCalloutDB[character].blitzHonor or 0) + tonumber(honorGained)
+                UpdateBlitzStatsFrame(character)
+            end
+        end
+    end
+}
+
+local function EventHandler(self, event, ...)
+    if eventHandlers[event] then
+        eventHandlers[event](...)
+    else
+        SavePvPStats()
+        local character = UnitName("player")
+        UpdatePvPStatsFrame(character)
+        UpdateBGStatsFrame(character)
+        UpdateBlitzStatsFrame(character)
+        UpdateSoloShuffleStatsFrame(character)
+        UpdateMiscStatsFrame(character)
+    end
+end
+
+local frame = CreateFrame("Frame")
+for event in pairs(eventHandlers) do
+    frame:RegisterEvent(event)
+end
+frame:SetScript("OnEvent", EventHandler)
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -1616,8 +2087,15 @@ frame:RegisterEvent("HONOR_XP_UPDATE")
 frame:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
 frame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
 frame:RegisterEvent("PVP_RATED_STATS_UPDATE")
+frame:RegisterEvent("PVP_REWARDS_UPDATE")
 frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
+frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
+frame:RegisterEvent("COMBAT_RATING_UPDATE")
+frame:SetScript("OnEvent", EventHandler)
 
 local function OnEvent(self, event, arg1, ...)
     

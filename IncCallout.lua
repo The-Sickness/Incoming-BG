@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.8 - 10.2.7
+-- v6.9 - 10.2.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -19,6 +19,7 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 --local LSM = LibStub ("LibSharedMedia-3.0")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
+LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
@@ -76,7 +77,6 @@ SLASH_INC1 = "/inc"
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 local blitzHonorGained = 0
-
 
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
@@ -1016,7 +1016,6 @@ IncCallout:SetScript("OnDragStop", function(self)
     end
 end)
 
--- Function to create a button
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
     local button = CreateFrame("Button", nil, IncCallout, "BackdropTemplate")
     button:SetSize(width, height)
@@ -1028,11 +1027,11 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     end
     button:GetFontString():SetTextColor(1, 1, 1, 1)
     button:SetBackdrop({
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+        bgFile = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard"),
         edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
         tile = true,
         tileSize = 12,
-        edgeSize = 7,  
+        edgeSize = 7,
         insets = {left = 1, right = 1, top = 1, bottom = 1}
     })
 
@@ -1051,7 +1050,6 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
             PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-
             if onClick then 
                 onClick(self)
             end
@@ -1061,6 +1059,7 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     return button
 end
 
+
 -- Function to handle chat messages
 local function onChatMessage(message)
     if string.find(message, "%[Incoming%-BG%]") then
@@ -1069,7 +1068,6 @@ local function onChatMessage(message)
 end
 
 local function applyButtonColor()
-
     if not IncDB then
         return
     end
@@ -1080,8 +1078,18 @@ local function applyButtonColor()
     else
         r, g, b, a = 1, 0, 0, 1 -- Default to red
     end
+
     for _, button in ipairs(buttons) do
-        button:SetBackdropColor(r, g, b, a)        
+        button:SetBackdrop({
+            bgFile = LSM:Fetch("statusbar", IncDB.statusbarTexture),
+            edgeFile = nil, 
+            tile = false, 
+            tileSize = 0, 
+            edgeSize = 16, 
+            insets = {left = 0, right = 0, top = 0, bottom = 0} 
+        })
+        button:SetBackdropColor(r, g, b, a)
+        button:SetBackdropBorderColor(0, 0, 0, 0) 
     end
 end
 
@@ -1137,6 +1145,22 @@ local mapSizeOptions = {
     { name = "Gigantic", value = 1.45 },
     { name = "Colossal", value = 1.6 }
 }
+
+local function applyStatusbarTexture()
+    local texture = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard")
+    for _, button in ipairs(buttons) do
+        button:SetBackdrop({
+            bgFile = texture,
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true,
+            tileSize = 12,
+            edgeSize = 7,
+            insets = {left = 1, right = 1, top = 1, bottom = 1}
+        })
+        -- Reapply the color overlay after setting the backdrop
+        applyButtonColor()
+    end
+end
 
 local options = {
     name = "Incoming-BG",
@@ -1475,47 +1499,45 @@ local options = {
                 },
             },
         },
-            
         appearanceSettings = {
-    type = "group",
-    name = "Appearance Settings",
-    order = 2,
-    args = {
-        fontColor = {
-    type = "color",
-    name = "Button Font Color",
-    desc = "Set the color of the button text.",
-    hasAlpha = true,
-    get = function()
-        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- default white
-        return color.r, color.g, color.b, color.a
-    end,
-    set = function(_, r, g, b, a)
-        IncDB.fontColor = {r = r, g = g, b = b, a = a}
-        
-        for _, buttonText in ipairs(buttonTexts) do
-            buttonText:SetTextColor(r, g, b, a)
-        end
-    end, 
-    order = 1, 	
-                                    },
-                    buttonColor = {
-                                type = "color",
-                                name = "Button Color",
-                                desc = "Select the color of the buttons.",
-                                order = 2,
-                                hasAlpha = true, 
-                                get = function()
-                                    local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
-                                    return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                                 end,
-                                 set = function(_, r, g, b, a)
-                                 local color = {r = r, g = g, b = b, a = a}
-                                 IncDB.buttonColor = color
-                                 applyButtonColor()
-                                 end,
-        },
-        scaleOption = {
+            type = "group",
+            name = "Appearance Settings",
+            order = 2,
+            args = {
+                fontColor = {
+                    type = "color",
+                    name = "Button Font Color",
+                    desc = "Set the color of the button text.",
+                    hasAlpha = true,
+                    get = function()
+                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- default white
+                        return color.r, color.g, color.b, color.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        IncDB.fontColor = {r = r, g = g, b = b, a = a}
+                        for _, buttonText in ipairs(buttonTexts) do
+                            buttonText:SetTextColor(r, g, b, a)
+                        end
+                    end, 
+                    order = 1, 
+                },
+                buttonColor = {
+                    type = "color",
+                    name = "Button Color",
+                    desc = "Select the color of the buttons.",
+                    order = 2,
+                    hasAlpha = true, 
+                    get = function()
+                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+                        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        local color = {r = r, g = g, b = b, a = a}
+                        IncDB.buttonColor = color
+                        applyButtonColor()
+                    end,
+                },
+                scaleOption = {
                     type = "range",
                     name = "GUI Window Scale",
                     desc = "Adjust the scale of the GUI.",
@@ -1523,128 +1545,138 @@ local options = {
                     max = 2.0, 
                     step = 0.05, 
                     get = function()
-                    return IncDB.scale or 1 
-                 end,
-                   set = function(_, value)
-                   IncDB.scale = value
-                   ScaleGUI(value) 
-                end,
+                        return IncDB.scale or 1 
+                    end,
+                    set = function(_, value)
+                        IncDB.scale = value
+                        ScaleGUI(value) 
+                    end,
+                },
+                borderStyle = {
+                    type = "select",
+                    name = "Border Style",
+                    desc = "Select the border style for the frame.",
+                    style = "dropdown",
+                    order = 3,
+                    values = function()
+                        local values = {}
+                        for i, option in ipairs(borderOptions) do
+                            values[i] = option.name
+                        end
+                        return values
+                    end,
+                    get = function()
+                        return IncDB.selectedBorderIndex or 1
+                    end,
+                    set = function(_, selectedIndex)
+                        IncDB.selectedBorderIndex = selectedIndex
+                        applyBorderChange()
+                        applyColorChange()
+                    end,
+                },
+                backdropColor = {
+                    type = "select",
+                    name = "Backdrop Color",
+                    desc = "Select the backdrop color and transparency for the frame.",
+                    style = "dropdown",
+                    order = 4,
+                    values = function()
+                        local values = {}
+                        for i, option in ipairs(colorOptions) do
+                            values[i] = option.name
+                        end
+                        return values
+                    end,
+                    get = function()
+                        return IncDB.selectedColorIndex or 1
+                    end,
+                    set = function(_, selectedIndex)
+                        IncDB.selectedColorIndex = selectedIndex
+                        applyColorChange()
+                    end,
+                },
+                statusbarTexture = {
+                    type = "select",
+                    name = "Statusbar Texture",
+                    desc = "Select the texture for the statusbar.",
+                    dialogControl = 'LSM30_Statusbar',
+                    values = LSM:HashTable("statusbar"),
+                    get = function() return IncDB.statusbarTexture or "Blizzard" end,
+                    set = function(_, newValue)
+                        IncDB.statusbarTexture = newValue
+                        applyButtonColor()
+					order = 5	
+              end,
+                 
+                },
+                lockGUI = {
+                    type = "toggle",
+                    name = "Lock GUI Window",
+                    desc = "Lock or unlock the GUI window's position.",
+                    order = 6,
+                    get = function() return IncDB.isLocked end,
+                    set = function(_, value)
+                        IncDB.isLocked = value
+                    end,
+                },
+                logoSelection = {
+                    type = "select",
+                    name = "Logo Selection",
+                    desc = "Choose a logo to display at the top of the frame.",
+                    style = "dropdown",
+                    order = 7,
+                    values = {
+                        ["None"] = "None",
+                        ["BearClaw"] = "BearClaw",
+                        ["BreatheFire"] = "BreatheFire",
+                        ["Bloody"] = "Bloody",
+                        ["Impact"] = "Impact",
+                        ["Shock"] = "Shock",
+                        ["Rifle"] = "Rifle",
+                        ["Condiment"] = "Condiment",
+                        ["Duplex"] = "Duplex",
+                        ["Eraser"] = "Eraser",
+                        ["Ogre"] = "Ogre",
+                        ["Seagram"] = "Seagram",
+                        ["SuperSunday"] = "SuperSunday",
+                        ["Minion"] = "Minion",
+                        ["Alligator"] = "Alligator",
+                        ["Fire"] = "Fire",
+                        ["GOW"] = "GOW",
+                        ["Maiden"] = "Maiden",
+                        ["Metal"] = "Metal",
+                        ["SourceCode"] = "SourceCode",
+                        ["InkFree"] = "InkFree",
+                    },
+                    get = function(info) return IncDB.selectedLogo end,
+                    set = function(info, value)
+                        IncDB.selectedLogo = value
+                        IncCallout:SetLogo(value)  
+                    end,
+                },
+                logoColor = {
+                    type = "color",
+                    name = "Logo Color",
+                    desc = "Set the color of the title logo.",
+                    hasAlpha = true, 
+                    get = function(info)
+                        local color = IncDB.logoColor or {1, 1, 1, 1} -- Default to white if not set
+                        return color.r, color.g, color.b, color.a
+                    end,
+                    set = function(info, r, g, b, a)
+                        IncDB.logoColor = {r = r, g = g, b = b, a = a}
+                        logo:SetVertexColor(r, g, b, a)
+                    end,
+                    order = 8, 
+                },
+            },
         },
-        borderStyle = {
-            type = "select",
-            name = "Border Style",
-            desc = "Select the border style for the frame.",
-            style = "dropdown",
-            order = 3,
-            values = function()
-                local values = {}
-                for i, option in ipairs(borderOptions) do
-                    values[i] = option.name
-                end
-                return values
-            end,
-            get = function()
-                return IncDB.selectedBorderIndex or 1
-            end,
-            set = function(_, selectedIndex)
-                IncDB.selectedBorderIndex = selectedIndex
-                applyBorderChange()
-                applyColorChange()
-            end,
-        },
-        backdropColor = {
-            type = "select",
-            name = "Backdrop Color",
-            desc = "Select the backdrop color and transparency for the frame.",
-            style = "dropdown",
-            order = 4,
-            values = function()
-                local values = {}
-                for i, option in ipairs(colorOptions) do
-                    values[i] = option.name
-                end
-                return values
-            end,
-            get = function()
-                return IncDB.selectedColorIndex or 1
-            end,
-            set = function(_, selectedIndex)
-                IncDB.selectedColorIndex = selectedIndex
-                applyColorChange()
-            end,
-        
-        },
-        lockGUI = {
-            type = "toggle",
-            name = "Lock GUI Window",
-            desc = "Lock or unlock the GUI window's position.",
-            order = 7,
-            get = function() return IncDB.isLocked end,
-            set = function(_, value)
-                IncDB.isLocked = value
-                
-            end,
-			},
-			logoSelection = {
-    type = "select",
-    name = "Logo Selection",
-    desc = "Choose a logo to display at the top of the frame.",
-    style = "dropdown",
-    order = 8,
-    values = {
-        ["None"] = "None",
-        ["BearClaw"] = "BearClaw",
-        ["BreatheFire"] = "BreatheFire",
-        ["Bloody"] = "Bloody",
-        ["Impact"] = "Impact",
-        ["Shock"] = "Shock",
-        ["Rifle"] = "Rifle",
-        ["Condiment"] = "Condiment",
-        ["Duplex"] = "Duplex",
-        ["Eraser"] = "Eraser",
-        ["Ogre"] = "Ogre",
-        ["Seagram"] = "Seagram",
-		["SuperSunday"] = "SuperSunday",
-		["Minion"] = "Minion",
-		["Alligator"] = "Alligator",
-		["Fire"] = "Fire",
-		["GOW"] = "GOW",
-		["Maiden"] = "Maiden",
-		["Metal"] = "Metal",
-		["SourceCode"] = "SourceCode",
-		["InkFree"] = "InkFree",
-    },
-    get = function(info) return IncDB.selectedLogo end,
-    set = function(info, value)
-        IncDB.selectedLogo = value
-        IncCallout:SetLogo(value)  
-    end,
-	},
-	logoColor = {
-    type = "color",
-    name = "Logo Color",
-    desc = "Set the color of the title logo.",
-    hasAlpha = true, 
-    get = function(info)
-        local color = IncDB.logoColor or {1, 1, 1, 1} -- Default to white if not set
-        return color.r, color.g, color.b, color.a
-    end,
-    set = function(info, r, g, b, a)
-        IncDB.logoColor = {r = r, g = g, b = b, a = a}
-        
-        logo:SetVertexColor(r, g, b, a)
-    end,
-    order = 9, 
-        },
-    },
-},
-
         mapSettings = {
             type = "group",
             name = "Map Settings",
             order = 3,
             args = {
-                	mapSizeChoice = {
+                mapSizeChoice = {
                     type = "select",
                     name = "Map Size",
                     desc = "Select the preferred size of the WorldMap.",
@@ -1680,7 +1712,7 @@ local options = {
                 },
             },
         },
-       fontSettings = {
+        fontSettings = {
             type = "group",
             name = "Font Settings",
             order = 3,
@@ -1725,6 +1757,7 @@ local options = {
 -- Register the options table
 AceConfig:RegisterOptionsTable(addonName, options)
 
+
 -- Create a config panel
 local configPanel = AceConfigDialog:AddToBlizOptions(addonName, "Incoming-BG")
 configPanel.default = function()
@@ -1735,6 +1768,9 @@ configPanel.default = function()
 	IncDB.selectedBorderIndex = 1
 
 end
+
+
+
 
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "

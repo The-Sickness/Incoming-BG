@@ -1,7 +1,7 @@
 ## Interface: 100207
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
-## Version: v.6.8
+## Version: v.6.9
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
@@ -24,6 +24,8 @@ libs\AceConfigDialog-3.0\AceConfigDialog-3.0.lua
 libs\AceConfigRegistry-3.0\AceConfigRegistry-3.0.lua
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+libs\AceTimer-3.0\AceTimer-3.0.lua
+libs\LibBabble-SubZone-3.0\lib.xml
 libs\LibSharedMedia-3.0\lib.xml
 libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 #@end-no-lib-strip@
@@ -31,6 +33,7 @@ libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 
 map.lua
 IncCallout.lua
+
 
 
 

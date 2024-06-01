@@ -1,9 +1,11 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.8 - 10.2.7
+-- v6.9 - 10.2.7
+
+local AceTimer = LibStub("AceTimer-3.0")
+local LBS = LibStub("LibBabble-SubZone-3.0"):GetReverseLookupTable()
 
 local addonName, addonNamespace = ...
-
 addonNamespace = addonNamespace or {}
 
 local function EnsureDBSettings()
@@ -34,21 +36,11 @@ end
 local function ResizeWorldMap()
     EnsureDBSettings()
 
-    -- Check PvP status
     local inInstance, instanceType = IsInInstance()
     local isPvPEnvironment = inInstance and (instanceType == "pvp" or instanceType == "arena")
 
-    -- Determine the scale to apply based on settings and context
-    local scale = 1  
-    if IncCalloutDB.settings.resizeInPvPOnly then
-        if isPvPEnvironment then
-            scale = IncCalloutDB.settings.mapScale
-        end
-    else
-        scale = IncCalloutDB.settings.mapScale
-    end
+    local scale = IncCalloutDB.settings.resizeInPvPOnly and isPvPEnvironment and IncCalloutDB.settings.mapScale or 1
 
-    -- Apply the determined scale
     if WorldMapFrame then
         WorldMapFrame:SetScale(scale)
         local pos = IncCalloutDB.settings.mapPosition
@@ -57,15 +49,11 @@ local function ResizeWorldMap()
     end
 end
 
--- Initialize and register events
 local function InitializeMapFeatures()
     local eventFrame = CreateFrame("Frame")
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
     eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-    eventFrame:SetScript("OnEvent", function(self, event, ...)
-        ResizeWorldMap()
-        
-    end)
+    eventFrame:SetScript("OnEvent", ResizeWorldMap)
 end
 
 WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
@@ -80,6 +68,23 @@ end)
 
 addonNamespace.ResizeWorldMap = ResizeWorldMap
 InitializeMapFeatures()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

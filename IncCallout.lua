@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.9 - 10.2.7
+-- v7.0 - 11.0.0
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -358,60 +358,64 @@ local function SavePvPStats()
 
     local SavedSettings = IncCalloutDB[character]
 
-    if IsAddOnLoaded("Blizzard_PVPUI") or LoadAddOn("Blizzard_PVPUI") then
-        local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-        local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-        local honorLevel = UnitHonorLevel("player")
-        local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
-
-        SavedSettings.conquestValue = conquestInfo and conquestInfo.quantity or 0
-        SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.maxQuantity > 0 and conquestInfo.quantity .. " / " .. conquestInfo.maxQuantity or conquestInfo.quantity .. " / No Cap") or "N/A"
-        SavedSettings.honorValue = honorInfo and honorInfo.quantity or "N/A"
-        SavedSettings.honorLevelValue = honorLevel
-        SavedSettings.soloShuffleRatingValue = soloShuffleRating
-
-        -- Save BG Stats
-        local bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills = FetchBGStats()
-        SavedSettings.bgPlayed = bgPlayed
-        SavedSettings.bgWon = bgWon
-        SavedSettings.bgLost = bgLost
-        SavedSettings.totalHonorableKills = totalHonorableKills
-        SavedSettings.battlegroundHonorableKills = battlegroundHonorableKills
-
-        -- Save Great Vault slots unlocked
-        SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
-
-        -- Save Blitz Honor
-        local blitzHonor = FetchWeeklyPvPHonor()
-        SavedSettings.blitzHonor = blitzHonor[1]
-        SavedSettings.blitzHonor2 = blitzHonor[2]
-        SavedSettings.blitzHonor3 = blitzHonor[3]
-
-        -- Save Solo Shuffle Stats
-        local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
-        local specStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
-        local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
-        local mostPlayedSpecName = GetSpecName(mostPlayedSpecID)
-
-        SavedSettings.bestRatingValue = seasonBest or "N/A"
-        SavedSettings.roundsWonValue = roundsSeasonWon or "N/A"
-        SavedSettings.roundsPlayedValue = roundsSeasonPlayed or "N/A"
-        SavedSettings.mostPlayedSpecValue = mostPlayedSpecName
-
-        -- Save Misc Stats
-        local totalKills = GetStatistic(1198) or "N/A" 
-        local totalKillingBlows = GetStatistic(1487) or "N/A" 
-        local battlegroundKillingBlows = GetStatistic(1491) or "N/A" 
-        local totalDeaths = GetStatistic(60) or "N/A" 
-        local battlegroundDeaths = GetStatistic(14786) or "N/A" 
-
-        SavedSettings.totalKillsValue = totalKills
-        SavedSettings.totalKillingBlowsValue = totalKillingBlows
-        SavedSettings.battlegroundKillingBlowsValue = battlegroundKillingBlows
-        SavedSettings.totalDeathsValue = totalDeaths
-        SavedSettings.battlegroundDeathsValue = battlegroundDeaths
+    local loadedOrLoading, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
+    if not loaded then
+        C_AddOns.LoadAddOn("Blizzard_PVPUI")
     end
+
+    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
+    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+    local honorLevel = UnitHonorLevel("player")
+    local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
+
+    SavedSettings.conquestValue = conquestInfo and conquestInfo.quantity or 0
+    SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.maxQuantity > 0 and conquestInfo.quantity .. " / " .. conquestInfo.maxQuantity or conquestInfo.quantity .. " / No Cap") or "N/A"
+    SavedSettings.honorValue = honorInfo and honorInfo.quantity or "N/A"
+    SavedSettings.honorLevelValue = honorLevel
+    SavedSettings.soloShuffleRatingValue = soloShuffleRating
+
+    -- Save BG Stats
+    local bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills = FetchBGStats()
+    SavedSettings.bgPlayed = bgPlayed
+    SavedSettings.bgWon = bgWon
+    SavedSettings.bgLost = bgLost
+    SavedSettings.totalHonorableKills = totalHonorableKills
+    SavedSettings.battlegroundHonorableKills = battlegroundHonorableKills
+
+    -- Save Great Vault slots unlocked
+    SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
+
+    -- Save Blitz Honor
+    local blitzHonor = FetchWeeklyPvPHonor()
+    SavedSettings.blitzHonor = blitzHonor[1]
+    SavedSettings.blitzHonor2 = blitzHonor[2]
+    SavedSettings.blitzHonor3 = blitzHonor[3]
+
+    -- Save Solo Shuffle Stats
+    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+    local specStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
+    local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
+    local mostPlayedSpecName = GetSpecName(mostPlayedSpecID)
+
+    SavedSettings.bestRatingValue = seasonBest or "N/A"
+    SavedSettings.roundsWonValue = roundsSeasonWon or "N/A"
+    SavedSettings.roundsPlayedValue = roundsSeasonPlayed or "N/A"
+    SavedSettings.mostPlayedSpecValue = mostPlayedSpecName
+
+    -- Save Misc Stats
+    local totalKills = GetStatistic(1198) or "N/A"
+    local totalKillingBlows = GetStatistic(1487) or "N/A"
+    local battlegroundKillingBlows = GetStatistic(1491) or "N/A"
+    local totalDeaths = GetStatistic(60) or "N/A"
+    local battlegroundDeaths = GetStatistic(14786) or "N/A"
+
+    SavedSettings.totalKillsValue = totalKills
+    SavedSettings.totalKillingBlowsValue = totalKillingBlows
+    SavedSettings.battlegroundKillingBlowsValue = battlegroundKillingBlows
+    SavedSettings.totalDeathsValue = totalDeaths
+    SavedSettings.battlegroundDeathsValue = battlegroundDeaths
 end
+
 
 -- Function to update Blitz stats frame
 local function UpdateBlitzStatsFrame(character)
@@ -466,8 +470,9 @@ end
 
 -- Function to update PvP stats frame
 local function UpdatePvPStatsFrame(character)
-    if not IsAddOnLoaded("Blizzard_PVPUI") then
-        LoadAddOn("Blizzard_PVPUI")
+    local loadedOrLoading, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
+    if not loaded then
+        C_AddOns.LoadAddOn("Blizzard_PVPUI")
     end
 
     local stats = IncCalloutDB[character]
@@ -1754,23 +1759,24 @@ local options = {
         },
     },
 }
--- Register the options table
-AceConfig:RegisterOptionsTable(addonName, options)
 
+-- Register the options table using AceConfig
+AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
--- Create a config panel
-local configPanel = AceConfigDialog:AddToBlizOptions(addonName, "Incoming-BG")
-configPanel.default = function()
-    buttonMessageIndices.sendMore = 1
-    buttonMessageIndices.inc = 1
-    buttonMessageIndices.allClear = 1
-	buttonMessageIndices.buffRequest = 1
-	IncDB.selectedBorderIndex = 1
+local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
+if Settings then
+    local function RegisterOptionsPanel(panel)
+        local category = Settings.GetCategory(panel.name)
+        if not category then
+            category, layout = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+            category.ID = panel.name
+            Settings.RegisterAddOnCategory(category)
+        end
+    end
+
+    RegisterOptionsPanel(optionsFrame)
 end
-
-
-
 
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "
@@ -1936,8 +1942,11 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
                 IncCallout:Show()
             end
         else
-            InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
-            InterfaceOptionsFrame_OpenToCategory("Incoming-BG") -- Call it twice to ensure the correct category is selected
+            if Settings.OpenToCategory then
+                Settings.OpenToCategory("Incoming-BG")
+            else
+                print("Options frame function not available")
+            end
         end
     end,
     OnMouseDown = function(self, button)
@@ -1962,7 +1971,8 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
         tooltip:Show()
     end,
 })
- 
+
+
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)

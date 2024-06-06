@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v6.9 - 10.2.7
+-- v7.0 - 11.0.0
 
 local AceTimer = LibStub("AceTimer-3.0")
 local LBS = LibStub("LibBabble-SubZone-3.0"):GetReverseLookupTable()

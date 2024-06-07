@@ -11,14 +11,14 @@ addonNamespace = addonNamespace or {}
 local function EnsureDBSettings()
     if not IncCalloutDB.settings then
         IncCalloutDB.settings = {
-            mapScale = 0.75, 
-            mapPosition = { 
+            mapScale = 0.75,
+            mapPosition = {
                 point = "CENTER",
                 relativePoint = "CENTER",
                 xOfs = 0,
                 yOfs = 0,
             },
-            resizeInPvPOnly = true, 
+            resizeInPvPOnly = true,
         }
     end
 end
@@ -39,7 +39,16 @@ local function ResizeWorldMap()
     local inInstance, instanceType = IsInInstance()
     local isPvPEnvironment = inInstance and (instanceType == "pvp" or instanceType == "arena")
 
-    local scale = IncCalloutDB.settings.resizeInPvPOnly and isPvPEnvironment and IncCalloutDB.settings.mapScale or 1
+    local scale
+    if IncCalloutDB.settings.resizeInPvPOnly then
+        if isPvPEnvironment then
+            scale = IncCalloutDB.settings.mapScale
+        else
+            scale = 1
+        end
+    else
+        scale = IncCalloutDB.settings.mapScale
+    end
 
     if WorldMapFrame then
         WorldMapFrame:SetScale(scale)
@@ -48,6 +57,8 @@ local function ResizeWorldMap()
         WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
     end
 end
+
+
 
 local function InitializeMapFeatures()
     local eventFrame = CreateFrame("Frame")
@@ -60,7 +71,9 @@ WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
 WorldMapFrame:SetMovable(true)
 WorldMapFrame:EnableMouse(true)
 WorldMapFrame:RegisterForDrag("LeftButton")
-WorldMapFrame:SetScript("OnDragStart", WorldMapFrame.StartMoving)
+WorldMapFrame:SetScript("OnDragStart", function()
+    WorldMapFrame:StartMoving()
+end)
 WorldMapFrame:SetScript("OnDragStop", function()
     WorldMapFrame:StopMovingOrSizing()
     SaveMapPosition()
@@ -68,41 +81,3 @@ end)
 
 addonNamespace.ResizeWorldMap = ResizeWorldMap
 InitializeMapFeatures()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

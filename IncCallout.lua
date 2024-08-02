@@ -1,6 +1,5 @@
--- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v7.0 - 11.0.0
+-- v7.2 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -178,12 +177,12 @@ local otherTab = CreateTabButton(tabFrame, "BG's", 2)
 otherTab:SetPoint("LEFT", generalTab, "RIGHT", 5, 0)
 table.insert(tabFrame.tabButtons, otherTab)
 
-local blitzTab = CreateTabButton(tabFrame, "Blitz", 3)
-blitzTab:SetPoint("LEFT", otherTab, "RIGHT", 5, 0)
-table.insert(tabFrame.tabButtons, blitzTab)
+local soloRBGTab = CreateTabButton(tabFrame, "Solo RBG", 3)
+soloRBGTab:SetPoint("LEFT", otherTab, "RIGHT", 5, 0)
+table.insert(tabFrame.tabButtons, soloRBGTab)
 
 local soloShuffleTab = CreateTabButton(tabFrame, "Solo Shuffle", 4)
-soloShuffleTab:SetPoint("LEFT", blitzTab, "RIGHT", 5, 0)
+soloShuffleTab:SetPoint("LEFT", soloRBGTab, "RIGHT", 5, 0)
 table.insert(tabFrame.tabButtons, soloShuffleTab)
 
 local miscTab = CreateTabButton(tabFrame, "Misc", 5)
@@ -218,16 +217,16 @@ tabs[5]:Hide()
 
 HideAllTabs()
 tabs[1]:Show()
-generalTab:SetNormalFontObject("GameFontHighlight") 
+generalTab:SetNormalFontObject("GameFontHighlight")
 
 -- Add PvP Stats to the General Tab
 local generalStats = {
-    {"Player Name:", "playerNameValue", {0, 1, 0}}, 
-    {"Conquest Points:", "conquestValue", {1, 0, 0}}, 
-    {"Honor Points:", "honorValue", {0, 0.75, 1}}, 
-    {"Honor Level:", "honorLevelValue", {0.58, 0, 0.82}}, 
-    {"Conquest Cap:", "conquestCapValue", {1, 0.5, 0}}, 
-    {"Solo Shuffle Rating:", "soloShuffleRatingValue", {0, 0.75, 1}}, 
+    {"Player Name:", "playerNameValue", {0, 1, 0}},
+    {"Conquest Points:", "conquestValue", {1, 0, 0}},
+    {"Honor Points:", "honorValue", {0, 0.75, 1}},
+    {"Honor Level:", "honorLevelValue", {0.58, 0, 0.82}},
+    {"Conquest Cap:", "conquestCapValue", {1, 0.5, 0}},
+    {"Solo Shuffle Rating:", "soloShuffleRatingValue", {0, 0.75, 1}},
 }
 
 for i, stat in ipairs(generalStats) do
@@ -237,11 +236,11 @@ end
 
 -- Add BG Stats to the BG Tab
 local bgStats = {
-    {"BGs Played:", "bgPlayedValue", {0, 1, 0}}, 
-    {"BGs Won:", "bgWonValue", {1, 0, 0}}, 
-    {"BGs Lost:", "bgLostValue", {0, 0.75, 1}}, 
-    {"Total Honorable Kills:", "totalHonorableKillsValue", {0.58, 0, 0.82}}, 
-    {"Battleground Honorable Kills:", "battlegroundHonorableKillsValue", {1, 0.5, 0}}, 
+    {"BGs Played:", "bgPlayedValue", {0, 1, 0}},
+    {"BGs Won:", "bgWonValue", {1, 0, 0}},
+    {"BGs Lost:", "bgLostValue", {0, 0.75, 1}},
+    {"Total Honorable Kills:", "totalHonorableKillsValue", {0.58, 0, 0.82}},
+    {"Battleground Honorable Kills:", "battlegroundHonorableKillsValue", {1, 0.5, 0}},
 }
 
 for i, stat in ipairs(bgStats) do
@@ -249,25 +248,26 @@ for i, stat in ipairs(bgStats) do
     tabs[2][stat[2]] = value
 end
 
--- Add Blitz Stats to the Blitz Tab
-local blitzStats = {
-    {"Vault Slot 1 ", "vaultSlot1", {0, 0.75, 1}},
-    {"Vault Slot 2 ", "vaultSlot2", {0.58, 0, 0.82}},
-    {"Vault Slot 3 ", "vaultSlot3", {0, 1, 0}},
-    {"Great Vault Slots Unlocked:", "greatVaultSlotsValue", {0, 0.75, 1}}, 
+-- Add Solo RBG Stats to the Solo RBG Tab
+local soloRBGStats = {
+    {"Best Rating:", "bestRatingValue", {0, 1, 0}},
+    {"Games Won:", "gamesWonValue", {1, 0, 0}},
+    {"Games Played:", "gamesPlayedValue", {0, 0.75, 1}},
+    {"Most Played Spec:", "mostPlayedSpecValue", {0.58, 0, 0.82}},
+    {"Played Most:", "playedMostValue", {1, 0.5, 0}}, 
 }
 
-for i, stat in ipairs(blitzStats) do
+for i, stat in ipairs(soloRBGStats) do
     local label, value = createStatLabelAndValueHorizontal(tabs[3], stat[1], 10, -10 - (i - 1) * 40, stat[3])
     tabs[3][stat[2]] = value
 end
 
 -- Add Solo Shuffle Stats to the Solo Shuffle Tab
 local soloShuffleStats = {
-    {"Best Rating:", "bestRatingValue", {0, 1, 0}}, 
-    {"Rounds Won:", "roundsWonValue", {0, 0.75, 1}}, 
-    {"Rounds Played:", "roundsPlayedValue", {1, 0, 0}}, 
-    {"Most Played (Spec):", "mostPlayedSpecValue", {0.58, 0, 0.82}}, 
+    {"Best Rating:", "shuffleBestRatingValue", {0, 1, 0}},
+    {"Rounds Won:", "shuffleRoundsWonValue", {0, 0.75, 1}},
+    {"Rounds Played:", "shuffleRoundsPlayedValue", {1, 0, 0}},
+    {"Most Played Spec:", "shuffleMostPlayedSpecValue", {0.58, 0, 0.82}},
 }
 
 for i, stat in ipairs(soloShuffleStats) do
@@ -277,11 +277,11 @@ end
 
 -- Add Misc Stats to the Misc Tab
 local miscStats = {
-    {"Total Kills (Exp or Honor):", "totalKillsValue", {0, 1, 0}}, 
-    {"Total Killing Blows:", "totalKillingBlowsValue", {1, 0, 0}}, 
-    {"Battleground Killing Blows:", "battlegroundKillingBlowsValue", {0, 0.75, 1}}, 
-    {"Total Deaths:", "totalDeathsValue", {0.58, 0, 0.82}}, 
-    {"Battleground Deaths:", "battlegroundDeathsValue", {1, 0.5, 0}}, 
+    {"Total Kills (Exp or Honor):", "totalKillsValue", {0, 1, 0}},
+    {"Total Killing Blows:", "totalKillingBlowsValue", {1, 0, 0}},
+    {"Battleground Killing Blows:", "battlegroundKillingBlowsValue", {0, 0.75, 1}},
+    {"Total Deaths:", "totalDeathsValue", {0.58, 0, 0.82}},
+    {"Battleground Deaths:", "battlegroundDeathsValue", {1, 0.5, 0}},
 }
 
 for i, stat in ipairs(miscStats) do
@@ -289,20 +289,21 @@ for i, stat in ipairs(miscStats) do
     tabs[5][stat[2]] = value
 end
 
+local SOLO_RBG_INDEX = 9
 local SOLO_SHUFFLE_INDEX = 7
 
 -- Function to fetch BG stats
 local function FetchBGStats()
-    local bgPlayed = GetStatistic(839) or "N/A" 
-    local bgWon = GetStatistic(840) or "N/A" 
+    local bgPlayed = GetStatistic(839) or "N/A"
+    local bgWon = GetStatistic(840) or "N/A"
     local bgLost
     if tonumber(bgPlayed) and tonumber(bgWon) then
-        bgLost = tonumber(bgPlayed) - tonumber(bgWon) 
+        bgLost = tonumber(bgPlayed) - tonumber(bgWon)
     else
         bgLost = "N/A"
     end
-    local totalHonorableKills = GetStatistic(588) or "N/A" 
-    local battlegroundHonorableKills = GetStatistic(382) or "N/A" 
+    local totalHonorableKills = GetStatistic(588) or "N/A"
+    local battlegroundHonorableKills = GetStatistic(382) or "N/A"
 
     return bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills
 end
@@ -313,37 +314,38 @@ local function FetchGreatVaultSlots()
     return weeklyProgress and weeklyProgress.unlocksCompleted or 0
 end
 
--- Function to fetch weekly PvP honor
-local function FetchWeeklyPvPHonor()
-    local activities = C_WeeklyRewards.GetActivities(Enum.WeeklyRewardChestThresholdType.RankedPvP)
-    local progress = {0, 0, 0}
-    for _, activity in ipairs(activities) do
-        if activity.type == Enum.WeeklyRewardChestThresholdType.RankedPvP then
-            if activity.index == 1 then
-                progress[1] = activity.progress
-            elseif activity.index == 2 then
-                progress[2] = activity.progress
-            elseif activity.index == 3 then
-                progress[3] = activity.progress
-            end
-        end
-    end
-    return progress
-end
-
--- Function to get vault progress
-local function GetVault(activity)
-    local progress = activity.progress or 0
-    local threshold = activity.threshold or 0
-    return string.format("%d/%d", progress, threshold)
-end
-
 -- Function to get spec name safely
 local function GetSpecName(specID)
     if specID and specID > 0 then
         return GetSpecializationNameForSpecID(specID) or "N/A"
     end
     return "N/A"
+end
+
+-- Function to fetch Solo RBG stats
+local function FetchSoloRBGStats()
+    local gamesPlayed = GetStatistic(40199) or "N/A"
+    local gamesWon = GetStatistic(40201) or "N/A"
+    local playedMost = GetStatistic(40200) or "N/A" 
+    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(9) -- Use the correct bracketIndex
+
+    if rating then
+        local specStats = C_PvP.GetPersonalRatedBGBlitzSpecStats() or {}
+        local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
+        local mostPlayedSpec = GetSpecName(mostPlayedSpecID)
+        return rating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost
+    else
+        return "N/A", gamesPlayed, gamesWon, "N/A", playedMost
+    end
+end
+
+-- Function to fetch Solo Shuffle stats
+local function FetchSoloShuffleStats()
+    local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+    local shuffleSpecStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
+    local shuffleMostPlayedSpecID = shuffleSpecStats.seasonMostPlayedSpecID or 0
+    local shuffleMostPlayedSpecName = GetSpecName(shuffleMostPlayedSpecID)
+    return shuffleSeasonBest, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleMostPlayedSpecName
 end
 
 -- Function to save PvP stats
@@ -385,22 +387,19 @@ local function SavePvPStats()
     -- Save Great Vault slots unlocked
     SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
 
-    -- Save Blitz Honor
-    local blitzHonor = FetchWeeklyPvPHonor()
-    SavedSettings.blitzHonor = blitzHonor[1]
-    SavedSettings.blitzHonor2 = blitzHonor[2]
-    SavedSettings.blitzHonor3 = blitzHonor[3]
+    -- Save Solo RBG Stats
+    local bestRating, gamesPlayed, gamesWon, mostPlayedSpec = FetchSoloRBGStats()
+    SavedSettings.bestRatingValue = bestRating or "N/A"
+    SavedSettings.gamesPlayedValue = gamesPlayed
+    SavedSettings.gamesWonValue = gamesWon
+    SavedSettings.mostPlayedSpecValue = mostPlayedSpec
 
     -- Save Solo Shuffle Stats
-    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
-    local specStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
-    local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
-    local mostPlayedSpecName = GetSpecName(mostPlayedSpecID)
-
-    SavedSettings.bestRatingValue = seasonBest or "N/A"
-    SavedSettings.roundsWonValue = roundsSeasonWon or "N/A"
-    SavedSettings.roundsPlayedValue = roundsSeasonPlayed or "N/A"
-    SavedSettings.mostPlayedSpecValue = mostPlayedSpecName
+    local shuffleBestRating, shuffleRoundsPlayed, shuffleRoundsWon, shuffleMostPlayedSpec = FetchSoloShuffleStats()
+    SavedSettings.shuffleBestRatingValue = shuffleBestRating or "N/A"
+    SavedSettings.shuffleRoundsWonValue = shuffleRoundsWon or "N/A"
+    SavedSettings.shuffleRoundsPlayedValue = shuffleRoundsPlayed or "N/A"
+    SavedSettings.shuffleMostPlayedSpecValue = shuffleMostPlayedSpec
 
     -- Save Misc Stats
     local totalKills = GetStatistic(1198) or "N/A"
@@ -416,21 +415,14 @@ local function SavePvPStats()
     SavedSettings.battlegroundDeathsValue = battlegroundDeaths
 end
 
-
--- Function to update Blitz stats frame
-local function UpdateBlitzStatsFrame(character)
+-- Function to update Solo RBG stats frame
+local function UpdateSoloRBGStatsFrame(character)
     local stats = IncCalloutDB[character]
     if stats then
-        local blitzHonor = { stats.blitzHonor or 0, stats.blitzHonor2 or 0, stats.blitzHonor3 or 0 }
-        tabs[3].vaultSlot1:SetText(GetVault({progress = blitzHonor[1], threshold = 1250}))
-        tabs[3].vaultSlot2:SetText(GetVault({progress = blitzHonor[2], threshold = 2500}))
-        tabs[3].vaultSlot3:SetText(GetVault({progress = blitzHonor[3], threshold = 5000}))
-        tabs[3].greatVaultSlotsValue:SetText(stats.greatVaultSlots or "N/A")
-    else
-        tabs[3].vaultSlot1:SetText("0/1250")
-        tabs[3].vaultSlot2:SetText("0/2500")
-        tabs[3].vaultSlot3:SetText("0/5000")
-        tabs[3].greatVaultSlotsValue:SetText("N/A")
+        tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+        tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
+        tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
+        tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
     end
 end
 
@@ -438,10 +430,10 @@ end
 local function UpdateSoloShuffleStatsFrame(character)
     local stats = IncCalloutDB[character]
     if stats then
-        tabs[4].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
-        tabs[4].roundsWonValue:SetText(stats.roundsWonValue or "N/A")
-        tabs[4].roundsPlayedValue:SetText(stats.roundsPlayedValue or "N/A")
-        tabs[4].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+        tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
+        tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
+        tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
+        tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
     end
 end
 
@@ -477,7 +469,7 @@ local function UpdatePvPStatsFrame(character)
 
     local stats = IncCalloutDB[character]
     if stats then
-        local name = string.match(character, "^[^%-]+")  
+        local name = string.match(character, "^[^%-]+")
         local classColor = RAID_CLASS_COLORS[stats.class] or {r = 1, g = 1, b = 1}
         local tabStats = {
             playerName = name,
@@ -524,7 +516,7 @@ local function CreateCharacterDropdown()
     dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
 
     UIDropDownMenu_SetWidth(dropdown, 150)
-    UIDropDownMenu_SetText(dropdown, "Characters") 
+    UIDropDownMenu_SetText(dropdown, "Characters")
 
     local function OnClick(self)
         UIDropDownMenu_SetSelectedID(dropdown, self:GetID(), true)
@@ -537,28 +529,28 @@ local function CreateCharacterDropdown()
             local classColor = RAID_CLASS_COLORS[stats.class]
             tabs[1].playerNameValue:SetText(characterNameOnly)
             tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
-            
+
             tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
             tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
             tabs[1].honorValue:SetText(stats.honorValue or "N/A")
             tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
             tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
-            
+
             tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
             tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
             tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
             tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
             tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
 
-            tabs[3].vaultSlot1:SetText(stats.vaultSlot1 or "0/1250")
-            tabs[3].vaultSlot2:SetText(stats.vaultSlot2 or "0/2500")
-            tabs[3].vaultSlot3:SetText(stats.vaultSlot3 or "0/5000")
-            tabs[3].greatVaultSlotsValue:SetText(stats.greatVaultSlots or "N/A")
+            tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+            tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
+            tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
+            tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
 
-            tabs[4].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
-            tabs[4].roundsWonValue:SetText(stats.roundsWonValue or "N/A")
-            tabs[4].roundsPlayedValue:SetText(stats.roundsPlayedValue or "N/A")
-            tabs[4].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+            tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
+            tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
+            tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
+            tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
 
             tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
             tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
@@ -566,7 +558,7 @@ local function CreateCharacterDropdown()
             tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
             tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
 
-            UpdateBlitzStatsFrame(characterFullName)
+            UpdateSoloRBGStatsFrame(characterFullName)
             UpdateSoloShuffleStatsFrame(characterFullName)
             UpdateMiscStatsFrame(characterFullName)
         else
@@ -578,22 +570,22 @@ local function CreateCharacterDropdown()
             tabs[1].honorValue:SetText("N/A")
             tabs[1].honorLevelValue:SetText("N/A")
             tabs[1].soloShuffleRatingValue:SetText("N/A")
-            
+
             tabs[2].bgPlayedValue:SetText("N/A")
             tabs[2].bgWonValue:SetText("N/A")
             tabs[2].bgLostValue:SetText("N/A")
             tabs[2].totalHonorableKillsValue:SetText("N/A")
             tabs[2].battlegroundHonorableKillsValue:SetText("N/A")
 
-            tabs[3].vaultSlot1:SetText("0/1250")
-            tabs[3].vaultSlot2:SetText("0/2500")
-            tabs[3].vaultSlot3:SetText("0/5000")
-            tabs[3].greatVaultSlotsValue:SetText("N/A")
+            tabs[3].bestRatingValue:SetText("N/A")
+            tabs[3].gamesWonValue:SetText("N/A")
+            tabs[3].gamesPlayedValue:SetText("N/A")
+            tabs[3].mostPlayedSpecValue:SetText("N/A")
 
-            tabs[4].bestRatingValue:SetText("N/A")
-            tabs[4].roundsWonValue:SetText("N/A")
-            tabs[4].roundsPlayedValue:SetText("N/A")
-            tabs[4].mostPlayedSpecValue:SetText("N/A")
+            tabs[4].shuffleBestRatingValue:SetText("N/A")
+            tabs[4].shuffleRoundsWonValue:SetText("N/A")
+            tabs[4].shuffleRoundsPlayedValue:SetText("N/A")
+            tabs[4].shuffleMostPlayedSpecValue:SetText("N/A")
 
             tabs[5].totalKillsValue:SetText("N/A")
             tabs[5].totalKillingBlowsValue:SetText("N/A")
@@ -601,7 +593,7 @@ local function CreateCharacterDropdown()
             tabs[5].totalDeathsValue:SetText("N/A")
             tabs[5].battlegroundDeathsValue:SetText("N/A")
 
-            UpdateBlitzStatsFrame(characterFullName)
+            UpdateSoloRBGStatsFrame(characterFullName)
             UpdateSoloShuffleStatsFrame(characterFullName)
             UpdateMiscStatsFrame(characterFullName)
         end
@@ -621,11 +613,11 @@ local function CreateCharacterDropdown()
                 UIDropDownMenu_AddButton(info, level)
             end
         end
-        UIDropDownMenu_SetText(dropdown, "Characters") 
+        UIDropDownMenu_SetText(dropdown, "Characters")
     end
 
     UIDropDownMenu_Initialize(dropdown, Initialize)
-    UIDropDownMenu_SetText(dropdown, "Characters") 
+    UIDropDownMenu_SetText(dropdown, "Characters")
 end
 
 CreateCharacterDropdown()
@@ -648,22 +640,22 @@ pvpStatsFrame:SetScript("OnShow", function()
         tabs[1].honorValue:SetText(stats.honorValue or "N/A")
         tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
         tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
-        
+
         tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
         tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
         tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
         tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
         tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
 
-        tabs[3].vaultSlot1:SetText(stats.vaultSlot1 or "0/1250")
-        tabs[3].vaultSlot2:SetText(stats.vaultSlot2 or "0/2500")
-        tabs[3].vaultSlot3:SetText(stats.vaultSlot3 or "0/5000")
-        tabs[3].greatVaultSlotsValue:SetText(stats.greatVaultSlots or "N/A")
+        tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+        tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
+        tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
+        tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
 
-        tabs[4].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
-        tabs[4].roundsWonValue:SetText(stats.roundsWonValue or "N/A")
-        tabs[4].roundsPlayedValue:SetText(stats.roundsPlayedValue or "N/A")
-        tabs[4].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+        tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
+        tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
+        tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
+        tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
 
         tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
         tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
@@ -671,17 +663,17 @@ pvpStatsFrame:SetScript("OnShow", function()
         tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
         tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
 
-        UpdateBlitzStatsFrame(character)
+        UpdateSoloRBGStatsFrame(character)
         UpdateSoloShuffleStatsFrame(character)
         UpdateMiscStatsFrame(character)
     end
     SavePvPStats()
     UpdatePvPStatsFrame(character)
     UpdateBGStatsFrame(character)
-    UpdateBlitzStatsFrame(character)
+    UpdateSoloRBGStatsFrame(character)
     UpdateSoloShuffleStatsFrame(character)
     UpdateMiscStatsFrame(character)
-    UIDropDownMenu_SetText(SelectCharacterDropdown, "Characters") 
+    UIDropDownMenu_SetText(SelectCharacterDropdown, "Characters")
 end)
 
 local function DelayedSaveAndUpdate()
@@ -691,7 +683,7 @@ local function DelayedSaveAndUpdate()
         local character = UnitName("player")
         UpdatePvPStatsFrame(character)
         UpdateBGStatsFrame(character)
-        UpdateBlitzStatsFrame(character)
+        UpdateSoloRBGStatsFrame(character)
         UpdateSoloShuffleStatsFrame(character)
         UpdateMiscStatsFrame(character)
     end)
@@ -703,7 +695,7 @@ local eventHandlers = {
         SavePvPStats()
         UpdatePvPStatsFrame(character)
         UpdateBGStatsFrame(character)
-        UpdateBlitzStatsFrame(character)
+        UpdateSoloRBGStatsFrame(character)
         UpdateSoloShuffleStatsFrame(character)
         UpdateMiscStatsFrame(character)
     end,
@@ -712,7 +704,7 @@ local eventHandlers = {
         SavePvPStats()
         UpdatePvPStatsFrame(character)
         UpdateBGStatsFrame(character)
-        UpdateBlitzStatsFrame(character)
+        UpdateSoloRBGStatsFrame(character)
         UpdateSoloShuffleStatsFrame(character)
         UpdateMiscStatsFrame(character)
     end,
@@ -748,7 +740,7 @@ local eventHandlers = {
             local character = UnitName("player")
             if IncCalloutDB[character] then
                 IncCalloutDB[character].blitzHonor = (IncCalloutDB[character].blitzHonor or 0) + tonumber(honorGained)
-                UpdateBlitzStatsFrame(character)
+                UpdateSoloRBGStatsFrame(character)
             end
         end
     end
@@ -762,7 +754,7 @@ local function EventHandler(self, event, ...)
         local character = UnitName("player")
         UpdatePvPStatsFrame(character)
         UpdateBGStatsFrame(character)
-        UpdateBlitzStatsFrame(character)
+        UpdateSoloRBGStatsFrame(character)
         UpdateSoloShuffleStatsFrame(character)
         UpdateMiscStatsFrame(character)
     end
@@ -851,7 +843,7 @@ local battlegroundLocations = {
     "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
     "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
     "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu",  "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
-    "Ashran", "StormShield", "The Ringing Deeps",   
+    "Ashran", "StormShield", "The Ringing Deeps", "Deephaul Ravine",  
 }
  
 local buttonMessages = {
@@ -2141,6 +2133,7 @@ frame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
 frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("COMBAT_RATING_UPDATE")
+frame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
 frame:SetScript("OnEvent", EventHandler)
 
 local function OnEvent(self, event, arg1, ...)

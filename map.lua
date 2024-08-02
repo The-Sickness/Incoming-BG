@@ -1,6 +1,5 @@
--- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v7.0 - 11.0.0
+-- v7.2 - 11.0.2 
 
 local AceTimer = LibStub("AceTimer-3.0")
 local LBS = LibStub("LibBabble-SubZone-3.0"):GetReverseLookupTable()
@@ -57,8 +56,6 @@ local function ResizeWorldMap()
         WorldMapFrame:SetPoint(pos.point, UIParent, pos.relativePoint, pos.xOfs, pos.yOfs)
     end
 end
-
-
 
 local function InitializeMapFeatures()
     local eventFrame = CreateFrame("Frame")

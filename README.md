@@ -87,11 +87,13 @@ BGs Won: Shows the total number of battlegrounds won.
 BGs Lost: Indicates the total number of battlegrounds lost.
 Total Honorable Kills: Displays the total number of honorable kills achieved by the player.
 Battleground Honorable Kills: Shows the number of honorable kills achieved specifically in battlegrounds.
-Blitz Tab
-Vault Slot 1 (0/1250): Shows the progress towards unlocking the first Great Vault slot with 1250 Conquest Points.
-Vault Slot 2 (0/2500): Indicates the progress towards unlocking the second Great Vault slot with 2500 Conquest Points.
-Vault Slot 3 (0/5000): Displays the progress towards unlocking the third Great Vault slot with 5000 Conquest Points.
-Great Vault Slots Unlocked: Shows the number of Great Vault slots currently unlocked by the player.
+Solo RBG Tab (previously Blitz Tab)
+
+Best Rating: Displays the player's highest rating achieved in Solo RBG.
+Games Won: Indicates the number of Solo RBG games won by the player.
+Games Played: Shows the total number of Solo RBG games played by the player.
+Most Played Spec: Displays the specialization most frequently used by the player in Solo RBG.
+Played Most: Shows the statistic related to the most played aspect by the player in Solo RBG.
 Solo Shuffle Tab
 Best Rating: Displays the player's best rating achieved in Solo Shuffle for the current season.
 Rounds Won: Indicates the number of Solo Shuffle rounds won in the current season.
@@ -137,6 +139,8 @@ Update to version 6.9 of Incoming-BG today and enjoy a more personalized and vis
  
 
  For more additional fonts please go SharedMediaAdditionalFonts, it will add many more fonts to the dropdown that you can choose from.
+
+For more additional textures please go to SharedMedia, it will add more textures to the dropdown.
 
  
 

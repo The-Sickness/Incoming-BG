@@ -75,18 +75,22 @@ We're excited to introduce a new feature that allows players to customize their 
 
 New Features and Changes in PvP Stats Window
 General Tab
+
 Player Name: Displays the name of the currently selected player.
 Conquest Points: Shows the current number of Conquest Points the player has earned.
 Honor Points: Indicates the current number of Honor Points the player has earned.
 Honor Level: Displays the player's current Honor Level.
 Conquest Cap: Shows the player's current progress towards the Conquest Cap.
 Solo Shuffle Rating: Indicates the player's rating in Solo Shuffle.
+
 BG’s (Battlegrounds) Tab
+
 BGs Played: Displays the total number of battlegrounds played.
 BGs Won: Shows the total number of battlegrounds won.
 BGs Lost: Indicates the total number of battlegrounds lost.
 Total Honorable Kills: Displays the total number of honorable kills achieved by the player.
 Battleground Honorable Kills: Shows the number of honorable kills achieved specifically in battlegrounds.
+
 Solo RBG Tab (previously Blitz Tab)
 
 Best Rating: Displays the player's highest rating achieved in Solo RBG.
@@ -94,17 +98,22 @@ Games Won: Indicates the number of Solo RBG games won by the player.
 Games Played: Shows the total number of Solo RBG games played by the player.
 Most Played Spec: Displays the specialization most frequently used by the player in Solo RBG.
 Played Most: Shows the statistic related to the most played aspect by the player in Solo RBG.
+
 Solo Shuffle Tab
+
 Best Rating: Displays the player's best rating achieved in Solo Shuffle for the current season.
 Rounds Won: Indicates the number of Solo Shuffle rounds won in the current season.
 Rounds Played: Shows the total number of Solo Shuffle rounds played in the current season.
 Most Played (Spec): Displays the player's most played specialization in Solo Shuffle for the current season.
+
 Misc Tab
+
 Total Kills (Exp or Honor): Displays the total number of kills that grant experience or honor.
 Total Killing Blows: Shows the total number of killing blows.
 Battleground Killing Blows: Indicates the number of killing blows achieved in battlegrounds.
 Total Deaths: Displays the total number of deaths.
 Battleground Deaths: Shows the total number of deaths in battlegrounds.
+
 How the Character Dropdown Works
 The character dropdown menu is designed to allow you to switch between different characters and view their respective PvP stats without having to log into each one separately. Here's how it works:
 

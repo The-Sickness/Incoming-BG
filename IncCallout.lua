@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v7.2 - 11.0.2
+-- v7.3 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -254,13 +254,14 @@ local soloRBGStats = {
     {"Games Won:", "gamesWonValue", {1, 0, 0}},
     {"Games Played:", "gamesPlayedValue", {0, 0.75, 1}},
     {"Most Played Spec:", "mostPlayedSpecValue", {0.58, 0, 0.82}},
-    {"Played Most:", "playedMostValue", {1, 0.5, 0}}, 
+    {"Played Most:", "playedMostValue", {1, 0.5, 0}} 
 }
 
 for i, stat in ipairs(soloRBGStats) do
     local label, value = createStatLabelAndValueHorizontal(tabs[3], stat[1], 10, -10 - (i - 1) * 40, stat[3])
     tabs[3][stat[2]] = value
 end
+
 
 -- Add Solo Shuffle Stats to the Solo Shuffle Tab
 local soloShuffleStats = {
@@ -326,7 +327,7 @@ end
 local function FetchSoloRBGStats()
     local gamesPlayed = GetStatistic(40199) or "N/A"
     local gamesWon = GetStatistic(40201) or "N/A"
-    local playedMost = GetStatistic(40200) or "N/A" 
+    local playedMost = GetStatistic(40202) or "N/A" 
     local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(9) -- Use the correct bracketIndex
 
     if rating then
@@ -388,11 +389,12 @@ local function SavePvPStats()
     SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
 
     -- Save Solo RBG Stats
-    local bestRating, gamesPlayed, gamesWon, mostPlayedSpec = FetchSoloRBGStats()
-    SavedSettings.bestRatingValue = bestRating or "N/A"
+    local bestRating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost = FetchSoloRBGStats()
+    SavedSettings.bestRatingValue = bestRating
     SavedSettings.gamesPlayedValue = gamesPlayed
     SavedSettings.gamesWonValue = gamesWon
     SavedSettings.mostPlayedSpecValue = mostPlayedSpec
+    SavedSettings.playedMostValue = playedMost
 
     -- Save Solo Shuffle Stats
     local shuffleBestRating, shuffleRoundsPlayed, shuffleRoundsWon, shuffleMostPlayedSpec = FetchSoloShuffleStats()
@@ -423,6 +425,7 @@ local function UpdateSoloRBGStatsFrame(character)
         tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
         tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
         tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+        tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A") -- Ensure this updates correctly
     end
 end
 

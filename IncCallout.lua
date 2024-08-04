@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v7.3 - 11.0.2
+-- v7.4 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -254,14 +254,14 @@ local soloRBGStats = {
     {"Games Won:", "gamesWonValue", {1, 0, 0}},
     {"Games Played:", "gamesPlayedValue", {0, 0.75, 1}},
     {"Most Played Spec:", "mostPlayedSpecValue", {0.58, 0, 0.82}},
-    {"Played Most:", "playedMostValue", {1, 0.5, 0}} 
+    {"Played the Most:", "playedMostValue", {1, 0.5, 0}},
+    {"Current Rank:", "currentRankValue", {0, 1, 0}}
 }
 
 for i, stat in ipairs(soloRBGStats) do
     local label, value = createStatLabelAndValueHorizontal(tabs[3], stat[1], 10, -10 - (i - 1) * 40, stat[3])
     tabs[3][stat[2]] = value
 end
-
 
 -- Add Solo Shuffle Stats to the Solo Shuffle Tab
 local soloShuffleStats = {
@@ -292,6 +292,29 @@ end
 
 local SOLO_RBG_INDEX = 9
 local SOLO_SHUFFLE_INDEX = 7
+
+-- Function to determine the rank based on the rating
+local function GetPvpRank(rating)
+    if rating < 1000 then
+        return "Unranked"
+    elseif rating < 1200 then
+        return "Combatant I"
+    elseif rating < 1400 then
+        return "Combatant II"
+    elseif rating < 1600 then
+        return "Challenger I"
+    elseif rating < 1800 then
+        return "Challenger II"
+    elseif rating < 1950 then
+        return "Rival I"
+    elseif rating < 2100 then
+        return "Rival II"
+    elseif rating < 2400 then
+        return "Duelist"
+    else
+        return "Elite"
+    end
+end
 
 -- Function to fetch BG stats
 local function FetchBGStats()
@@ -327,16 +350,17 @@ end
 local function FetchSoloRBGStats()
     local gamesPlayed = GetStatistic(40199) or "N/A"
     local gamesWon = GetStatistic(40201) or "N/A"
-    local playedMost = GetStatistic(40202) or "N/A" 
-    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(9) -- Use the correct bracketIndex
+    local playedMost = GetStatistic(40200) or "N/A"
+    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_RBG_INDEX) -- Use the correct bracketIndex
 
     if rating then
         local specStats = C_PvP.GetPersonalRatedBGBlitzSpecStats() or {}
         local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
         local mostPlayedSpec = GetSpecName(mostPlayedSpecID)
-        return rating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost
+        local currentRank = GetPvpRank(rating)
+        return rating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost, currentRank
     else
-        return "N/A", gamesPlayed, gamesWon, "N/A", playedMost
+        return "N/A", gamesPlayed, gamesWon, "N/A", playedMost, "N/A"
     end
 end
 
@@ -389,12 +413,13 @@ local function SavePvPStats()
     SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
 
     -- Save Solo RBG Stats
-    local bestRating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost = FetchSoloRBGStats()
+    local bestRating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost, currentRank = FetchSoloRBGStats()
     SavedSettings.bestRatingValue = bestRating
     SavedSettings.gamesPlayedValue = gamesPlayed
     SavedSettings.gamesWonValue = gamesWon
     SavedSettings.mostPlayedSpecValue = mostPlayedSpec
     SavedSettings.playedMostValue = playedMost
+    SavedSettings.currentRankValue = currentRank
 
     -- Save Solo Shuffle Stats
     local shuffleBestRating, shuffleRoundsPlayed, shuffleRoundsWon, shuffleMostPlayedSpec = FetchSoloShuffleStats()
@@ -417,7 +442,7 @@ local function SavePvPStats()
     SavedSettings.battlegroundDeathsValue = battlegroundDeaths
 end
 
--- Function to update Solo RBG stats frame
+-- Update the Solo RBG Stats
 local function UpdateSoloRBGStatsFrame(character)
     local stats = IncCalloutDB[character]
     if stats then
@@ -425,7 +450,8 @@ local function UpdateSoloRBGStatsFrame(character)
         tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
         tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
         tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
-        tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A") -- Ensure this updates correctly
+        tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
+        tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
     end
 end
 
@@ -549,6 +575,8 @@ local function CreateCharacterDropdown()
             tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
             tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
             tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+            tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
+            tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
 
             tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
             tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
@@ -584,6 +612,8 @@ local function CreateCharacterDropdown()
             tabs[3].gamesWonValue:SetText("N/A")
             tabs[3].gamesPlayedValue:SetText("N/A")
             tabs[3].mostPlayedSpecValue:SetText("N/A")
+            tabs[3].playedMostValue:SetText("N/A")
+            tabs[3].currentRankValue:SetText("N/A")
 
             tabs[4].shuffleBestRatingValue:SetText("N/A")
             tabs[4].shuffleRoundsWonValue:SetText("N/A")
@@ -654,6 +684,8 @@ pvpStatsFrame:SetScript("OnShow", function()
         tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
         tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
         tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+        tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
+        tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
 
         tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
         tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
@@ -768,6 +800,8 @@ for event in pairs(eventHandlers) do
     frame:RegisterEvent(event)
 end
 frame:SetScript("OnEvent", EventHandler)
+
+
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -2137,6 +2171,7 @@ frame:RegisterEvent("PLAYER_REGEN_DISABLED")
 frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("COMBAT_RATING_UPDATE")
 frame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
+frame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
 frame:SetScript("OnEvent", EventHandler)
 
 local function OnEvent(self, event, arg1, ...)

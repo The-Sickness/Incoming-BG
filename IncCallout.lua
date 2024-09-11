@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v7.7 - 11.0.2
+-- v7.8 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -880,106 +880,102 @@ local battlegroundLocations = {
  
 local buttonMessages = {
     sendMore = {
-        "[Incoming-BG] We need more peeps",
-        "[Incoming-BG] Need help",
-        "[Incoming-BG] We are outnumbered",
-        "[Incoming-BG] Need a few more",
-        "[Incoming-BG] Need more",
-        "[Incoming-BG] Backup required",
-        "[Incoming-BG] We could use some help",
-        "[Incoming-BG] Calling for backup",
-        "[Incoming-BG] Could use some backup",
-        "[Incoming-BG] Reinforcements needed",
-        "[Incoming-BG] In need of additional support",
-        "[Incoming-BG] Calling all hands on deck",
-        "[Incoming-BG] Require extra manpower",
-        "[Incoming-BG] Assistance urgently needed",
-        "[Incoming-BG] Requesting more participants",
-        
+        "We need more peeps",
+        "Need help",
+        "We are outnumbered",
+        "Need a few more",
+        "Need more",
+        "Backup required",
+        "We could use some help",
+        "Calling for backup",
+        "Could use some backup",
+        "Reinforcements needed",
+        "In need of additional support",
+        "Calling all hands on deck",
+        "Require extra manpower",
+        "Assistance urgently needed",
+        "Requesting more participants",
     },
     inc = {
-        "[Incoming-BG] Incoming",
-        "[Incoming-BG] INC INC INC",
-        "[Incoming-BG] INC",
-        "[Incoming-BG] Gotta INC",
-        "[Incoming-BG] BIG INC",
-        "[Incoming-BG] Incoming enemy forces",
-        "[Incoming-BG] Incoming threat",
-        "[Incoming-BG] Enemy push incoming",
-        "[Incoming-BG] Enemy blitz incoming",
-        "[Incoming-BG] Enemy strike team inbound",
-        "[Incoming-BG] Incoming attack alert",
-        "[Incoming-BG] Enemy wave inbound",
-        "[Incoming-BG] Enemy squad closing in",
-        "[Incoming-BG] Anticipate enemy push",
-        "[Incoming-BG] Enemy forces are closing in",
-        
+        "Incoming",
+        "INC INC INC",
+        "INC",
+        "Gotta INC",
+        "BIG INC",
+        "Incoming enemy forces",
+        "Incoming threat",
+        "Enemy push incoming",
+        "Enemy blitz incoming",
+        "Enemy strike team inbound",
+        "Incoming attack alert",
+        "Enemy wave inbound",
+        "Enemy squad closing in",
+        "Anticipate enemy push",
+        "Enemy forces are closing in",
     },
     allClear = {
-        "[Incoming-BG] We are all clear",
-        "[Incoming-BG] All clear",
-        "[Incoming-BG] Looks like a ghost town",
-        "[Incoming-BG] All good",
-        "[Incoming-BG] Looking good",
-        "[Incoming-BG] Area secure",
-        "[Incoming-BG] All quiet on the front",
-        "[Incoming-BG] Situation is under control",
-        "[Incoming-BG] All quiet here",
-        "[Incoming-BG] We are looking good",
-        "[Incoming-BG] Perimeter is secured",
-        "[Incoming-BG] Situation is calm",
-        "[Incoming-BG] No threats detected",
-        "[Incoming-BG] All quiet on this end",
-        "[Incoming-BG] Area is threat-free",
-        
+        "We are all clear",
+        "All clear",
+        "Looks like a ghost town",
+        "All good",
+        "Looking good",
+        "Area secure",
+        "All quiet on the front",
+        "Situation is under control",
+        "All quiet here",
+        "We are looking good",
+        "Perimeter is secured",
+        "Situation is calm",
+        "No threats detected",
+        "All quiet on this end",
+        "Area is threat-free",
     },
     buffRequest = {
-    "[Incoming-BG] Need buffs please!",
-    "[Incoming-BG] Buff up, team!",
-    "[Incoming-BG] Could use some buffs here!",
-    "[Incoming-BG] Calling for all buffs, let's gear up!",
-    "[Incoming-BG] Looking for that magical boost, buffs needed!",
-    "[Incoming-BG] Time to get enchanted, where are those buffs?",
-    "[Incoming-BG] Let’s get buffed for the battle ahead!",
-    "[Incoming-BG] Buffs are our best friends, let’s have them!",
-    "[Incoming-BG] Ready for buffs, let's enhance our strength!",
-    "[Incoming-BG] Buffs needed for extra might and magic!",
-    "[Incoming-BG] Gimme some buffs, let’s not fall behind!"
-     },
-     healRequest = {
-    "[Incoming-BG] Need heals ASAP!",
-    "[Incoming-BG] Healing needed at my position!",
-    "[Incoming-BG] Can someone heal me, please?",
-    "[Incoming-BG] Healers, your assistance is required!",
-    "[Incoming-BG] I'm in dire need of healing!",
-    "[Incoming-BG] Could use some healing here!",
-    "[Incoming-BG] Healers, please focus on our location!",
-    "[Incoming-BG] Urgent healing needed to stay in the fight!",
-    "[Incoming-BG] Heal me up to keep the pressure on!",
-    "[Incoming-BG] Healers, attention needed here now!"	 
-	},
-	efcRequest = {
-    "[Incoming-BG] Get the EFC!!",
-    "[Incoming-BG] EFC spotted, group up to kill and recover our flag!",
-    "[Incoming-BG] Kill the EFC on sight, let's bring that flag home!",
-    "[Incoming-BG] EFC is vulnerable, kill them now!",
-    "[Incoming-BG] Everyone on the EFC!",
-    "[Incoming-BG] Close in and kill the EFC, no escape allowed!",
-    "[Incoming-BG] EFC heading towards their base—kill them before they cap!",
-    "[Incoming-BG] The EFC is weak, finish them off!",
-    "[Incoming-BG] Kill the EFC now, they're almost at their base!",
-    "[Incoming-BG] It’s a race against time, kill the EFC and secure our victory!"
-	},
-	fcRequest = {
-    "[Incoming-BG] Protect our FC!",
-    "[Incoming-BG] FC needs help!!",
-    "[Incoming-BG] Heals on FC!",
-    "[Incoming-BG] Need some help with the FC.",
-    "[Incoming-BG] Someone needs to get the flag.",
-    
-   }
- } 
- 
+        "Need buffs please!",
+        "Buff up, team!",
+        "Could use some buffs here!",
+        "Calling for all buffs, let's gear up!",
+        "Looking for that magical boost, buffs needed!",
+        "Time to get enchanted, where are those buffs?",
+        "Let’s get buffed for the battle ahead!",
+        "Buffs are our best friends, let’s have them!",
+        "Ready for buffs, let's enhance our strength!",
+        "Buffs needed for extra might and magic!",
+        "Gimme some buffs, let’s not fall behind!"
+    },
+    healRequest = {
+        "Need heals ASAP!",
+        "Healing needed at my position!",
+        "Can someone heal me, please?",
+        "Healers, your assistance is required!",
+        "I'm in dire need of healing!",
+        "Could use some healing here!",
+        "Healers, please focus on our location!",
+        "Urgent healing needed to stay in the fight!",
+        "Heal me up to keep the pressure on!",
+        "Healers, attention needed here now!"
+    },
+    efcRequest = {
+        "Get the EFC!!",
+        "EFC spotted, group up to kill and recover our flag!",
+        "Kill the EFC on sight, let's bring that flag home!",
+        "EFC is vulnerable, kill them now!",
+        "Everyone on the EFC!",
+        "Close in and kill the EFC, no escape allowed!",
+        "EFC heading towards their base—kill them before they cap!",
+        "The EFC is weak, finish them off!",
+        "Kill the EFC now, they're almost at their base!",
+        "It’s a race against time, kill the EFC and secure our victory!"
+    },
+    fcRequest = {
+        "Protect our FC!",
+        "FC needs help!!",
+        "Heals on FC!",
+        "Need some help with the FC.",
+        "Someone needs to get the flag.",
+    }
+}
+
 -- Define available logos
 local logos = {
     None = "",
@@ -1087,7 +1083,6 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
 
     return button
 end
-
 
 -- Function to handle chat messages
 local function onChatMessage(message)
@@ -1912,9 +1907,10 @@ local function ButtonOnClick(self)
 
     local currentLocation = GetSubZoneText()
    
-    local message = "[Incoming-BG] " .. self:GetText() .. " Incoming at " .. currentLocation
+    local message = self:GetText() .. " Incoming at " .. currentLocation
     SendChatMessage(message, "INSTANCE_CHAT")
 end
+
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")

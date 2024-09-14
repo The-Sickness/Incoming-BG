@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v7.8 - 11.0.2
+-- v7.9 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -296,10 +296,14 @@ local SOLO_SHUFFLE_INDEX = 7
 local function GetPvpRank(rating)
     if rating < 1000 then
         return "Unranked"
+    elseif rating < 1200 then
+        return "Combatant 1"
     elseif rating < 1400 then
-        return "Combatant"
+        return "Combatant 2"
+    elseif rating < 1600 then
+        return "Challenger 1"
     elseif rating < 1800 then
-        return "Challenger"
+        return "Challenger 2"
     elseif rating < 2100 then
         return "Rival"
     elseif rating < 2400 then
@@ -308,8 +312,6 @@ local function GetPvpRank(rating)
         return "Elite"
     end
 end
-
-
 
 -- Function to fetch BG stats
 local function FetchBGStats()

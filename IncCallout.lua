@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v7.9 - 11.0.2
+-- v8.0 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -19,6 +19,7 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
+local L = LibStub("AceLocale-3.0"):GetLocale("IncCallout", true)
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
@@ -225,6 +226,7 @@ local generalStats = {
     {"Conquest Points:", "conquestValue", {1, 0, 0}},
     {"Honor Points:", "honorValue", {0, 0.75, 1}},
     {"Honor Level:", "honorLevelValue", {0.58, 0, 0.82}},
+    {"Conquest Cap:", "conquestCapValue", {1, 0.5, 0}},
     {"Solo Shuffle Rating:", "soloShuffleRatingValue", {0, 0.75, 1}},
 }
 
@@ -371,63 +373,28 @@ end
 
 -- Function to save PvP stats
 local function SavePvPStats()
-    -- Ensure the database is initialized
     IncCalloutDB = IncCalloutDB or {}
     local character = UnitName("player")
     local _, class = UnitClass("player")
 
-    -- Initialize character entry if it doesn't exist
     if not IncCalloutDB[character] then
         IncCalloutDB[character] = { class = class }
     end
 
     local SavedSettings = IncCalloutDB[character]
 
-    -- Ensure that Blizzard_PVPUI is loaded
     local loadedOrLoading, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
     if not loaded then
         C_AddOns.LoadAddOn("Blizzard_PVPUI")
     end
 
-    -- Fetch Conquest and Honor information
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
     local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
     local honorLevel = UnitHonorLevel("player")
     local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
 
-    -- Fetch the current Conquest amount and the weekly max cap
-    local currentConquest = conquestInfo and conquestInfo.quantity or 0
-    local maxConquest = conquestInfo and conquestInfo.maxQuantity or 0
-
-    -- If we've never stored the total earned Conquest, initialize it
-    SavedSettings.totalEarnedConquest = SavedSettings.totalEarnedConquest or currentConquest
-
-    -- If current Conquest is greater than the total saved, update total earned
-    if currentConquest > SavedSettings.totalEarnedConquest then
-        SavedSettings.totalEarnedConquest = currentConquest
-    end
-
-    -- Calculate spent Conquest: Total earned minus what you currently have
-    local spentConquest = SavedSettings.totalEarnedConquest - currentConquest
-
-    -- Apply color coding to the max value based on proximity to the cap
-    local percentage = (currentConquest / maxConquest) * 100
-    local maxColor
-    if percentage >= 90 then
-        maxColor = "|cffff0000" -- Red for 90% or higher
-    elseif percentage >= 75 then
-        maxColor = "|cffffa500" -- Orange for 75% to 89%
-    else
-        maxColor = "|cff00ff00" -- Green for less than 75%
-    end
-
-    -- Format the Conquest display as "spent/earned/max" with dynamic color on max value
-    local conquestDisplay = string.format("%d/%d/%s%d|r", spentConquest, SavedSettings.totalEarnedConquest, maxColor, maxConquest)
-
-    -- Save the formatted Conquest display
-    SavedSettings.conquestValue = conquestDisplay
-
-    -- Save other information (Honor, Solo Shuffle, etc.)
+    SavedSettings.conquestValue = conquestInfo and conquestInfo.quantity or 0
+    SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.maxQuantity > 0 and conquestInfo.quantity .. " / " .. conquestInfo.maxQuantity or conquestInfo.quantity .. " / No Cap") or "N/A"
     SavedSettings.honorValue = honorInfo and honorInfo.quantity or "N/A"
     SavedSettings.honorLevelValue = honorLevel
     SavedSettings.soloShuffleRatingValue = soloShuffleRating
@@ -514,6 +481,7 @@ local function UpdateTabValues(tab, stats)
     tab.playerNameValue:SetText(stats.playerName or "N/A")
     tab.playerNameValue:SetTextColor(stats.playerColor.r or 1, stats.playerColor.g or 1, stats.playerColor.b or 1)
     tab.conquestValue:SetText(stats.conquestValue or "N/A")
+    tab.conquestCapValue:SetText(stats.conquestCapValue or "N/A")
     tab.honorValue:SetText(stats.honorValue or "N/A")
     tab.honorLevelValue:SetText(stats.honorLevelValue or "N/A")
     tab.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
@@ -534,6 +502,7 @@ local function UpdatePvPStatsFrame(character)
             playerName = name,
             playerColor = classColor,
             conquestValue = stats.conquestValue,
+            conquestCapValue = stats.conquestCapValue,
             honorValue = stats.honorValue,
             honorLevelValue = stats.honorLevelValue,
             soloShuffleRatingValue = stats.soloShuffleRatingValue
@@ -587,7 +556,9 @@ local function CreateCharacterDropdown()
             local classColor = RAID_CLASS_COLORS[stats.class]
             tabs[1].playerNameValue:SetText(characterNameOnly)
             tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
-            tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")          
+
+            tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
+            tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
             tabs[1].honorValue:SetText(stats.honorValue or "N/A")
             tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
             tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
@@ -622,7 +593,9 @@ local function CreateCharacterDropdown()
         else
             tabs[1].playerNameValue:SetText(characterNameOnly)
             tabs[1].playerNameValue:SetTextColor(1, 1, 1)
-            tabs[1].conquestValue:SetText("N/A")           
+
+            tabs[1].conquestValue:SetText("N/A")
+            tabs[1].conquestCapValue:SetText("N/A")
             tabs[1].honorValue:SetText("N/A")
             tabs[1].honorLevelValue:SetText("N/A")
             tabs[1].soloShuffleRatingValue:SetText("N/A")
@@ -693,7 +666,8 @@ pvpStatsFrame:SetScript("OnShow", function()
             tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
         end
 
-        tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")      
+        tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
+        tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
         tabs[1].honorValue:SetText(stats.honorValue or "N/A")
         tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
         tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
@@ -824,6 +798,8 @@ for event in pairs(eventHandlers) do
     frame:RegisterEvent(event)
 end
 frame:SetScript("OnEvent", EventHandler)
+
+
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -2019,6 +1995,7 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
     end,
 })
 
+
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
@@ -2323,7 +2300,7 @@ pvpStatsButton:SetScript("OnEnter", function(self)
     GameTooltip:AddLine("Your current total.", 1, 1, 1, true)  -- White for description
     GameTooltip:AddLine("• Conquest Points: ", 1, 0.5, 0, true)
     GameTooltip:AddLine("Your current total.", 1, 1, 1, true)
-    
+    GameTooltip:AddLine("• Conquest Cap: ", 1, 0.5, 0, true)
     GameTooltip:AddLine("The maximum Conquest points you can earn this week.", 1, 1, 1, true)
     GameTooltip:AddLine("• Honor Level: ", 1, 0.5, 0, true)
     GameTooltip:AddLine("Your current level in the Honor system.", 1, 1, 1, true)   

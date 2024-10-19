@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v8.0 - 11.0.2
+-- v7.9 - 11.0.2
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -19,7 +19,6 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
-local L = LibStub("AceLocale-3.0"):GetLocale("IncCallout", true)
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
@@ -394,7 +393,7 @@ local function SavePvPStats()
     local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
 
     SavedSettings.conquestValue = conquestInfo and conquestInfo.quantity or 0
-    SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.maxQuantity > 0 and conquestInfo.quantity .. " / " .. conquestInfo.maxQuantity or conquestInfo.quantity .. " / No Cap") or "N/A"
+    SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.totalEarned .. " / " .. (conquestInfo.maxQuantity > 0 and conquestInfo.maxQuantity or "No Cap")) or "N/A"
     SavedSettings.honorValue = honorInfo and honorInfo.quantity or "N/A"
     SavedSettings.honorLevelValue = honorLevel
     SavedSettings.soloShuffleRatingValue = soloShuffleRating

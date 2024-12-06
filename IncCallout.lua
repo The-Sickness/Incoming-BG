@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v7.9 - 11.0.2
+-- v8.2- 11.0.5
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -990,11 +990,8 @@ local logos = {
     Condiment = "Interface\\AddOns\\IncCallout\\Textures\\Condiment.png",
     Duplex = "Interface\\AddOns\\IncCallout\\Textures\\Duplex.png",
     Eraser = "Interface\\AddOns\\IncCallout\\Textures\\Eraser.png",
-    Ogre = "Interface\\AddOns\\IncCallout\\Textures\\Ogre.png",
-	Seagram = "Interface\\AddOns\\IncCallout\\Textures\\Seagram.png",
-	SuperSunday = "Interface\\AddOns\\IncCallout\\Textures\\SuperSunday.png",
-	Minion = "Interface\\AddOns\\IncCallout\\Textures\\Minion.png",
-	Fire = "Interface\\AddOns\\IncCallout\\Textures\\Fire.png",
+    Ogre = "Interface\\AddOns\\IncCallout\\Textures\\Ogre.png",	
+	SuperSunday = "Interface\\AddOns\\IncCallout\\Textures\\SuperSunday.png",	
 	GOW = "Interface\\AddOns\\IncCallout\\Textures\\GOW.png",
 	Maiden = "Interface\\AddOns\\IncCallout\\Textures\\Maiden.png",
 	Metal = "Interface\\AddOns\\IncCallout\\Textures\\Metal.png",
@@ -1663,11 +1660,8 @@ local options = {
                         ["Duplex"] = "Duplex",
                         ["Eraser"] = "Eraser",
                         ["Ogre"] = "Ogre",
-                        ["Seagram"] = "Seagram",
                         ["SuperSunday"] = "SuperSunday",
-                        ["Minion"] = "Minion",
                         ["Alligator"] = "Alligator",
-                        ["Fire"] = "Fire",
                         ["GOW"] = "GOW",
                         ["Maiden"] = "Maiden",
                         ["Metal"] = "Metal",

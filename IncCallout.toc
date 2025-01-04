@@ -1,7 +1,7 @@
-## Interface: 110005
+## Interface: 110007
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
-## Version: v.8.2
+## Version: v.8.4
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
@@ -36,6 +36,9 @@ Locale/esES.lua
 Locale/esMX.lua
 Locale/frFR.lua
 Locale/zhCN.lua
+Locale/itIT.lua
+Locale/ptBR.lua
+Locale/koKR.lua
 
 map.lua
 IncCallout.lua

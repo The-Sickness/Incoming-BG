@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v8.2- 11.0.5
+-- v8.4  11.0.7
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub

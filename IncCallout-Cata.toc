@@ -26,6 +26,17 @@ libs\LibSharedMedia-3.0\lib.xml
 libs\AceGUI-3.0-SharedMediaWidgets\widget.xml
 #@end-no-lib-strip@
 
+Locale/deDE.lua
+Locale/enUS.lua
+Locale/zhTW.lua
+Locale/esES.lua
+Locale/esMX.lua
+Locale/frFR.lua
+Locale/zhCN.lua
+Locale/itIT.lua
+Locale/ptBR.lua
+Locale/koKR.lua
+
 IncCallout-Cata.lua
 
 

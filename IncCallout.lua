@@ -1,21 +1,20 @@
 -- Made by Sharpedge_Gaming
--- v8.4  11.0.7
+-- v8.8 - 11.1.0
+
+if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+    print("Running in Retail WoW")
+elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+    print("Running in Classic WoW (Cata)")
+end
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
---local AceDB = LibStub("AceDB-3.0")
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
---local AceAddon = LibStub("AceAddon-3.0")
 local AceAddon = LibStub:GetLibrary("AceAddon-3.0")
---local AceConfig = LibStub("AceConfig-3.0")
 local AceConfig = LibStub:GetLibrary("AceConfig-3.0")
---local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigDialog = LibStub:GetLibrary("AceConfigDialog-3.0")
---local icon = LibStub("LibDBIcon-1.0")
 local icon = LibStub:GetLibrary("LibDBIcon-1.0")
---local LDB = LibStub("LibDataBroker-1.1")
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
---local LSM = LibStub ("LibSharedMedia-3.0")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
@@ -28,23 +27,23 @@ addonNamespace.db = IncDB
 
 local defaults = {
     profile = {
-        buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
-        fontColor = {r = 1, g = 1, b = 1, a = 1},  -- Default to white
+        buttonColor = {r = 1, g = 0, b = 0, a = 1}, 
+        fontColor = {r = 1, g = 1, b = 1, a = 1},  
         opacity = 1,
         sendMoreIndex = 1,
         incIndex = 1,
         allClearIndex = 1,
-        logoColor = {r = 1, g = 1, b = 1, a = 1}, -- Default logo color
+        logoColor = {r = 1, g = 1, b = 1, a = 1}, 
         scale = 1,
         isLocked = false,
         worldMapScale = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
-        conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
+        conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, 
         honorFont = "Friz Quadrata TT",
         honorFontSize = 14,
-        honorFontColor = {r = 1, g = 1, b = 1, a = 1}, -- white
-        selectedLogo = "None", -- Default logo selection
+        honorFontColor = {r = 1, g = 1, b = 1, a = 1}, 
+        selectedLogo = "None", 
         buffRequestIndex = 1,
         healRequestIndex = 1,
         efcRequestIndex = 1,
@@ -106,7 +105,7 @@ end)
 
 -- Create the PVP Stats window frame
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
-pvpStatsFrame:SetSize(700, 320)  -- Adjusted size to fit to the left margin
+pvpStatsFrame:SetSize(700, 320)  
 pvpStatsFrame:SetPoint("CENTER")
 pvpStatsFrame:SetMovable(true)
 pvpStatsFrame:EnableMouse(true)
@@ -129,7 +128,7 @@ local function createStatLabelAndValueHorizontal(parent, labelText, xOffset, yOf
     
     local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
-    value:SetTextColor(1, 0.84, 0) -- Default color for the value text
+    value:SetTextColor(1, 0.84, 0) 
     return label, value
 end
 
@@ -405,8 +404,6 @@ local function SavePvPStats()
     SavedSettings.bgLost = bgLost
     SavedSettings.totalHonorableKills = totalHonorableKills
     SavedSettings.battlegroundHonorableKills = battlegroundHonorableKills
-
-    -- Save Great Vault slots unlocked
     SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
 
     -- Save Solo RBG Stats
@@ -798,8 +795,6 @@ for event in pairs(eventHandlers) do
 end
 frame:SetScript("OnEvent", EventHandler)
 
-
-
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
     { name = "Solid Black", color = {0, 0, 0, 1} },
@@ -1004,7 +999,7 @@ local logos = {
 local logo = IncCallout:CreateTexture(nil, "ARTWORK")
 logo:SetSize(180, 30)
 logo:SetPoint("TOP", IncCallout, "TOP", -5, 30)
-logo:SetTexture(logos.BearClaw) -- Default logo
+logo:SetTexture(logos.BearClaw) 
 
 function IncCallout:SetLogo(selectedLogo)
     if selectedLogo == "None" then
@@ -1099,7 +1094,7 @@ local function applyButtonColor()
     if IncDB.buttonColor then
         r, g, b, a = IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a
     else
-        r, g, b, a = 1, 0, 0, 1 -- Default to red
+        r, g, b, a = 1, 0, 0, 1 
     end
 
     for _, button in ipairs(buttons) do
@@ -1146,7 +1141,7 @@ local function applyColorChange()
 end
 
 local function ScaleGUI()
-    local scaleFactor = IncDB.scale or 1; -- Default scale is 1
+    local scaleFactor = IncDB.scale or 1; 
     IncCallout:SetScale(scaleFactor);
     
     local adjustedFontSize = math.floor(fontSize * scaleFactor);
@@ -1160,7 +1155,7 @@ local mapSizeOptions = {
     { name = "Very Small", value = 0.4 },
     { name = "Small", value = 0.5 },
     { name = "Medium Small", value = 0.65 },
-    { name = "Medium", value = 0.75 }, -- Assuming this is the current default
+    { name = "Medium", value = 0.75 }, 
     { name = "Medium Large", value = 0.85 },
     { name = "Large", value = 1.0 },
     { name = "Very Large", value = 1.15 },
@@ -1180,7 +1175,6 @@ local function applyStatusbarTexture()
             edgeSize = 7,
             insets = {left = 1, right = 1, top = 1, bottom = 1}
         })
-        -- Reapply the color overlay after setting the backdrop
         applyButtonColor()
     end
 end
@@ -1533,7 +1527,7 @@ local options = {
                     desc = "Set the color of the button text.",
                     hasAlpha = true,
                     get = function()
-                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} -- default white
+                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} 
                         return color.r, color.g, color.b, color.a
                     end,
                     set = function(_, r, g, b, a)
@@ -1551,7 +1545,7 @@ local options = {
                     order = 2,
                     hasAlpha = true, 
                     get = function()
-                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
+                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} 
                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
                     end,
                     set = function(_, r, g, b, a)
@@ -1680,7 +1674,7 @@ local options = {
                     desc = "Set the color of the title logo.",
                     hasAlpha = true, 
                     get = function(info)
-                        local color = IncDB.logoColor or {1, 1, 1, 1} -- Default to white if not set
+                        local color = IncDB.logoColor or {1, 1, 1, 1} 
                         return color.r, color.g, color.b, color.a
                     end,
                     set = function(info, r, g, b, a)
@@ -1775,7 +1769,6 @@ local options = {
     },
 }
 
--- Register the options table using AceConfig
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
 local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
@@ -1831,11 +1824,11 @@ end
 
 local messageQueue = {}
 local timeLastMessageSent = 0
-local MESSAGE_DELAY = 1.5 -- Delay in seconds between messages
+local MESSAGE_DELAY = 1.5 
 
 local function SendMessage()
     if #messageQueue == 0 then return end
-    if time() - timeLastMessageSent < MESSAGE_DELAY then return end -- Check if delay has passed
+    if time() - timeLastMessageSent < MESSAGE_DELAY then return end 
 
     local message = table.remove(messageQueue, 1)
     SendChatMessage(message.text, message.channel)
@@ -2116,7 +2109,6 @@ local function BuffRequestButtonOnClick()
         return
     end
 
-    -- Send the chat message
     SendChatMessage(message, chatType)
 end
 
@@ -2124,9 +2116,9 @@ local function ApplyFontSettings()
     if not IncDB then return end
 
     IncDB.font = IncDB.font or "Friz Quadrata TT"  
-    IncDB.fontSize = IncDB.fontSize or 14  -- Default font size
+    IncDB.fontSize = IncDB.fontSize or 14  
 
-    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT  -- Fallback to a default font if nil
+    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT  
     local fontSize = IncDB.fontSize
 
     for _, text in ipairs(buttonTexts) do
@@ -2167,13 +2159,10 @@ local function OnEvent(self, event, arg1, ...)
         db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
         IncDB = db.profile or {}
 
-        -- Initialize IncDB if it doesn't exist
         if not IncDB then
             IncDB = {
-                -- Set your default values here
                 buttonColor = {r = 1, g = 0, b = 0, a = 1},
                 fontColor = {r = 1, g = 1, b = 1, a = 1},
-                -- Add other default settings as needed
             }
         end
 
@@ -2248,7 +2237,6 @@ local function OnEvent(self, event, arg1, ...)
     end
 end
 
--- Register the function to the frame and events
 frame:SetScript("OnEvent", OnEvent)
 
 -- Register additional events for pvpStatsFrame
@@ -2288,9 +2276,9 @@ end)
 pvpStatsButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText("PVP Stats Information", nil, nil, nil, nil, true)
-    GameTooltip:AddLine(" \nDisplays the following stats:\n", 1, 1, 1, true)  -- Extra line breaks for spacing
-    GameTooltip:AddLine("• Honor Points: ", 1, 0.5, 0, true)  -- Orange for title
-    GameTooltip:AddLine("Your current total.", 1, 1, 1, true)  -- White for description
+    GameTooltip:AddLine(" \nDisplays the following stats:\n", 1, 1, 1, true)  
+    GameTooltip:AddLine("• Honor Points: ", 1, 0.5, 0, true)  
+    GameTooltip:AddLine("Your current total.", 1, 1, 1, true)  
     GameTooltip:AddLine("• Conquest Points: ", 1, 0.5, 0, true)
     GameTooltip:AddLine("Your current total.", 1, 1, 1, true)
     GameTooltip:AddLine("• Conquest Cap: ", 1, 0.5, 0, true)

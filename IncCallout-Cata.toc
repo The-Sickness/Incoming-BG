@@ -1,7 +1,7 @@
 ## Interface: 40402
-## Title: IncCallout
+## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
-## Version: v.2.8
+## Version: v.8.9
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 
@@ -16,6 +16,7 @@ libs\AceDB-3.0\AceDB-3.0.xml
 libs\AceEvent-3.0\AceEvent-3.0.xml
 libs\AceConsole-3.0\AceConsole-3.0.xml
 libs\AceGUI-3.0\AceGUI-3.0.xml
+libs\AceLocale-3.0\AceLocale-3.0.lua
 libs\AceConfig-3.0\AceConfig-3.0.xml
 libs\AceConfigDialog-3.0\AceConfigDialog-3.0.lua
 libs\AceConfigRegistry-3.0\AceConfigRegistry-3.0.lua

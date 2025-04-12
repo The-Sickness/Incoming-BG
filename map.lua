@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v8.4 - 11.0.7
+-- v9.0 - 11.1.0 - 11.1.5
 
 local AceTimer = LibStub("AceTimer-3.0")
 local LBS = LibStub("LibBabble-SubZone-3.0"):GetReverseLookupTable()

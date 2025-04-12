@@ -1,10 +1,10 @@
 -- Made by Sharpedge_Gaming
--- v8.8 - 11.1.0
+-- v9.0 - 11.1.0 - 11.1.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-    print("Running in Retail WoW")
+    print("Incoming-BG is now running in Retail")
 elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-    print("Running in Classic WoW (Cata)")
+    print("Incoming-BG is now running in (Cata)")
 end
 
 -- Load embedded libraries

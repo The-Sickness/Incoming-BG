@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v2.8 - 10.2.5
+-- v8.9 - 10.2.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Running in Retail WoW")

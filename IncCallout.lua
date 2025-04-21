@@ -1179,6 +1179,15 @@ local function applyStatusbarTexture()
     end
 end
 
+function ToggleMiniMapButton(enable)
+    IncDB.minimap.enable = enable
+    if enable then
+        icon:Show()
+    else
+        icon:Hide()
+    end
+end
+
 local options = {
     name = "Incoming-BG",
     type = "group",
@@ -1624,6 +1633,20 @@ local options = {
                         applyButtonColor()
 					order = 5	
               end,
+			  },
+			  minimapButtonEnable = {
+        type = "toggle",
+        name = "Enable MiniMap Button",
+        desc = "Toggle the visibility of the MiniMap button.",
+        order = 6,
+        get = function()
+            -- Return the current state of the MiniMap button (enabled/disabled)
+            return IncDB.minimap.enable
+        end,
+        set = function(_, enable)
+            -- Call the function to toggle the MiniMap button
+            ToggleMiniMapButton(enable)
+        end,
                  
                 },
                 lockGUI = {
@@ -2187,8 +2210,18 @@ local function OnEvent(self, event, arg1, ...)
         ApplyFontSettings()
 
         if not IncDB.minimap then
-            IncDB.minimap = { hide = false, minimapPos = 45 }
-        end
+    IncDB.minimap = {
+        hide = false,
+        minimapPos = 45, -- Default position angle (in degrees)
+        enable = true, -- New option added here
+    }
+end
+
+if IncDB.minimap.enable then
+    icon:Show()
+else
+    icon:Hide()
+end
 
         icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
 

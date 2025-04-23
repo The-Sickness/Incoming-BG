@@ -35,6 +35,8 @@ local defaults = {
         allClearIndex = 1,
         logoColor = {r = 1, g = 1, b = 1, a = 1}, 
         scale = 1,
+		enableMiniMap = true,
+		minimap = { minimapPos = 180 },
         isLocked = false,
         worldMapScale = 1,
         conquestFont = "Friz Quadrata TT",
@@ -56,6 +58,7 @@ local defaults = {
             healRequest = "",
             efcRequest = "",
             fcRequest = "",
+			
         },
     },
 }
@@ -1179,6 +1182,33 @@ local function applyStatusbarTexture()
     end
 end
 
+-- Function to toggle the MiniMap visibility
+local function UpdateMiniMapVisibility()
+    if IncDB.enableMiniMap then
+        icon:Show("IncomingBG") -- Show the MiniMap icon
+    else
+        icon:Hide("IncomingBG") -- Hide the MiniMap icon
+    end
+end
+
+-- Function to toggle MiniMap button visibility
+local function ToggleMiniMapButton(enable)
+    if not IncDB.minimap then
+        IncDB.minimap = { hide = false, minimapPos = 45, enable = true }
+    end
+    
+    IncDB.minimap.enable = enable
+    if enable then
+        icon:Show("IncCallout")
+    else
+        icon:Hide("IncCallout")
+    end
+end
+
+local function InitializeAddon()
+    UpdateMiniMapVisibility()
+end
+
 local options = {
     name = "Incoming-BG",
     type = "group",
@@ -1682,6 +1712,18 @@ local options = {
                         logo:SetVertexColor(r, g, b, a)
                     end,
                     order = 8, 
+					},
+					minimapButtonEnable = {
+            type = "toggle",
+            name = "Enable MiniMap Button",
+            desc = "Toggle the visibility of the MiniMap button.",
+            get = function()
+                return IncDB.minimap and IncDB.minimap.enable
+            end,
+            set = function(_, enable)
+                ToggleMiniMapButton(enable)
+            end,
+            order = 9,
                 },
             },
         },
@@ -1939,6 +1981,7 @@ f:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
+-- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",
     text = "Incoming-BG",
@@ -1950,36 +1993,43 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
             else
                 IncCallout:Show()
             end
-        else
-            if Settings.OpenToCategory then
-                Settings.OpenToCategory("Incoming-BG")
-            else
-                print("Options frame function not available")
-            end
+        elseif button == "RightButton" then
+            -- Toggle the MiniMap visibility directly via the button
+            IncDB.enableMiniMap = not IncDB.enableMiniMap
+            UpdateMiniMapVisibility()
         end
     end,
-    OnMouseDown = function(self, button)
+    -- Updated OnMouseDown and OnMouseUp handlers
+    OnMouseDown = function(_, button)
         if button == "LeftButton" then
-            IncCallout:StartMoving()
+            icon:StartMoving()
         end
     end,
-    OnMouseUp = function(self, button)
+    OnMouseUp = function(_, button)
         if button == "LeftButton" then
-            IncCallout:StopMovingOrSizing()
-            local point, _, _, x, y = IncCallout:GetPoint()
-            local centerX, centerY = Minimap:GetCenter()
-            local scale = Minimap:GetEffectiveScale()
-            x, y = (x - centerX) / scale, (y - centerY) / scale
-            IncDB.minimap.minimapPos = math.deg(math.atan2(y, x)) % 360
+            icon:StopMovingOrSizing()
+            SaveMiniMapIconPosition()
         end
     end,
     OnTooltipShow = function(tooltip)
         tooltip:AddLine("|cffff0000Incoming-BG|r")
-        tooltip:AddLine("Left Click: GUI")
-        tooltip:AddLine("Right Click: Options")
+        tooltip:AddLine("Left Click: Show/Hide GUI")
+        tooltip:AddLine("Right Click: Toggle MiniMap Visibility")
         tooltip:Show()
     end,
 })
+
+-- Function to calculate and save the new position of the MiniMap icon
+local function SaveMiniMapIconPosition()
+    local x, y = Minimap:GetCenter()
+    local mx, my = icon:GetCenter()
+    local angle = math.deg(math.atan2(my - y, mx - x)) % 360
+    IncDB.minimap.minimapPos = angle
+end
+
+local function InitializeAddon()
+    UpdateMiniMapVisibility()
+end
 
 
 -- Function to handle the All Clear button click event
@@ -2153,8 +2203,21 @@ frame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
 frame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
 frame:SetScript("OnEvent", EventHandler)
 
+-- Track if the MiniMap icon has been registered
+local isIconRegistered = false
+
 local function OnEvent(self, event, arg1, ...)
-    
+    if not IncDB.minimap then
+        IncDB.minimap = { hide = false, minimapPos = 45, enable = true }
+    end
+
+    if not isIconRegistered then
+        icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
+        isIconRegistered = true
+    end
+
+    ToggleMiniMapButton(IncDB.minimap.enable)
+
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
         db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
         IncDB = db.profile or {}
@@ -2185,12 +2248,6 @@ local function OnEvent(self, event, arg1, ...)
         applyBorderChange()
         applyColorChange()
         ApplyFontSettings()
-
-        if not IncDB.minimap then
-            IncDB.minimap = { hide = false, minimapPos = 45 }
-        end
-
-        icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
 
     elseif event == "PLAYER_LOGIN" then
         SavePvPStats()

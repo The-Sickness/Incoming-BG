@@ -1,11 +1,11 @@
 -- Made by Sharpedge_Gaming
--- v9.3 - 11.1.7
+-- v9.4 - 11.2
 
-if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-    print("Incoming-BG is now running in Retail")
-elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-    print("Incoming-BG is now running in (Cata)")
-end
+--if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+ --   print("Incoming-BG is now running in Retail")
+--elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+ --   print("Incoming-BG is now running in (Cata)")
+--end
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -78,8 +78,6 @@ SLASH_INC1 = "/inc"
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 local blitzHonorGained = 0
-
-
 
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
@@ -1168,6 +1166,48 @@ local mapSizeOptions = {
     { name = "Gigantic", value = 1.45 },
     { name = "Colossal", value = 1.6 }
 }
+
+local function ResizeWorldMap()
+    if not IncCalloutDB then IncCalloutDB = {} end
+    if not IncCalloutDB.settings then
+        IncCalloutDB.settings = {
+            mapScale = 0.75,
+            mapPosition = {
+                point = "CENTER",
+                relativePoint = "CENTER",
+                xOfs = 0,
+                yOfs = 0,
+            },
+            resizeInPvPOnly = false,
+        }
+    end
+
+    local scale = IncCalloutDB.settings.mapScale or 0.75
+    local resizeInPvPOnly = IncCalloutDB.settings.resizeInPvPOnly
+
+    if resizeInPvPOnly then
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+            if WorldMapFrame and WorldMapFrame.SetScale then
+                WorldMapFrame:SetScale(scale)
+            end
+        else
+           
+            if WorldMapFrame and WorldMapFrame.SetScale then
+                WorldMapFrame:SetScale(1.0)
+            end
+        end
+    else
+        
+        if WorldMapFrame and WorldMapFrame.SetScale then
+            WorldMapFrame:SetScale(scale)
+        end
+    end
+end
+
+if WorldMapFrame and WorldMapFrame.HookScript then
+    WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
+end
 
 local function applyStatusbarTexture()
     local texture = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard")

@@ -5,7 +5,7 @@
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Running in Retail WoW")
 elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
-    print("Running in Classic WoW (Cata)")
+    print("Running in Classic WoW (MoP)")
 end
 
 
@@ -181,8 +181,31 @@ IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
  
 local fontSize = 14
 
+local mapSizeOptions = {
+    { name = "Very Small", value = 0.4 },
+    { name = "Small", value = 0.5 },
+    { name = "Medium Small", value = 0.65 },
+    { name = "Medium", value = 0.75 }, 
+    { name = "Medium Large", value = 0.85 },
+    { name = "Large", value = 1.0 },
+    { name = "Very Large", value = 1.15 },
+    { name = "Huge", value = 1.3 },
+    { name = "Gigantic", value = 1.45 },
+    { name = "Colossal", value = 1.6 }
+}
+
 local function ResizeWorldMap()
-    -- Defensive: ensure DB is initialized
+    local scale = IncCalloutDB.settings.mapScale or 0.75
+    if WorldMapFrame and WorldMapFrame.SetScale then
+        WorldMapFrame:SetScale(scale)
+    end
+end
+
+if WorldMapFrame and WorldMapFrame.HookScript then
+    WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
+end
+ 
+local function ResizeWorldMap()
     if not IncCalloutDB then IncCalloutDB = {} end
     if not IncCalloutDB.settings then
         IncCalloutDB.settings = {
@@ -199,57 +222,39 @@ local function ResizeWorldMap()
 
     local scale = IncCalloutDB.settings.mapScale or 0.75
     local resizeInPvPOnly = IncCalloutDB.settings.resizeInPvPOnly
+    local inInstance, instanceType = IsInInstance()
 
     if resizeInPvPOnly then
-        local inInstance, instanceType = IsInInstance()
         if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-            -- In PvP, use user’s scale
             if WorldMapFrame and WorldMapFrame.SetScale then
                 WorldMapFrame:SetScale(scale)
             end
         else
-            -- Not in PvP, set to default (or comment out this line if you want to keep previous scale)
             if WorldMapFrame and WorldMapFrame.SetScale then
                 WorldMapFrame:SetScale(1.0)
             end
         end
     else
-        -- Always use user’s scale
         if WorldMapFrame and WorldMapFrame.SetScale then
             WorldMapFrame:SetScale(scale)
         end
     end
 end
 
-if WorldMapFrame and WorldMapFrame.HookScript then
-    WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
-end
- 
--- Function to create a button
-local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
-    local button = CreateFrame("Button", nil, IncCallout, "UIPanelButtonTemplate, BackdropTemplate")
-    button:SetSize(width, height)
-    button:SetText(text)
-    if type(anchor) == "table" then
-        button:SetPoint(anchor[1], anchor[2], anchor[3], xOffset, yOffset)
-    else
-        button:SetPoint(anchor, xOffset, yOffset)
+local function MapResizer_OnPlayerLogin()
+    if WorldMapFrame and WorldMapFrame.HookScript then
+        if not WorldMapFrame._IncCalloutHooked then
+            WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
+            WorldMapFrame._IncCalloutHooked = true
+        end
+        ResizeWorldMap()
     end
-    button:SetScript("OnClick", onClick)
-    button:GetFontString():SetTextColor(1, 1, 1, 1)
-    button:SetBackdrop({
-      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-      edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-      tile = true,
-      tileSize = 12,
-      edgeSize = 7,  
-      insets = { left = 1, right = 1, top = 1, bottom = 1 }
-})
-
-    table.insert(buttonTexts, button:GetFontString())
-    table.insert(buttons, button)
-    return button
 end
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("PLAYER_LOGIN")
+eventFrame:SetScript("OnEvent", MapResizer_OnPlayerLogin)
+
  
 local function applyButtonColor()
     local r, g, b, a
@@ -260,14 +265,13 @@ local function applyButtonColor()
     end
     for _, button in ipairs(buttons) do
         button:SetBackdropColor(r, g, b, a)
-        button.Left:SetColorTexture(r, g, b, a)
-        button.Right:SetColorTexture(r, g, b, a)
-        button.Middle:SetColorTexture(r, g, b, a)
-        
+        -- Remove these lines unless you actually create these:
+        -- button.Left:SetColorTexture(r, g, b, a)
+        -- button.Right:SetColorTexture(r, g, b, a)
+        -- button.Middle:SetColorTexture(r, g, b, a)
     end
 end
 
--- This function will be triggered every time IncCallout is shown
 IncCallout:SetScript("OnShow", function()
     applyButtonColor()
     
@@ -314,9 +318,6 @@ OnClick = function(_, button)
     end
 end,
 
-
-
-
     OnMouseDown = function(self, button)
         if button == "LeftButton" and IncCallout then
             IncCallout:StartMoving()
@@ -343,19 +344,6 @@ end,
         tooltip:Show()
     end,
 })
-
-local mapSizeOptions = {
-    { name = "Very Small", value = 0.4 },
-    { name = "Small", value = 0.5 },
-    { name = "Medium Small", value = 0.65 },
-    { name = "Medium", value = 0.75 }, 
-    { name = "Medium Large", value = 0.85 },
-    { name = "Large", value = 1.0 },
-    { name = "Very Large", value = 1.15 },
-    { name = "Huge", value = 1.3 },
-    { name = "Gigantic", value = 1.45 },
-    { name = "Colossal", value = 1.6 }
-}
 
 local options = {
     name = "IncCallout",
@@ -621,10 +609,6 @@ f:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
-
-
-
- 
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
     local location = GetSubZoneText()
@@ -689,6 +673,22 @@ playerFaction = UnitFactionGroup("player")
 local function BuffRequestButtonOnClick()
     local message = "Need buffs please!"
     SendChatMessage(message, "INSTANCE_CHAT")  
+end
+
+local function createButton(name, width, height, text, pointTable, x, y, onClick)
+    local button = CreateFrame("Button", name, IncCallout, "BackdropTemplate")
+    button:SetSize(width, height)
+    button:SetPoint(pointTable[1], pointTable[2], pointTable[3], x, y)
+    button:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
+    button:SetBackdropColor(0.2, 0.2, 0.2, 1)
+    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    buttonText:SetPoint("CENTER", button, "CENTER")
+    buttonText:SetText(text)
+    button:SetFontString(buttonText)
+    if onClick then button:SetScript("OnClick", onClick) end
+    table.insert(buttons, button)
+    table.insert(buttonTexts, buttonText)
+    return button
 end
  
 -- Create the buttons

@@ -1,4 +1,5 @@
-## Interface: 40402
+
+## Interface: 11506, 11507, 20504, 30405, 40402, 40401, 50500
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
 ## Version: v.8.9

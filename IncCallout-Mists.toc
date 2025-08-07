@@ -1,4 +1,4 @@
-## Interface: 110200
+## Interface: 50500
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
 ## Version: v.9.4
@@ -8,7 +8,7 @@
 ## X-Wago-ID: as3Dfg57
 ## SavedVariables: IncCalloutDB
 ## SavedVariablesPerCharacter: IncDB
-## Dependencies:  Blizzard_PVPMatch
+
 
 
 #@no-lib-strip@
@@ -43,8 +43,8 @@ Locale/ptBR.lua
 Locale/koKR.lua
 Locale/ukUA.lua
 
-map.lua
-IncCallout.lua
+
+IncCallout-Mists.lua
 
 
 

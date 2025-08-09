@@ -1,11 +1,11 @@
 -- Made by Sharpedge_Gaming
--- v9.4 - 11.2
+-- v9.5 - 11.2
 
---if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
- --   print("Incoming-BG is now running in Retail")
---elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
- --   print("Incoming-BG is now running in (Cata)")
---end
+if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+    print("Incoming-BG is now running in Retail")
+elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
+    print("Incoming-BG is now running in (Cata)")
+	end
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub

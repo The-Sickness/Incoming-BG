@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v8.9 - 10.2.5
+-- v9.0 - 10.2.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Running in Retail WoW")
@@ -8,47 +8,36 @@ elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
     print("Running in Classic WoW (MoP)")
 end
 
-
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
---local AceDB = LibStub("AceDB-3.0")
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
---local AceAddon = LibStub("AceAddon-3.0")
 local AceAddon = LibStub:GetLibrary("AceAddon-3.0")
---local AceConfig = LibStub("AceConfig-3.0")
 local AceConfig = LibStub:GetLibrary("AceConfig-3.0")
---local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfigDialog = LibStub:GetLibrary("AceConfigDialog-3.0")
---local icon = LibStub("LibDBIcon-1.0")
 local icon = LibStub:GetLibrary("LibDBIcon-1.0")
---local LDB = LibStub("LibDataBroker-1.1")
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
---local LSM = LibStub ("LibSharedMedia-3.0")
 local LSM = LibStub("LibSharedMedia-3.0")
 
 local addonName, addonNamespace = ...
- 
-local IncDB, db 
+
+local IncDB, db
 local addon = AceAddon:NewAddon(addonName)
- 
+
 local defaults = {
     profile = {
-        buttonColor = {r = 1, g = 0, b = 0, a = 1}, -- Default to red
-        fontColor = {r=1, g=1, b=1, a=1},  -- Default to white 
-        opacity = 1,  -- Default to fully opaque
+        buttonColor = {r = 1, g = 0, b = 0, a = 1},
+        fontColor = {r = 1, g = 1, b = 1, a = 1},
+        opacity = 1,
+        sendMoreIndex = 1,
+        incIndex = 1,
+        allClearIndex = 1,
     },
 }
- 
+
 local buttonTexts = {}
 local buttons = {}
- 
+
 local playerFaction
- 
-local buttonMessageIndices = {
-    sendMore = 1,
-    inc = 1,
-    allClear = 1
-}
 
 local predefinedColors = {
     { text = "White", value = {r = 1, g = 1, b = 1, a = 1} },
@@ -74,11 +63,10 @@ local predefinedColors = {
 }
 
 SLASH_INC1 = "/inc"
- 
--- Define the battleground locations
+
 local battlegroundLocations = {
     "Stables", "Blacksmith", "Lumber Mill", "Gold Mine", "Mine", "Trollbane Hall", "Defiler's Den", "Farm",
-    "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins", 
+    "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins",
     "The Broken Temple", "Cauldron of Flames", "Central Bridge", "The Chilled Quagemire",
     "Eastern Bridge", "Flamewatch Tower", "The Forest of Shadows", "Glacial Falls", "The Steppe of Life",
     "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress", "Eastpark Workshop", "Westpark Workshop ",
@@ -87,14 +75,14 @@ local battlegroundLocations = {
     "Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
     "The Restless Front", "Wellson Shipyard", "Largo's Overlook", "Farson Hold",
     "Forgotten Hill", "Hellscream's Grasp","Stormpike Graveyard", "Irondeep Mine", "Dun Baldar",
-    "Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard", 
+    "Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard",
     "Iceblood Garrison", "Tower Point", "Coldtooth Mine", "Dun Baldar Pass", "Icewing Bunker",
-    "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
-    "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
+    "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass",
+    "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village",
     "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu",  "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
-    "Ashran", "StormShield", "The Ringing Deeps",   
+    "Ashran", "StormShield", "The Ringing Deeps",
 }
- 
+
 local buttonMessages = {
     sendMore = {
         "We need more peeps",
@@ -112,7 +100,6 @@ local buttonMessages = {
         "Require extra manpower",
         "Assistance urgently needed",
         "Requesting more participants",
-        -- Add more custom messages if needed...
     },
     inc = {
         "Incoming",
@@ -130,7 +117,6 @@ local buttonMessages = {
         "Enemy squad closing in",
         "Anticipate enemy push",
         "Enemy forces are closing in",
-        -- Add more custom messages if needed...
     },
     allClear = {
         "We are all clear",
@@ -148,44 +134,37 @@ local buttonMessages = {
         "No threats detected",
         "All quiet on this end",
         "Area is threat-free",
-        -- Add more custom messages if needed...
     },
 }
- 
--- Create the main frame
+
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
 IncCallout:SetSize(160, 180)
 IncCallout:SetPoint("CENTER")
- 
--- Create a background texture for the main frame
+
 local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
 bgTexture:SetColorTexture(0, 0, 0)
 bgTexture:SetAllPoints(IncCallout)
- 
--- Create a border frame
+
 local BorderFrame = CreateFrame("Frame", nil, IncCallout, "BackdropTemplate")
-BorderFrame:SetFrameLevel(IncCallout:GetFrameLevel() - 1) -- Ensure it's behind the main frame
-BorderFrame:SetSize(IncCallout:GetWidth() + 4, IncCallout:GetHeight() + 4) -- Adjust these values for border thickness
+BorderFrame:SetFrameLevel(IncCallout:GetFrameLevel() - 1)
+BorderFrame:SetSize(IncCallout:GetWidth() + 4, IncCallout:GetHeight() + 4)
 BorderFrame:SetPoint("CENTER", IncCallout, "CENTER")
- 
--- Create a border texture for the border frame
+
 local borderTexture = BorderFrame:CreateTexture(nil, "OVERLAY")
 borderTexture:SetColorTexture(1, 1, 1)
 borderTexture:SetAllPoints(BorderFrame)
- 
+
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
 IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
 IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
- 
-local fontSize = 14
 
 local mapSizeOptions = {
     { name = "Very Small", value = 0.4 },
     { name = "Small", value = 0.5 },
     { name = "Medium Small", value = 0.65 },
-    { name = "Medium", value = 0.75 }, 
+    { name = "Medium", value = 0.75 },
     { name = "Medium Large", value = 0.85 },
     { name = "Large", value = 1.0 },
     { name = "Very Large", value = 1.15 },
@@ -194,17 +173,6 @@ local mapSizeOptions = {
     { name = "Colossal", value = 1.6 }
 }
 
-local function ResizeWorldMap()
-    local scale = IncCalloutDB.settings.mapScale or 0.75
-    if WorldMapFrame and WorldMapFrame.SetScale then
-        WorldMapFrame:SetScale(scale)
-    end
-end
-
-if WorldMapFrame and WorldMapFrame.HookScript then
-    WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
-end
- 
 local function ResizeWorldMap()
     if not IncCalloutDB then IncCalloutDB = {} end
     if not IncCalloutDB.settings then
@@ -241,6 +209,10 @@ local function ResizeWorldMap()
     end
 end
 
+if WorldMapFrame and WorldMapFrame.HookScript then
+    WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
+end
+
 local function MapResizer_OnPlayerLogin()
     if WorldMapFrame and WorldMapFrame.HookScript then
         if not WorldMapFrame._IncCalloutHooked then
@@ -255,26 +227,20 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:SetScript("OnEvent", MapResizer_OnPlayerLogin)
 
- 
 local function applyButtonColor()
     local r, g, b, a
     if IncDB.buttonColor then
         r, g, b, a = IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a
     else
-        r, g, b, a = 1, 0, 0, 1 -- Default to red
+        r, g, b, a = 1, 0, 0, 1
     end
     for _, button in ipairs(buttons) do
         button:SetBackdropColor(r, g, b, a)
-        -- Remove these lines unless you actually create these:
-        -- button.Left:SetColorTexture(r, g, b, a)
-        -- button.Right:SetColorTexture(r, g, b, a)
-        -- button.Middle:SetColorTexture(r, g, b, a)
     end
 end
 
 IncCallout:SetScript("OnShow", function()
     applyButtonColor()
-    
 end)
 
 local function RegisterIncCalloutOptions()
@@ -285,38 +251,33 @@ local function RegisterIncCalloutOptions()
     title:SetPoint("TOPLEFT", 16, -16)
     title:SetText("IncCallout Settings")
 
-    -- Manually register the panel since InterfaceOptions_AddCategory does not exist in Cata
     panel:SetScript("OnShow", function(self)
         if not self.initialized then
             self.initialized = true
         end
     end)
 
-    tinsert(UISpecialFrames, panel) -- This ensures the panel can be opened and closed properly
+    tinsert(UISpecialFrames, panel)
 end
 
-RegisterIncCalloutOptions() -- Ensure the panel is created when the addon loads
-
-
+RegisterIncCalloutOptions()
 
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("IncCallout", {
     type = "data source",
     text = "IncCallout",
     icon = "Interface\\AddOns\\IncCallout\\Icon\\INC.png",
 
-OnClick = function(_, button)
-    if button == "RightButton" then
-        -- Right Click: Show/Hide the GUI
-        if IncCallout:IsShown() then
-            IncCallout:Hide()
+    OnClick = function(_, button)
+        if button == "RightButton" then
+            if IncCallout:IsShown() then
+                IncCallout:Hide()
+            else
+                IncCallout:Show()
+            end
         else
-            IncCallout:Show()
+            AceConfigDialog:Open("IncCallout")
         end
-    else
-        -- Left Click: Open the AceConfig settings window
-        AceConfigDialog:Open("IncCallout")
-    end
-end,
+    end,
 
     OnMouseDown = function(self, button)
         if button == "LeftButton" and IncCallout then
@@ -354,8 +315,10 @@ local options = {
             name = "Send More Message",
             desc = "Select the message for the 'Send More' button",
             values = buttonMessages.sendMore,
-            get = function() return buttonMessageIndices.sendMore end,
-            set = function(_, newValue) buttonMessageIndices.sendMore = newValue end,
+            get = function() return IncDB.sendMoreIndex or 1 end,
+            set = function(_, newValue)
+                IncDB.sendMoreIndex = newValue
+            end,
             order = 1,
         },
         inc = {
@@ -363,8 +326,10 @@ local options = {
             name = "INC Message",
             desc = "Select the message for the 'INC' button",
             values = buttonMessages.inc,
-            get = function() return buttonMessageIndices.inc end,
-            set = function(_, newValue) buttonMessageIndices.inc = newValue end,
+            get = function() return IncDB.incIndex or 1 end,
+            set = function(_, newValue)
+                IncDB.incIndex = newValue
+            end,
             order = 2,
         },
         allClear = {
@@ -372,8 +337,10 @@ local options = {
             name = "All Clear Message",
             desc = "Select the message for the 'All Clear' button",
             values = buttonMessages.allClear,
-            get = function() return buttonMessageIndices.allClear end,
-            set = function(_, newValue) buttonMessageIndices.allClear = newValue end,
+            get = function() return IncDB.allClearIndex or 1 end,
+            set = function(_, newValue)
+                IncDB.allClearIndex = newValue
+            end,
             order = 3,
         },
         opacity = {
@@ -560,214 +527,205 @@ local options = {
 
 AceConfig:RegisterOptionsTable("IncCallout", options)
 
--- Create a config panel
 local configPanel = AceConfigDialog:AddToBlizOptions(addonName, "IncCallout")
 configPanel.default = function()
-    -- Reset the options to default values
-    buttonMessageIndices.sendMore = 1
-    buttonMessageIndices.inc = 1
-    buttonMessageIndices.allClear = 1
+    IncDB.sendMoreIndex = 1
+    IncDB.incIndex = 1
+    IncDB.allClearIndex = 1
 end
- 
--- Create a table to map each location to itself
+
 local locationTable = {}
 for _, location in ipairs(battlegroundLocations) do
     locationTable[location] = location
 end
- 
+
 local function isInBattleground()
     local inInstance, instanceType = IsInInstance()
     return inInstance and (instanceType == "pvp" or instanceType == "arena")
 end
- 
-local function ButtonOnClick(self)
-if not isInBattleground() then
-print("You are not in a battleground.")
-return
+
+-- Improved location detection for broader flag area reporting
+local function getFlagArea()
+    local subZone = GetSubZoneText() or ""
+    local zone = GetZoneText() or ""
+    local realZone = GetRealZoneText() or ""
+
+    -- Try subzone first by substring match
+    for _, area in ipairs(battlegroundLocations) do
+        if subZone:lower():find(area:lower(), 1, true) then
+            return area
+        end
+    end
+
+    -- Try zone name by substring match
+    for _, area in ipairs(battlegroundLocations) do
+        if zone:lower():find(area:lower(), 1, true) then
+            return area
+        end
+    end
+
+    -- Try real zone name by substring match
+    for _, area in ipairs(battlegroundLocations) do
+        if realZone:lower():find(area:lower(), 1, true) then
+            return area
+        end
+    end
+
+    -- Fallbacks
+    if subZone ~= "" then return subZone end
+    if zone ~= "" then return zone end
+    return realZone
 end
 
-local currentLocation = GetSubZoneText()
-local message = self:GetText() .. " Incoming at " .. currentLocation
-SendChatMessage(message, "INSTANCE_CHAT")
+local function ButtonOnClick(self)
+    if not isInBattleground() then
+        print("You are not in a battleground.")
+        return
+    end
+
+    local location = getFlagArea()
+    local message = self:GetText() .. " Incoming at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
- 
--- Register an event listener for when the player enters a new zone or subzone
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
- 
+
 f:SetScript("OnEvent", function(self, event, ...)
     if event == "ZONE_CHANGED_NEW_AREA" then
         local currentLocation = GetRealZoneText() .. " - " .. GetSubZoneText()
         local location = locationTable[currentLocation]
- 
-        -- Check if location is in the defined battleground locations
+
         if location then
-            IncCallout:Show()  -- Show the GUI
+            IncCallout:Show()
         else
-            
+            -- Hide or do nothing
         end
     end
 end)
 
--- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
-    local location = GetSubZoneText()
- 
-    -- Check if location is in the defined battleground locations
-    if not location then
-    print("You are not in a BattleGround.")
-    return
+    local location = getFlagArea()
+    if not location or location == "" then
+        print("You are not in a BattleGround.")
+        return
+    end
+    local message = buttonMessages.allClear[IncDB.allClearIndex or 1] .. " at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
- 
-local message = buttonMessages.allClear[buttonMessageIndices.allClear] .. " at " .. location
-SendChatMessage(message, "INSTANCE_CHAT")
-end
- 
--- Function to handle the Send More button click event
+
 local function SendMoreButtonOnClick()
-    local location = GetSubZoneText()
- 
-    -- Check if location is in the defined battleground locations
-    if not location then
-    print("You are not in a BattleGround.")
-    return
+    local location = getFlagArea()
+    if not location or location == "" then
+        print("You are not in a BattleGround.")
+        return
+    end
+    local message = buttonMessages.sendMore[IncDB.sendMoreIndex or 1] .. " at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
- 
-local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
-SendChatMessage(message, "INSTANCE_CHAT")
-end
- 
--- Function to handle the INC button click event
+
 local function IncButtonOnClick()
-    local location = GetSubZoneText()
- 
-    -- Check if location is in the defined battleground locations
-    if not location then
-    print("You are not in a BattleGround.")
-    return
+    local location = getFlagArea()
+    if not location or location == "" then
+        print("You are not in a BattleGround.")
+        return
+    end
+    local message = buttonMessages.inc[IncDB.incIndex or 1] .. " at " .. location
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
- 
-local message = buttonMessages.inc[buttonMessageIndices.inc] .. " at " .. location
-SendChatMessage(message, "INSTANCE_CHAT")
-end
- 
+
 local function OnEvent(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
-        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-    
-        else
-            IncCallout:Hide() 
+        if not (inInstance and (instanceType == "pvp" or instanceType == "arena")) then
+            IncCallout:Hide()
         end
-        
         if inInstance and instanceType == "pvp" then
-            IncCallout:Show() 
+            IncCallout:Show()
         end
- 
     elseif event == "PLAYER_LOGIN" then
+        db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
+        IncDB = db.profile
+        playerFaction = UnitFactionGroup("player")
 
-db = LibStub("AceDB-3.0"):New(addonName.."DB", defaults, true)
-IncDB = db.profile
-playerFaction = UnitFactionGroup("player")
- 
-local function BuffRequestButtonOnClick()
-    local message = "Need buffs please!"
-    SendChatMessage(message, "INSTANCE_CHAT")  
-end
+        local function BuffRequestButtonOnClick()
+            local message = "Need buffs please!"
+            SendChatMessage(message, "INSTANCE_CHAT")
+        end
 
-local function createButton(name, width, height, text, pointTable, x, y, onClick)
-    local button = CreateFrame("Button", name, IncCallout, "BackdropTemplate")
-    button:SetSize(width, height)
-    button:SetPoint(pointTable[1], pointTable[2], pointTable[3], x, y)
-    button:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
-    button:SetBackdropColor(0.2, 0.2, 0.2, 1)
-    local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    buttonText:SetPoint("CENTER", button, "CENTER")
-    buttonText:SetText(text)
-    button:SetFontString(buttonText)
-    if onClick then button:SetScript("OnClick", onClick) end
-    table.insert(buttons, button)
-    table.insert(buttonTexts, buttonText)
-    return button
-end
- 
--- Create the buttons
-local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 15, -20, ButtonOnClick)
-local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 3, 0, ButtonOnClick)
-local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 3, 0, ButtonOnClick)
-local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 3, 0, ButtonOnClick)
-local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 3, 0, ButtonOnClick)
-local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
-local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
-local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
-local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+        local function createButton(name, width, height, text, pointTable, x, y, onClick)
+            local button = CreateFrame("Button", name, IncCallout, "BackdropTemplate")
+            button:SetSize(width, height)
+            button:SetPoint(pointTable[1], pointTable[2], pointTable[3], x, y)
+            button:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
+            button:SetBackdropColor(0.2, 0.2, 0.2, 1)
+            local buttonText = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            buttonText:SetPoint("CENTER", button, "CENTER")
+            buttonText:SetText(text)
+            button:SetFontString(buttonText)
+            if onClick then button:SetScript("OnClick", onClick) end
+            table.insert(buttons, button)
+            table.insert(buttonTexts, buttonText)
+            return button
+        end
 
--- Apply the color to all the buttons
-applyButtonColor()
+        local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 15, -20, ButtonOnClick)
+        local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 3, 0, ButtonOnClick)
+        local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 3, 0, ButtonOnClick)
+        local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 3, 0, ButtonOnClick)
+        local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 3, 0, ButtonOnClick)
+        local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, "TOP"}, 0, -45, ButtonOnClick)
+        local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
+        local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
+        local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
+        local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
 
--- Function for Buff Request Button
-local function BuffRequestButtonOnClick()
-    -- Example implementation: Sends a generic buff request in chat
-    local message = "Requesting buffs, please!"
-    SendChatMessage(message, "INSTANCE_CHAT") 
-end
-
--- Apply the PostClick script to each button
-for _, button in ipairs(buttons) do
-    button:SetScript("PostClick", function()
         applyButtonColor()
-    end)
-end
 
-allClearButton:SetScript("OnClick", AllClearButtonOnClick)
-sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
-incButton:SetScript("OnClick", IncButtonOnClick)
+        for _, button in ipairs(buttons) do
+            button:SetScript("PostClick", function()
+                applyButtonColor()
+            end)
+        end
 
--- Apply the color to all the buttons
-applyButtonColor()
- 
--- Initialize IncDB.minimap if it's not already initialized
-if not IncDB.minimap then
-    IncDB.minimap = {
-        hide = false,
-        minimapPos = 45, -- Default position angle (in degrees)
-    }
-end
-  
-    -- Load saved button messages indices
-    buttonMessageIndices.sendMore = IncDB.sendMoreIndex or 1
-    buttonMessageIndices.inc = IncDB.incIndex or 1
-    buttonMessageIndices.allClear = IncDB.allClearIndex or 1
- 
-    -- Load the opacity setting
-    bgTexture:SetAlpha(IncDB.opacity or 1)
-    borderTexture:SetAlpha(IncDB.opacity or 1)
- 
-    -- Load the button color
-    local color = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} -- Default to red
-    local r, g, b, a = color.r, color.g, color.b, color.a
-    applyButtonColor() 
- 
-    -- Load the font color
-    local savedColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}  -- Default to white
-    local r, g, b, a = savedColor.r, savedColor.g, savedColor.b, savedColor.a
-    for _, text in ipairs(buttonTexts) do
-        text:SetTextColor(r, g, b, a)
-    end
-    
-    local font = IncDB.font or "Friz Quadrata TT"  -- Default font
-    local fontSize = IncDB.fontSize or 15  -- Default font size
-    for _, text in ipairs(buttonTexts) do
-    text:SetFont(LSM:Fetch("font", font), fontSize)
-end
-    -- Load the minimap icon settings
-    icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
- 
+        allClearButton:SetScript("OnClick", AllClearButtonOnClick)
+        sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
+        incButton:SetScript("OnClick", IncButtonOnClick)
+
+        applyButtonColor()
+
+        if not IncDB.minimap then
+            IncDB.minimap = {
+                hide = false,
+                minimapPos = 45,
+            }
+        end
+
+        -- Load the opacity setting
+        bgTexture:SetAlpha(IncDB.opacity or 1)
+        borderTexture:SetAlpha(IncDB.opacity or 1)
+
+        -- Load the button color
+        applyButtonColor()
+
+        -- Load the font color
+        local savedColor = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
+        for _, text in ipairs(buttonTexts) do
+            text:SetTextColor(savedColor.r, savedColor.g, savedColor.b, savedColor.a)
+        end
+
+        local font = IncDB.font or "Friz Quadrata TT"
+        local fontSize = IncDB.fontSize or 15
+        for _, text in ipairs(buttonTexts) do
+            text:SetFont(LSM:Fetch("font", font), fontSize)
+        end
+
+        icon:Register("IncCallout", IncCalloutLDB, IncDB.minimap)
     elseif event == "PLAYER_LOGOUT" then
+        -- No need to do anything, AceDB saves automatically
     end
- end
- 
+end
+
 SLASH_INC1 = "/inc"
 SlashCmdList["INC"] = function()
     if IncCallout:IsShown() then
@@ -777,21 +735,17 @@ SlashCmdList["INC"] = function()
     end
 end
 
--- New function to handle the '/incmsg' command
 local function IncomingBGMessageCommandHandler(msg)
-    local messageType = "INSTANCE_CHAT"  
-    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."  
-
-    -- Send the message
+    local messageType = "INSTANCE_CHAT"
+    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."
     SendChatMessage(message, messageType)
 end
 
 SLASH_INCOMINGBGMSG1 = "/incmsg"
 SlashCmdList["INCOMINGBGMSG"] = IncomingBGMessageCommandHandler
- 
+
 IncCallout:SetScript("OnEvent", OnEvent)
- 
--- Register the events
+
 IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_LOGOUT")

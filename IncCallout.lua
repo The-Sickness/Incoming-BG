@@ -1,11 +1,11 @@
 -- Made by Sharpedge_Gaming
--- v9.5 - 11.2
+-- v9.0 - 11.2
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
 elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
     print("Incoming-BG is now running in (Cata)")
-	end
+end
 
 -- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
@@ -78,6 +78,8 @@ SLASH_INC1 = "/inc"
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 local blitzHonorGained = 0
+
+
 
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
@@ -877,6 +879,31 @@ local battlegroundLocations = {
     "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu",  "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
     "Ashran", "StormShield", "The Ringing Deeps", "Deephaul Ravine",  
 }
+
+local function getFlagArea()
+    local subZone = GetSubZoneText() or ""
+    local zone = GetZoneText() or ""
+    local realZone = GetRealZoneText() or ""
+
+    for _, area in ipairs(battlegroundLocations) do
+        if subZone:lower():find(area:lower(), 1, true) then
+            return area
+        end
+    end
+    for _, area in ipairs(battlegroundLocations) do
+        if zone:lower():find(area:lower(), 1, true) then
+            return area
+        end
+    end
+    for _, area in ipairs(battlegroundLocations) do
+        if realZone:lower():find(area:lower(), 1, true) then
+            return area
+        end
+    end
+    if subZone ~= "" then return subZone end
+    if zone ~= "" then return zone end
+    return realZone
+end
  
 local buttonMessages = {
     sendMore = {
@@ -1166,48 +1193,6 @@ local mapSizeOptions = {
     { name = "Gigantic", value = 1.45 },
     { name = "Colossal", value = 1.6 }
 }
-
-local function ResizeWorldMap()
-    if not IncCalloutDB then IncCalloutDB = {} end
-    if not IncCalloutDB.settings then
-        IncCalloutDB.settings = {
-            mapScale = 0.75,
-            mapPosition = {
-                point = "CENTER",
-                relativePoint = "CENTER",
-                xOfs = 0,
-                yOfs = 0,
-            },
-            resizeInPvPOnly = false,
-        }
-    end
-
-    local scale = IncCalloutDB.settings.mapScale or 0.75
-    local resizeInPvPOnly = IncCalloutDB.settings.resizeInPvPOnly
-
-    if resizeInPvPOnly then
-        local inInstance, instanceType = IsInInstance()
-        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-            if WorldMapFrame and WorldMapFrame.SetScale then
-                WorldMapFrame:SetScale(scale)
-            end
-        else
-           
-            if WorldMapFrame and WorldMapFrame.SetScale then
-                WorldMapFrame:SetScale(1.0)
-            end
-        end
-    else
-        
-        if WorldMapFrame and WorldMapFrame.SetScale then
-            WorldMapFrame:SetScale(scale)
-        end
-    end
-end
-
-if WorldMapFrame and WorldMapFrame.HookScript then
-    WorldMapFrame:HookScript("OnShow", ResizeWorldMap)
-end
 
 local function applyStatusbarTexture()
     local texture = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard")
@@ -2103,12 +2088,12 @@ end
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
+    local location = getFlagArea()
+    if not location or location == "" then
         print("You are not in a Battleground.")
         return
     end
-    local message = IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[buttonMessageIndices.allClear]
+    local message = IncDB.customMessages and IncDB.customMessages.allClear and IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[IncDB.allClearIndex or 1]
     message = message .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -2116,12 +2101,12 @@ end
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
+    local location = getFlagArea()
+    if not location or location == "" then
         print("You are not in a Battleground.")
         return
     end
-    local message = IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[buttonMessageIndices.sendMore]
+    local message = IncDB.customMessages and IncDB.customMessages.sendMore and IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[IncDB.sendMoreIndex or 1]
     message = message .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -2129,12 +2114,12 @@ end
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
+    local location = getFlagArea()
+    if not location or location == "" then
         print("You are not in a Battleground.")
         return
     end
-    local message = IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[buttonMessageIndices.inc]
+    local message = IncDB.customMessages and IncDB.customMessages.inc and IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[IncDB.incIndex or 1]
     message = message .. " at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -2144,7 +2129,7 @@ local function EFCButtonOnClick()
     if not InCombatLockdown() then
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     end
-    
+
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2159,7 +2144,7 @@ local function EFCButtonOnClick()
         return
     end
 
-    local message = IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex]
+    local message = IncDB.customMessages and IncDB.customMessages.efcRequest and IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex or 1]
     SendChatMessage(message, chatType)
 end
 
@@ -2168,7 +2153,7 @@ local function FCButtonOnClick()
     if not InCombatLockdown() then
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     end
-    
+
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2183,20 +2168,20 @@ local function FCButtonOnClick()
         return
     end
 
-    local message = IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex]
+    local message = IncDB.customMessages and IncDB.customMessages.fcRequest and IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex or 1]
     SendChatMessage(message, chatType)
 end
 
 -- Function to handle the Heals button click event
 local function HealsButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
+    local location = getFlagArea()
+    if not location or location == "" then
         print("You are not in a Battleground.")
         return
     end
 
-    local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex]
+    local message = IncDB.customMessages and IncDB.customMessages.healRequest and IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex or 1]
     message = message .. " Needed at " .. location
     SendChatMessage(message, "INSTANCE_CHAT")
 end
@@ -2205,9 +2190,9 @@ end
 local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
-    local messageIndex = buttonMessageIndices.buffRequest or 1
-    local message = IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest or buttonMessages.buffRequest[messageIndex]
-    
+    local messageIndex = IncDB.buffRequestIndex or 1
+    local message = IncDB.customMessages and IncDB.customMessages.buffRequest and IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest or buttonMessages.buffRequest[messageIndex]
+
     if not message then
         print("No buff request message available.")
         return

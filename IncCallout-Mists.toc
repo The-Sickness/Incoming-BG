@@ -1,7 +1,7 @@
 ## Interface: 50500
 ## Title: Incoming-BG
 ## Author: Sharpedge_Gaming
-## Version: v.9.4
+## Version: v.9.0
 ## Notes: GUI for calling out Inc's
 ## X-Category: Battlegrounds/PvP, Chat/Communication
 ## IconTexture: 975742 

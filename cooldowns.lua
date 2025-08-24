@@ -241,7 +241,17 @@ local healingSpells = {
     [359816] = true, -- Dream Flight
 }
 
+local HEALER_CLASS_COLORS = {
+    DRUID       = "ff7d0a", -- Restoration Druid
+    MONK        = "00ff96", -- Mistweaver Monk
+    PALADIN     = "f58cba", -- Holy Paladin
+    PRIEST      = "ffffff", -- Discipline/Holy Priest
+    SHAMAN      = "0070de", -- Restoration Shaman
+    EVOKER      = "33937f", -- Preservation Evoker
+}
+
 local healerGUIDs = {}
+local announcedHealers = {}
 
 local function IsInPvPInstance()
     local inInstance, instanceType = IsInInstance()
@@ -298,6 +308,22 @@ function UpdateCooldownIcons()
     UpdateHealerIcons()
 end
 
+function AnnounceEnemyHealer(guid, unit)
+    if not announcedHealers[guid] and unit then
+        local name = UnitName(unit)
+        local className, classToken = UnitClass(unit)
+        if HEALER_CLASS_COLORS[classToken] then
+            announcedHealers[guid] = true
+            local color = HEALER_CLASS_COLORS[classToken]
+            local coloredClass = "|cff" .. color .. className .. "|r"
+            SendChatMessage(
+                string.format("[IncCallout] Enemy healer: %s (%s)", name or "Unknown", coloredClass),
+                "INSTANCE_CHAT"
+            )
+        end
+    end
+end
+
 function ShowHealerIcon(nameplate)
     if not healerIcons[nameplate] then
         local icon = nameplate:CreateTexture(nil, "OVERLAY")
@@ -324,6 +350,7 @@ function UpdateHealerIcons()
             local guid = UnitGUID(unit)
             if guid and IsGUIDEnemyHealer(guid) then
                 ShowHealerIcon(plate)
+				AnnounceEnemyHealer(guid, unit)
             else
                 HideHealerIcon(plate)
             end
@@ -406,11 +433,18 @@ frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
+    if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+        announcedHealers = {}
+        healerGUIDs = {}
+        UpdateCooldownIcons()
+        UpdateHealerIcons()
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
         OnCombatLogEvent()
         UpdateHealerIcons()
     else
         UpdateCooldownIcons()
+        UpdateHealerIcons()
     end
 end)

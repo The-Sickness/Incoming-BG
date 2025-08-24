@@ -309,18 +309,14 @@ function UpdateCooldownIcons()
 end
 
 function AnnounceEnemyHealer(guid, unit)
-    if not announcedHealers[guid] and unit then
+    if not announcedHealers[guid] then
+        announcedHealers[guid] = true
         local name = UnitName(unit)
-        local className, classToken = UnitClass(unit)
-        if HEALER_CLASS_COLORS[classToken] then
-            announcedHealers[guid] = true
-            local color = HEALER_CLASS_COLORS[classToken]
-            local coloredClass = "|cff" .. color .. className .. "|r"
-            SendChatMessage(
-                string.format("[IncCallout] Enemy healer: %s (%s)", name or "Unknown", coloredClass),
-                "INSTANCE_CHAT"
-            )
-        end
+        local className = select(1, UnitClass(unit))
+        SendChatMessage(
+            string.format("[IncCallout] Enemy healer detected: %s (%s)", name or "Unknown", className or "Unknown"),
+            "INSTANCE_CHAT"
+        )
     end
 end
 

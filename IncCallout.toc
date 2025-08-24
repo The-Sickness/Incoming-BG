@@ -44,6 +44,7 @@ Locale/koKR.lua
 Locale/ukUA.lua
 
 map.lua
+cooldowns.lua
 IncCallout.lua
 
 

@@ -1797,7 +1797,7 @@ local options = {
                     end,
                     order = 1,
                 },
-                fontSize = {
+                                fontSize = {
                     type = "range",
                     name = "Font Size",
                     desc = "Adjust the font size for the buttons.",
@@ -1814,9 +1814,90 @@ local options = {
                 },
             },
         },
+        trackerSettings = {
+            type = "group",
+            name = "Tracker Settings",
+            order = 99,
+            args = {
+                enableCooldownTracker = {
+                    type = "toggle",
+                    name = "Enable Cooldown Tracker",
+                    desc = "When enabled, tracks and displays enemy cooldowns directly on their nameplates in PvP. This helps you anticipate their next abilities (such as trinkets, interrupts, or major defensives) and plan your plays accordingly. Only works in battlegrounds and arenas.",
+                    order = 1,
+                    get = function()
+                        return IncDB.enableCooldownTracker ~= false
+                    end,
+                    set = function(_, value)
+                        IncDB.enableCooldownTracker = value
+                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                        if value then
+                            UpdateCooldownIcons()
+                        else
+                            HideAllCooldownIcons()
+                        end
+                    end,
+                },
+                enableHealerIcon = {
+                    type = "toggle",
+                    name = "Enable Healer Icon Tracker",
+                    desc = "When enabled, identifies enemy healer players in battlegrounds and arenas by displaying a healer icon next to their nameplate. This makes it easier to target or call focus on enemy healers, improving team coordination and strategy.",
+                    order = 2,
+                    get = function()
+                        return IncDB.enableHealerIcon ~= false
+                    end,
+                    set = function(_, value)
+                        IncDB.enableHealerIcon = value
+                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                        if value then
+                            UpdateHealerIcons()
+                        else
+                            for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
+                                HideHealerIcon(plate)
+                            end
+                        end
+                    end,
+					},
+					cooldownIconSize = {
+    type = "range",
+    name = "Cooldown Icon Size",
+    desc = "Adjust the size of displayed cooldown icons on nameplates.",
+    min = 10, max = 64, step = 1,
+    get = function() return IncDB.cooldownIconSize or 24 end,
+    set = function(_, value)
+        IncDB.cooldownIconSize = value
+        UpdateCooldownIcons() -- Re-apply size to visible icons
+    end,
+    order = 3,
+},
+
+healerIconSize = {
+    type = "range",
+    name = "Healer Icon Size",
+    desc = "Adjust the size of the healer icon shown on nameplates.",
+    min = 10, max = 64, step = 1,
+    get = function() return IncDB.healerIconSize or 24 end,
+    set = function(_, value)
+        IncDB.healerIconSize = value
+        UpdateHealerIcons() -- Re-apply size to healer icons
+    end,
+    order = 4,
+	},
+	maxCooldownIcons = {
+    type = "range",
+    name = "Max Cooldown Icons",
+    desc = "Set the maximum number of cooldown icons displayed per enemy nameplate.",
+    min = 1, max = 8, step = 1,
+    get = function() return IncDB.maxCooldownIcons or 4 end,
+    set = function(_, value)
+        IncDB.maxCooldownIcons = value
+        UpdateCooldownIcons() -- Refresh displayed icons
+    end,
+    order = 5,
+                },
+            },
+        },
     },
 }
-
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
 local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")

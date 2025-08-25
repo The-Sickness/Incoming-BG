@@ -308,13 +308,25 @@ function UpdateCooldownIcons()
     UpdateHealerIcons()
 end
 
-function AnnounceEnemyHealer(guid, unit)
-    if not announcedHealers[guid] then
+function AnnounceEnemyHealers(guidList)
+    if #guidList == 0 then return end
+    local healerNames = {}
+    for _, guid in ipairs(guidList) do
         announcedHealers[guid] = true
-        local name = UnitName(unit)
-        local className = select(1, UnitClass(unit))
+        -- Find the unit for this GUID
+        for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
+            local unit = plate.namePlateUnitToken
+            if unit and UnitGUID(unit) == guid then
+                local name = UnitName(unit)
+                local className = select(1, UnitClass(unit))
+                table.insert(healerNames, string.format("%s (%s)", name or "Unknown", className or "Unknown"))
+                break
+            end
+        end
+    end
+    if #healerNames > 0 then
         SendChatMessage(
-            string.format("[IncCallout] Enemy healer detected: %s (%s)", name or "Unknown", className or "Unknown"),
+            "[IncCallout] Enemy healer(s): " .. table.concat(healerNames, ", "),
             "INSTANCE_CHAT"
         )
     end
@@ -340,13 +352,16 @@ function HideHealerIcon(nameplate)
 end
 
 function UpdateHealerIcons()
+    local newHealerGUIDs = {}
     for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
         local unit = plate.namePlateUnitToken
         if unit and UnitIsPlayer(unit) and UnitIsEnemy("player", unit) then
             local guid = UnitGUID(unit)
             if guid and IsGUIDEnemyHealer(guid) then
                 ShowHealerIcon(plate)
-				AnnounceEnemyHealer(guid, unit)
+                if not announcedHealers[guid] then
+                    table.insert(newHealerGUIDs, guid)
+                end
             else
                 HideHealerIcon(plate)
             end
@@ -354,6 +369,7 @@ function UpdateHealerIcons()
             HideHealerIcon(plate)
         end
     end
+    AnnounceEnemyHealers(newHealerGUIDs)
 end
 
 function ShowCooldownIcon(nameplate, spellID, index, remaining)

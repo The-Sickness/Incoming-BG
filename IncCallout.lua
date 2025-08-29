@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.0 - 11.2
+-- v9.1 - 11.2
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -1882,6 +1882,20 @@ healerIconSize = {
     end,
     order = 4,
 	},
+	
+	enableHealerMessage = {
+    type = "toggle",
+    name = "Enable Healer Message Announcements",
+    desc = "If enabled, announces enemy healer detection in chat.",
+    order = 5,
+    get = function()
+        return IncDB.enableHealerMessage ~= false
+    end,
+    set = function(_, value)
+        IncDB.enableHealerMessage = value
+        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+    end,
+	},
 	maxCooldownIcons = {
     type = "range",
     name = "Max Cooldown Icons",
@@ -1892,7 +1906,8 @@ healerIconSize = {
         IncDB.maxCooldownIcons = value
         UpdateCooldownIcons() -- Refresh displayed icons
     end,
-    order = 5,
+    order = 4.1,
+	
                 },
             },
         },

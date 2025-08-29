@@ -229,6 +229,9 @@ end
 function AnnounceEnemyHealer(guid, unit)
     if not announcedHealers[guid] then
         announcedHealers[guid] = true
+        if IncDB and IncDB.enableHealerMessage == false then
+            return
+        end
         local name = UnitName(unit)
         local className = select(1, UnitClass(unit))
         SendChatMessage(

@@ -229,9 +229,24 @@ end
 function AnnounceEnemyHealer(guid, unit)
     if not announcedHealers[guid] then
         announcedHealers[guid] = true
+
+        -- PvP type checks
+        local isBattleground = C_PvP.IsBattleground and C_PvP.IsBattleground()
+        local isRatedBattleground = C_PvP.IsRatedBattleground and C_PvP.IsRatedBattleground()
+        local isBlitz = C_PvP.IsSoloRBG and C_PvP.IsSoloRBG()
+        local isSoloShuffle = C_PvP.IsSoloShuffle and C_PvP.IsSoloShuffle()
+        local isRatedArena = C_PvP.IsRatedArena and C_PvP.IsRatedArena()
+
+        -- Only announce in BGs, Rated BGs, and Blitz!
+        if not (isBattleground or isRatedBattleground or isBlitz) then
+            return
+        end
+
+        -- Respect user setting
         if IncDB and IncDB.enableHealerMessage == false then
             return
         end
+
         local name = UnitName(unit)
         local className = select(1, UnitClass(unit))
         SendChatMessage(

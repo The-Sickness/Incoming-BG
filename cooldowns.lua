@@ -199,55 +199,19 @@ local ICON_SIZE = 24
 local TIMER_FONT = "Fonts\\FRIZQT__.TTF"
 local TIMER_FONT_SIZE = 10
 
--- Healing spells used for healer detection (by GUID)
 local healingSpells = {
-    -- Druid (Restoration only)
-    [132158] = true, -- Nature's Swiftness
-    [18562]  = true, -- Swiftmend
-    [33763]  = true, -- Lifebloom
-    [740]    = true, -- Tranquility
-
-    -- Priest (Holy and Discipline)
-    [33076]  = true, -- Prayer of Mending
-    [34861]  = true, -- Holy Word: Sanctify
-    [2050]   = true, -- Holy Word: Serenity
-    [194509] = true, -- Power Word: Radiance
-    [47540]  = true, -- Penance
-    [372835] = true, -- Lightwell
-
-    -- Paladin (Holy only)
-    [20473]  = true, -- Holy Shock
-    [223306] = true, -- Bestow Faith
-    [85222]  = true, -- Light of Dawn
-    [183998] = true, -- Light of the Martyr
-
-    -- Shaman (Restoration only)
-    [73920]  = true, -- Healing Rain
-    [61295]  = true, -- Riptide
-    [98008]  = true, -- Spirit Link Totem
-    [108280] = true, -- Healing Tide Totem
-    [1064]   = true, -- Chain Heal
-
-    -- Monk (Mistweaver only)
-    [191837] = true, -- Essence Font
-    [124682] = true, -- Enveloping Mist
-    [116849] = true, -- Life Cocoon
-    [115151] = true, -- Renewing Mist
-
-    -- Evoker (Preservation only)
-    [355941] = true, -- Dream Breath
-    [367226] = true, -- Spiritbloom
-    [366155] = true, -- Reversion
-    [359816] = true, -- Dream Flight
-}
-
-local HEALER_CLASS_COLORS = {
-    DRUID       = "ff7d0a", -- Restoration Druid
-    MONK        = "00ff96", -- Mistweaver Monk
-    PALADIN     = "f58cba", -- Holy Paladin
-    PRIEST      = "ffffff", -- Discipline/Holy Priest
-    SHAMAN      = "0070de", -- Restoration Shaman
-    EVOKER      = "33937f", -- Preservation Evoker
+    -- Druid
+    [132158] = true, [18562] = true, [33763] = true, [740] = true,
+    -- Priest
+    [33076] = true, [34861] = true, [2050] = true, [194509] = true, [47540] = true, [372835] = true,
+    -- Paladin
+    [20473] = true, [223306] = true, [85222] = true, [183998] = true,
+    -- Shaman
+    [73920] = true, [61295] = true, [98008] = true, [108280] = true, [1064] = true,
+    -- Monk
+    [191837] = true, [124682] = true, [116849] = true, [115151] = true,
+    -- Evoker
+    [355941] = true, [367226] = true, [366155] = true, [359816] = true,
 }
 
 local healerGUIDs = {}
@@ -260,6 +224,18 @@ end
 
 local function IsGUIDEnemyHealer(guid)
     return healerGUIDs[guid]
+end
+
+function AnnounceEnemyHealer(guid, unit)
+    if not announcedHealers[guid] then
+        announcedHealers[guid] = true
+        local name = UnitName(unit)
+        local className = select(1, UnitClass(unit))
+        SendChatMessage(
+            string.format("[IncCallout] Enemy healer detected: %s (%s)", name or "Unknown", className or "Unknown"),
+            "INSTANCE_CHAT"
+        )
+    end
 end
 
 function HideAllCooldownIcons()
@@ -308,37 +284,17 @@ function UpdateCooldownIcons()
     UpdateHealerIcons()
 end
 
-function AnnounceEnemyHealers(guidList)
-    if #guidList == 0 then return end
-    local healerNames = {}
-    for _, guid in ipairs(guidList) do
-        announcedHealers[guid] = true
-        -- Find the unit for this GUID
-        for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
-            local unit = plate.namePlateUnitToken
-            if unit and UnitGUID(unit) == guid then
-                local name = UnitName(unit)
-                local className = select(1, UnitClass(unit))
-                table.insert(healerNames, string.format("%s (%s)", name or "Unknown", className or "Unknown"))
-                break
-            end
-        end
-    end
-    if #healerNames > 0 then
-        SendChatMessage(
-            "[IncCallout] Enemy healer(s): " .. table.concat(healerNames, ", "),
-            "INSTANCE_CHAT"
-        )
-    end
-end
-
 function ShowHealerIcon(nameplate)
+    if IncDB and IncDB.enableHealerIcon == false then
+        -- If healer icon tracker is disabled, do not show icon
+        HideHealerIcon(nameplate)
+        return
+    end
     if not healerIcons[nameplate] then
         local icon = nameplate:CreateTexture(nil, "OVERLAY")
         icon:SetTexture(HEALER_ICON_PATH)
         healerIcons[nameplate] = icon
     end
-    -- Always update size in case the setting changed
     local size = IncDB.healerIconSize or 24
     healerIcons[nameplate]:SetSize(size, size)
     healerIcons[nameplate]:SetPoint("RIGHT", nameplate, "LEFT", -2, 0)
@@ -352,15 +308,15 @@ function HideHealerIcon(nameplate)
 end
 
 function UpdateHealerIcons()
-    local newHealerGUIDs = {}
+    local enableIcons = IncDB and IncDB.enableHealerIcon ~= false
     for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
         local unit = plate.namePlateUnitToken
         if unit and UnitIsPlayer(unit) and UnitIsEnemy("player", unit) then
             local guid = UnitGUID(unit)
-            if guid and IsGUIDEnemyHealer(guid) then
+            if guid and IsGUIDEnemyHealer(guid) and enableIcons then
                 ShowHealerIcon(plate)
                 if not announcedHealers[guid] then
-                    table.insert(newHealerGUIDs, guid)
+                    AnnounceEnemyHealer(guid, unit)
                 end
             else
                 HideHealerIcon(plate)
@@ -369,7 +325,6 @@ function UpdateHealerIcons()
             HideHealerIcon(plate)
         end
     end
-    AnnounceEnemyHealers(newHealerGUIDs)
 end
 
 function ShowCooldownIcon(nameplate, spellID, index, remaining)
@@ -391,7 +346,6 @@ function ShowCooldownIcon(nameplate, spellID, index, remaining)
         iconFrame.timerText:Hide()
         cooldownIcons[nameplate][spellID] = iconFrame
     end
-    -- Always update size in case the setting changed
     iconFrame:SetSize(size, size)
     local spellInfo = C_Spell.GetSpellInfo(spellID)
     local texture = spellInfo and spellInfo.iconID
@@ -445,9 +399,10 @@ frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+frame:RegisterEvent("PLAYER_LEAVING_WORLD")
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+    if event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_LEAVING_WORLD" then
         announcedHealers = {}
         healerGUIDs = {}
         UpdateCooldownIcons()

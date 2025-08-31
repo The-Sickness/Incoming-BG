@@ -331,8 +331,12 @@ function UpdateHealerIcons()
         local unit = plate.namePlateUnitToken
         if unit and UnitIsPlayer(unit) and UnitIsEnemy("player", unit) then
             local guid = UnitGUID(unit)
-            if guid and IsGUIDEnemyHealer(guid) and enableIcons then
-                ShowHealerIcon(plate)
+            if guid and IsGUIDEnemyHealer(guid) then
+                if enableIcons then
+                    ShowHealerIcon(plate)
+                else
+                    HideHealerIcon(plate)
+                end
                 if not announcedHealers[guid] then
                     AnnounceEnemyHealer(guid, unit)
                 end

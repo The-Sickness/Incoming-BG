@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.1 - 11.2
+-- v9.2 - 11.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -79,11 +79,9 @@ local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 local blitzHonorGained = 0
 
-
-
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(225, 240)  
+IncCallout:SetSize(225, 280)  
 IncCallout:SetPoint("CENTER")
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
@@ -1658,9 +1656,8 @@ local options = {
                     set = function(_, newValue)
                         IncDB.statusbarTexture = newValue
                         applyButtonColor()
-					order = 5	
-              end,
-                 
+                    end,
+                    order = 5,
                 },
                 lockGUI = {
                     type = "toggle",
@@ -1718,18 +1715,18 @@ local options = {
                         logo:SetVertexColor(r, g, b, a)
                     end,
                     order = 8, 
-					},
-					minimapButtonEnable = {
-    type = "toggle",
-    name = "Enable MiniMap Button",
-    desc = "Toggle the visibility of the MiniMap button.",
-    get = function()
-        return not (IncDB.minimap and IncDB.minimap.hide)
-    end,
-    set = function(_, enable)
-        ToggleMiniMapButton(enable)
-    end,
-    order = 9,
+                },
+                minimapButtonEnable = {
+                    type = "toggle",
+                    name = "Enable MiniMap Button",
+                    desc = "Toggle the visibility of the MiniMap button.",
+                    get = function()
+                        return not (IncDB.minimap and IncDB.minimap.hide)
+                    end,
+                    set = function(_, enable)
+                        ToggleMiniMapButton(enable)
+                    end,
+                    order = 9,
                 },
             },
         },
@@ -1777,7 +1774,7 @@ local options = {
         fontSettings = {
             type = "group",
             name = "Font Settings",
-            order = 3,
+            order = 4,
             args = {
                 font = {
                     type = "select",
@@ -1797,7 +1794,7 @@ local options = {
                     end,
                     order = 1,
                 },
-                                fontSize = {
+                fontSize = {
                     type = "range",
                     name = "Font Size",
                     desc = "Adjust the font size for the buttons.",
@@ -1819,24 +1816,6 @@ local options = {
             name = "Tracker Settings",
             order = 99,
             args = {
-                enableCooldownTracker = {
-                    type = "toggle",
-                    name = "Enable Cooldown Tracker",
-                    desc = "When enabled, tracks and displays enemy cooldowns directly on their nameplates in PvP. This helps you anticipate their next abilities (such as trinkets, interrupts, or major defensives) and plan your plays accordingly. Only works in battlegrounds and arenas.",
-                    order = 1,
-                    get = function()
-                        return IncDB.enableCooldownTracker ~= false
-                    end,
-                    set = function(_, value)
-                        IncDB.enableCooldownTracker = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                        if value then
-                            UpdateCooldownIcons()
-                        else
-                            HideAllCooldownIcons()
-                        end
-                    end,
-                },
                 enableHealerIcon = {
                     type = "toggle",
                     name = "Enable Healer Icon Tracker",
@@ -1856,63 +1835,37 @@ local options = {
                             end
                         end
                     end,
-					},
-					cooldownIconSize = {
-    type = "range",
-    name = "Cooldown Icon Size",
-    desc = "Adjust the size of displayed cooldown icons on nameplates.",
-    min = 10, max = 64, step = 1,
-    get = function() return IncDB.cooldownIconSize or 24 end,
-    set = function(_, value)
-        IncDB.cooldownIconSize = value
-        UpdateCooldownIcons() -- Re-apply size to visible icons
-    end,
-    order = 3,
-},
-
-healerIconSize = {
-    type = "range",
-    name = "Healer Icon Size",
-    desc = "Adjust the size of the healer icon shown on nameplates.",
-    min = 10, max = 64, step = 1,
-    get = function() return IncDB.healerIconSize or 24 end,
-    set = function(_, value)
-        IncDB.healerIconSize = value
-        UpdateHealerIcons() -- Re-apply size to healer icons
-    end,
-    order = 4,
-	},
-	
-	enableHealerMessage = {
-    type = "toggle",
-    name = "Enable Healer Message Announcements",
-    desc = "If enabled, announces enemy healer detection in chat.",
-    order = 5,
-    get = function()
-        return IncDB.enableHealerMessage ~= false
-    end,
-    set = function(_, value)
-        IncDB.enableHealerMessage = value
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-	},
-	maxCooldownIcons = {
-    type = "range",
-    name = "Max Cooldown Icons",
-    desc = "Set the maximum number of cooldown icons displayed per enemy nameplate.",
-    min = 1, max = 8, step = 1,
-    get = function() return IncDB.maxCooldownIcons or 4 end,
-    set = function(_, value)
-        IncDB.maxCooldownIcons = value
-        UpdateCooldownIcons() -- Refresh displayed icons
-    end,
-    order = 4.1,
-	
+                },
+                healerIconSize = {
+                    type = "range",
+                    name = "Healer Icon Size",
+                    desc = "Adjust the size of the healer icon shown on nameplates.",
+                    min = 10, max = 64, step = 1,
+                    get = function() return IncDB.healerIconSize or 24 end,
+                    set = function(_, value)
+                        IncDB.healerIconSize = value
+                        UpdateHealerIcons() -- Re-apply size to healer icons
+                    end,
+                    order = 4,
+                },
+                enableHealerMessage = {
+                    type = "toggle",
+                    name = "Enable Healer Message Announcements",
+                    desc = "If enabled, announces enemy healer detection in chat.",
+                    order = 5,
+                    get = function()
+                        return IncDB.enableHealerMessage ~= false
+                    end,
+                    set = function(_, value)
+                        IncDB.enableHealerMessage = value
+                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                    end,
                 },
             },
         },
     },
 }
+
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
 local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
@@ -2153,9 +2106,6 @@ local function InitializeAddon()
     UpdateMiniMapVisibility()
 end
 
-
-
-
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
@@ -2284,6 +2234,26 @@ local function BuffRequestButtonOnClick()
     end
 
     SendChatMessage(message, chatType)
+end
+
+local function ShareButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible, else PARTY
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            SendChatMessage(message, "INSTANCE_CHAT")
+        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+            SendChatMessage(message, "PARTY")
+        else
+            -- fallback to SAY if not in group (should be rare in BG)
+            SendChatMessage(message, "SAY")
+        end
+    else
+        -- Not in PvP: always use SAY
+        SendChatMessage(message, "SAY")
+    end
 end
 
 local function ApplyFontSettings()
@@ -2449,10 +2419,13 @@ local healsButton = createButton("healsButton", 95, 22, "Heals", {"LEFT", allCle
 local efcButton = createButton("efcButton", 95, 22, "EFC", {"TOP", allClearButton, "BOTTOM"}, 0, -10, EFCButtonOnClick)
 local fcButton = createButton("fcButton", 95, 22, "FC", {"LEFT", efcButton, "RIGHT"}, 10, 0, FCButtonOnClick)
 local buffButton = createButton("buffButton", 95, 22, "Buffs", {"TOP", efcButton, "BOTTOM"}, 0, -10, BuffRequestButtonOnClick)
+
 local mapButton = createButton("mapButton", 95, 22, "Map", {"LEFT", buffButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     ToggleWorldMap()
 end)
+
+local shareButton = createButton("shareButton", 95, 22, "Share", {"BOTTOM", IncCallout, "BOTTOM"}, 0, 10, ShareButtonOnClick)
 
 local healerButton = createButton("healerButton", 95, 22, "Healers", {"TOP", buffButton, "BOTTOM"}, 0, -10, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
@@ -2461,9 +2434,10 @@ end)
 
 local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-	
     pvpStatsFrame:Show()
 end)
+
+
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included
 pvpStatsButton:SetScript("OnEnter", function(self)
@@ -2483,6 +2457,23 @@ pvpStatsButton:SetScript("OnEnter", function(self)
     GameTooltip:Show()
 end)
 
+shareButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Share Incoming-BG Addon", 1, 1, 1, true)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Let your teammates know about Incoming-BG!", 0, 1, 0, true)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("• In a battleground or arena: Sends a recommendation to your team in instance or party chat.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Outside PvP: Sends a message in /say to nearby players.", 1, 1, 1, true)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Incoming-BG makes calling out important battleground events fast and easy with one-click buttons for INCOMING, SEND MORE, FC, and more.", 0.8, 0.8, 0.8, true)
+    GameTooltip:Show()
+end)
+
+shareButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()
+end)
+
 pvpStatsButton:SetScript("OnLeave", function(self)
     GameTooltip:Hide()
 end)
@@ -2494,6 +2485,7 @@ applyButtonColor()
 allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 incButton:SetScript("OnClick", IncButtonOnClick)
+
 
 -- Apply the PostClick script to each button
 for _, button in ipairs(buttons) do
@@ -2541,4 +2533,3 @@ IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_LOGOUT")
 IncCallout:SetScript("OnEvent", OnEvent)
-

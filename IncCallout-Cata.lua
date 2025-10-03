@@ -1,6 +1,6 @@
 -- IncCallout (Rebuild of Incoming-BG)
 -- Made by Sharpedge_Gaming
--- v8.9 - 10.2.5
+-- v9.0 - 10.2.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Running in Retail WoW")
@@ -154,7 +154,7 @@ local buttonMessages = {
  
 -- Create the main frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 180)
+IncCallout:SetSize(160, 210)
 IncCallout:SetPoint("CENTER")
  
 -- Create a background texture for the main frame
@@ -313,9 +313,6 @@ OnClick = function(_, button)
         AceConfigDialog:Open("IncCallout")
     end
 end,
-
-
-
 
     OnMouseDown = function(self, button)
         if button == "LeftButton" and IncCallout then
@@ -593,6 +590,7 @@ local function isInBattleground()
 end
  
 local function ButtonOnClick(self)
+PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 if not isInBattleground() then
 print("You are not in a battleground.")
 return
@@ -621,12 +619,9 @@ f:SetScript("OnEvent", function(self, event, ...)
     end
 end)
 
-
-
-
- 
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
  
     -- Check if location is in the defined battleground locations
@@ -641,6 +636,7 @@ end
  
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
  
     -- Check if location is in the defined battleground locations
@@ -652,9 +648,30 @@ end
 local message = buttonMessages.sendMore[buttonMessageIndices.sendMore] .. " at " .. location
 SendChatMessage(message, "INSTANCE_CHAT")
 end
+
+local function ShareButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible, else PARTY
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            SendChatMessage(message, "INSTANCE_CHAT")
+        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+            SendChatMessage(message, "PARTY")
+        else
+            -- fallback to SAY if not in group (should be rare in BG)
+            SendChatMessage(message, "SAY")
+        end
+    else
+        -- Not in PvP: always use SAY
+        SendChatMessage(message, "SAY")
+    end
+end
  
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
  
     -- Check if location is in the defined battleground locations
@@ -687,6 +704,7 @@ IncDB = db.profile
 playerFaction = UnitFactionGroup("player")
  
 local function BuffRequestButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = "Need buffs please!"
     SendChatMessage(message, "INSTANCE_CHAT")  
 end
@@ -701,14 +719,15 @@ local incButton = createButton("incButton", 110, 22, "Inc", {"TOP", IncCallout, 
 local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
 local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
 local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+local shareButton = createButton("shareButton", 95, 22, "Share", {"BOTTOM", IncCallout, "BOTTOM"}, 0, 35, ShareButtonOnClick)
+local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -35, function() IncCallout:Hide() end)
 
 -- Apply the color to all the buttons
 applyButtonColor()
 
 -- Function for Buff Request Button
 local function BuffRequestButtonOnClick()
-    -- Example implementation: Sends a generic buff request in chat
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = "Requesting buffs, please!"
     SendChatMessage(message, "INSTANCE_CHAT") 
 end

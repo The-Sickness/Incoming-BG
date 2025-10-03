@@ -138,7 +138,7 @@ local buttonMessages = {
 }
 
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(160, 180)
+IncCallout:SetSize(160, 210)
 IncCallout:SetPoint("CENTER")
 
 local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
@@ -578,6 +578,7 @@ local function getFlagArea()
 end
 
 local function ButtonOnClick(self)
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     if not isInBattleground() then
         print("You are not in a battleground.")
         return
@@ -605,6 +606,7 @@ f:SetScript("OnEvent", function(self, event, ...)
 end)
 
 local function AllClearButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = getFlagArea()
     if not location or location == "" then
         print("You are not in a BattleGround.")
@@ -615,6 +617,7 @@ local function AllClearButtonOnClick()
 end
 
 local function SendMoreButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = getFlagArea()
     if not location or location == "" then
         print("You are not in a BattleGround.")
@@ -624,7 +627,28 @@ local function SendMoreButtonOnClick()
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
+local function ShareButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible, else PARTY
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            SendChatMessage(message, "INSTANCE_CHAT")
+        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+            SendChatMessage(message, "PARTY")
+        else
+            -- fallback to SAY if not in group (should be rare in BG)
+            SendChatMessage(message, "SAY")
+        end
+    else
+        -- Not in PvP: always use SAY
+        SendChatMessage(message, "SAY")
+    end
+end
+
 local function IncButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = getFlagArea()
     if not location or location == "" then
         print("You are not in a BattleGround.")
@@ -649,6 +673,7 @@ local function OnEvent(self, event, ...)
         playerFaction = UnitFactionGroup("player")
 
         local function BuffRequestButtonOnClick()
+		    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
             local message = "Need buffs please!"
             SendChatMessage(message, "INSTANCE_CHAT")
         end
@@ -678,7 +703,8 @@ local function OnEvent(self, event, ...)
         local sendMoreButton = createButton("sendMoreButton", 110, 22, "Send More", {"TOP", incButton, "BOTTOM"}, 0, -5, SendMoreButtonOnClick)
         local allClearButton = createButton("allClearButton", 110, 22, "All Clear", {"TOP", sendMoreButton, "BOTTOM"}, 0, -5, AllClearButtonOnClick)
         local buffRequestButton = createButton("buffRequestButton", 110, 22, "Request Buffs", {"TOP", allClearButton, "BOTTOM"}, 0, -5, BuffRequestButtonOnClick)
-        local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -5, function() IncCallout:Hide() end)
+		local shareButton = createButton("shareButton", 95, 22, "Share", {"BOTTOM", IncCallout, "BOTTOM"}, 0, 35, ShareButtonOnClick)
+        local exitButton = createButton("exitButton", 110, 22, "Exit", {"TOP", buffRequestButton, "BOTTOM"}, 0, -35, function() IncCallout:Hide() end)
 
         applyButtonColor()
 

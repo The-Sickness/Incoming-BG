@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.4 - 11.2.5
+-- v9.5 - 11.2.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")

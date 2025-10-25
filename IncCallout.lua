@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.2 - 11.5
+-- v9.4 - 11.2.5
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -1020,9 +1020,9 @@ end
 
 local fontSize = 14
 
-local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
-bgTexture:SetColorTexture(0, 0, 0)
-bgTexture:SetAllPoints(IncCallout)
+--local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
+--bgTexture:SetColorTexture(0, 0, 0)
+--bgTexture:SetAllPoints(IncCallout)
 
 IncCallout:SetScript("OnDragStart", function(self)
     if not IncDB.isLocked then
@@ -1549,7 +1549,8 @@ local options = {
                     },
                 },
             },
-        },
+        }, 
+
         appearanceSettings = {
             type = "group",
             name = "Appearance Settings",
@@ -1561,7 +1562,7 @@ local options = {
                     desc = "Set the color of the button text.",
                     hasAlpha = true,
                     get = function()
-                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} 
+                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
                         return color.r, color.g, color.b, color.a
                     end,
                     set = function(_, r, g, b, a)
@@ -1569,17 +1570,17 @@ local options = {
                         for _, buttonText in ipairs(buttonTexts) do
                             buttonText:SetTextColor(r, g, b, a)
                         end
-                    end, 
-                    order = 1, 
+                    end,
+                    order = 1,
                 },
                 buttonColor = {
                     type = "color",
                     name = "Button Color",
                     desc = "Select the color of the buttons.",
                     order = 2,
-                    hasAlpha = true, 
+                    hasAlpha = true,
                     get = function()
-                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} 
+                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1}
                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
                     end,
                     set = function(_, r, g, b, a)
@@ -1592,15 +1593,15 @@ local options = {
                     type = "range",
                     name = "GUI Window Scale",
                     desc = "Adjust the scale of the GUI.",
-                    min = 0.5, 
-                    max = 2.0, 
-                    step = 0.05, 
+                    min = 0.5,
+                    max = 2.0,
+                    step = 0.05,
                     get = function()
-                        return IncDB.scale or 1 
+                        return IncDB.scale or 1
                     end,
                     set = function(_, value)
                         IncDB.scale = value
-                        ScaleGUI(value) 
+                        ScaleGUI(value)
                     end,
                 },
                 borderStyle = {
@@ -1698,23 +1699,23 @@ local options = {
                     get = function(info) return IncDB.selectedLogo end,
                     set = function(info, value)
                         IncDB.selectedLogo = value
-                        IncCallout:SetLogo(value)  
+                        IncCallout:SetLogo(value)
                     end,
                 },
                 logoColor = {
                     type = "color",
                     name = "Logo Color",
                     desc = "Set the color of the title logo.",
-                    hasAlpha = true, 
+                    hasAlpha = true,
                     get = function(info)
-                        local color = IncDB.logoColor or {1, 1, 1, 1} 
+                        local color = IncDB.logoColor or {1, 1, 1, 1}
                         return color.r, color.g, color.b, color.a
                     end,
                     set = function(info, r, g, b, a)
                         IncDB.logoColor = {r = r, g = g, b = b, a = a}
                         logo:SetVertexColor(r, g, b, a)
                     end,
-                    order = 8, 
+                    order = 8,
                 },
                 minimapButtonEnable = {
                     type = "toggle",
@@ -1729,7 +1730,8 @@ local options = {
                     order = 9,
                 },
             },
-        },
+        }, 
+
         mapSettings = {
             type = "group",
             name = "Map Settings",
@@ -1770,7 +1772,8 @@ local options = {
                     end,
                 },
             },
-        },
+        }, 
+
         fontSettings = {
             type = "group",
             name = "Font Settings",
@@ -1810,7 +1813,8 @@ local options = {
                     order = 2,
                 },
             },
-        },
+        }, 
+
         trackerSettings = {
             type = "group",
             name = "Tracker Settings",
@@ -1821,9 +1825,7 @@ local options = {
                     name = "Enable Healer Icon Tracker",
                     desc = "When enabled, identifies enemy healer players in battlegrounds and arenas by displaying a healer icon next to their nameplate. This makes it easier to target or call focus on enemy healers, improving team coordination and strategy.",
                     order = 2,
-                    get = function()
-                        return IncDB.enableHealerIcon ~= false
-                    end,
+                    get = function() return IncDB.enableHealerIcon ~= false end,
                     set = function(_, value)
                         IncDB.enableHealerIcon = value
                         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
@@ -1836,6 +1838,7 @@ local options = {
                         end
                     end,
                 },
+
                 healerIconSize = {
                     type = "range",
                     name = "Healer Icon Size",
@@ -1844,27 +1847,82 @@ local options = {
                     get = function() return IncDB.healerIconSize or 24 end,
                     set = function(_, value)
                         IncDB.healerIconSize = value
-                        UpdateHealerIcons() -- Re-apply size to healer icons
+                        UpdateHealerIcons()
                     end,
                     order = 4,
                 },
+
                 enableHealerMessage = {
                     type = "toggle",
                     name = "Enable Healer Message Announcements",
                     desc = "If enabled, announces enemy healer detection in chat.",
                     order = 5,
-                    get = function()
-                        return IncDB.enableHealerMessage ~= false
-                    end,
+                    get = function() return IncDB.enableHealerMessage ~= false end,
                     set = function(_, value)
                         IncDB.enableHealerMessage = value
                         LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
                     end,
                 },
             },
-        },
-    },
-}
+        }, 
+
+        resetSettings = {
+            type = "group",
+            name = "Reset",
+            order = 100,
+            args = {
+                resetToDefaults = {
+                    type = "execute",
+                    name = "Reset to Defaults",
+                    desc = "Reset all Incoming-BG settings to their default values. This will overwrite the current profile.",
+                    confirm = function()
+                        return "Are you sure you want to reset Incoming-BG settings to defaults? This cannot be undone."
+                    end,
+                    func = function()
+                        -- Preferred: use AceDB to reset the current profile if available
+                        if db and type(db.ResetProfile) == "function" then
+                            db:ResetProfile()
+                            IncDB = db.profile
+                            print("|cff00ff00Incoming-BG: Settings reset to defaults (AceDB ResetProfile).|r")
+                        else
+                            -- Fallback: deep-copy defaults.profile into IncDB
+                            local function deepcopy(orig)
+                                if type(orig) ~= "table" then return orig end
+                                local copy = {}
+                                for k, v in pairs(orig) do copy[k] = deepcopy(v) end
+                                return copy
+                            end
+
+                            IncDB = IncDB or {}
+                            local newProfile = deepcopy(defaults.profile)
+                            for k in pairs(IncDB) do IncDB[k] = nil end
+                            for k, v in pairs(newProfile) do IncDB[k] = v end
+
+                            if db and db.profile then db.profile = IncDB end
+
+                            print("|cff00ff00Incoming-BG: Settings reset to defaults (fallback).|r")
+                        end
+
+                        -- Reapply visual and functional settings
+                        pcall(function()
+                            if ApplyFontSettings then ApplyFontSettings() end
+                            if applyButtonColor then applyButtonColor() end
+                            if applyBorderChange then applyBorderChange() end
+                            if applyColorChange then applyColorChange() end
+                            if ScaleGUI then ScaleGUI() end
+                            if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
+                            if InitializeMiniMapIcon then InitializeMiniMapIcon() end
+                            if LibStub and LibStub("AceConfigRegistry-3.0") then
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
+                            end
+                        end)
+                    end,
+                },
+            },
+        }, 
+    }, 
+} 
 
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 

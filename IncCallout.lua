@@ -1758,16 +1758,36 @@ local options = {
                     order = 8,
                 },
                 minimapButtonEnable = {
-                    type = "toggle",
-                    name = "Enable MiniMap Button",
-                    desc = "Toggle the visibility of the MiniMap button.",
-                    get = function()
-                        return not (IncDB.minimap and IncDB.minimap.hide)
-                    end,
-                    set = function(_, enable)
-                        ToggleMiniMapButton(enable)
-                    end,
-                    order = 9,
+    type = "toggle",
+    name = "Enable MiniMap Button",
+    desc = "Toggle the visibility of the MiniMap button.",
+    get = function()
+        IncCalloutDB = IncCalloutDB or {}
+        IncCalloutDB.profiles = IncCalloutDB.profiles or {}
+        IncCalloutDB.profiles.Default = IncCalloutDB.profiles.Default or {}
+        IncCalloutDB.profiles.Default.minimap = IncCalloutDB.profiles.Default.minimap or { minimapPos = 45, hide = false }
+        return not IncCalloutDB.profiles.Default.minimap.hide
+    end,
+    set = function(_, enable)
+        IncCalloutDB = IncCalloutDB or {}
+        IncCalloutDB.profiles = IncCalloutDB.profiles or {}
+        IncCalloutDB.profiles.Default = IncCalloutDB.profiles.Default or {}
+        IncCalloutDB.profiles.Default.minimap = IncCalloutDB.profiles.Default.minimap or { minimapPos = 45, hide = false }
+        IncCalloutDB.profiles.Default.minimap.hide = not enable
+
+        if type(addonNamespace.UpdateMiniMapVisibility) == "function" then
+            addonNamespace.UpdateMiniMapVisibility()
+        else
+            local ok, dbicon = pcall(function() return LibStub("LibDBIcon-1.0", true) end)
+            if ok and dbicon then
+                pcall(function()
+                    if enable then dbicon:Show("IncCallout") else dbicon:Hide("IncCallout") end
+                end)
+            end
+        end
+    end,
+    order = 9,
+
                 },
             },
         },
@@ -2045,57 +2065,48 @@ local isIconRegistered = false
 -- Event handler for ADDON_LOADED to initialize settings
 local function OnEvent(self, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
-        -- Initialize AceDB for profile management
+        -- initialize AceDB and sync global saved tables
         db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
         IncDB = db.profile or {}
 
-        -- Ensure minimap settings exist in the profile
-        local minimapSettings = IncCalloutDB.profiles.Default.minimap
-        if not minimapSettings then
-            minimapSettings = { minimapPos = 45, hide = false }
-            IncCalloutDB.profiles.Default.minimap = minimapSettings
+        -- Ensure the global saved-table used by LibDBIcon is initialized and matches AceDB storage
+        IncCalloutDB = _G["IncCalloutDB"] or IncCalloutDB or {}
+        IncCalloutDB.profiles = IncCalloutDB.profiles or {}
+        IncCalloutDB.profiles.Default = IncCalloutDB.profiles.Default or {}
+        IncCalloutDB.profiles.Default.minimap = IncCalloutDB.profiles.Default.minimap or { minimapPos = 45, hide = false }
+
+        -- Immediately register and apply minimap settings now that saved vars exist
+        if addonNamespace.InitializeMiniMapIcon then
+            addonNamespace.InitializeMiniMapIcon()
+        else
+            -- try fallback registration if the helper isn't present
+            pcall(function()
+                if LibStub and LibStub("LibDBIcon-1.0", true) and IncCalloutLDB then
+                    LibStub("LibDBIcon-1.0"):Register("IncCallout", IncCalloutLDB, IncCalloutDB.profiles.Default.minimap)
+                end
+            end)
+        end
+        if addonNamespace.UpdateMiniMapVisibility then
+            addonNamespace.UpdateMiniMapVisibility()
         end
 
-        -- Register the MiniMap icon if not already registered
-        if not isIconRegistered then
-        --    icon:Register("IncCallout", IncCalloutLDB, minimapSettings)
-            isIconRegistered = true
+        -- Reapply visual settings now that IncDB exists (borders, color, fonts, scale)
+        pcall(function()
+            if applyBorderChange then applyBorderChange() end
+            if applyColorChange then applyColorChange() end
+            if ApplyFontSettings then ApplyFontSettings() end
+            if applyButtonColor then applyButtonColor() end
+            if ScaleGUI then ScaleGUI() end
+            if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
+        end)
+
+        -- Ensure the main window is hidden by default unless we are in a PvP instance
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+            IncCallout:Show()
+        else
+            IncCallout:Hide()
         end
-
-        -- Initialize the MiniMap icon
-        InitializeMiniMapIcon()
-
-        -- Set default values for other settings if not already set
-        if not IncDB then
-            IncDB = {
-                buttonColor = { r = 1, g = 0, b = 0, a = 1 },
-                fontColor = { r = 1, g = 1, b = 1, a = 1 },
-            }
-        end
-
-        -- Apply logo settings
-        if IncCallout.SetLogo then
-            IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw")
-        end
-
-        -- Apply logo color settings
-        if IncDB.logoColor then
-            local color = IncDB.logoColor
-            logo:SetVertexColor(color.r, color.g, color.b, color.a)
-        end
-
-        -- Apply font color settings
-        if IncDB.fontColor then
-            local color = IncDB.fontColor
-            for _, buttonText in ipairs(buttonTexts) do
-                buttonText:SetTextColor(color.r, color.g, color.b, color.a)
-            end
-        end
-
-        -- Apply UI settings
-        applyBorderChange()
-        applyColorChange()
-        ApplyFontSettings()
 
     elseif event == "PLAYER_LOGIN" then
         SavePvPStats()
@@ -2134,10 +2145,9 @@ local function OnEvent(self, event, arg1, ...)
         local message = arg1
         onChatMessage(message)
 
-    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
-        local index = 7  
-        local rating = select(2, GetPersonalRatedInfo(index))  
-        
+    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        local index = 7
+        local rating = select(2, GetPersonalRatedInfo(index))
         UpdatePvPStatsFrame(rating)
     end
 end
@@ -2147,82 +2157,183 @@ SafeRegisterOn(pvpStatsFrame, "PLAYER_ENTERING_WORLD")
 SafeRegisterOn(pvpStatsFrame, "CURRENCY_DISPLAY_UPDATE")
 SafeRegisterOn(pvpStatsFrame, "WEEKLY_REWARDS_UPDATE")
 
--- Create the LibDataBroker object
-local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
-    type = "data source",
-    text = "Incoming-BG",
-    icon = "Interface\\AddOns\\IncCallout\\Icon\\INC.png",
-    OnClick = function(_, button)
-        if button == "LeftButton" then
-            if IncCallout:IsShown() then
-                IncCallout:Hide()
-            else
-                IncCallout:Show()
-            end
-        else
-            if Settings.OpenToCategory then
-                Settings.OpenToCategory("Incoming-BG")
-            else
-                print("|cffff0000Options frame function not available|r")
-            end
-        end
-    end,
-    OnTooltipShow = function(tooltip)
-        tooltip:AddLine("|cff00ff00Incoming-BG|r") -- Green title
-        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1) -- Yellow label
-        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1) -- Yellow label
-        
-    end,
-})
+-- === Consolidated Minimap / LDB / LibDBIcon block (replace all other minimap/LDB code) ===
 
--- Function to toggle MiniMap button visibility
-local function ToggleMiniMapButton(enable)
-   
-    local minimapSettings = IncCalloutDB.profiles.Default.minimap
-    if not minimapSettings then
-        IncCalloutDB.profiles.Default.minimap = { minimapPos = 45, hide = false }
-    end
+local LDB_ICON_ID = "IncCallout" -- canonical id used for LibDBIcon
 
-    -- Update the visibility state using `hide`
-    IncCalloutDB.profiles.Default.minimap.hide = not enable
 
-    -- Toggle the MiniMap button visibility using LibDBIcon
-    if enable then
-        LibStub("LibDBIcon-1.0"):Show("IncCallout")
-    else
-        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
-    end
+
+-- Ensure saved profile table for LibDBIcon exists and return it
+local function EnsureMiniMapProfileTable()
+    IncCalloutDB = IncCalloutDB or {}
+    IncCalloutDB.profiles = IncCalloutDB.profiles or {}
+    -- AceDB will normally create profiles.Default, but guard if not present
+    IncCalloutDB.profiles.Default = IncCalloutDB.profiles.Default or {}
+    IncCalloutDB.profiles.Default.minimap = IncCalloutDB.profiles.Default.minimap or { minimapPos = 45, hide = false }
+    return IncCalloutDB.profiles.Default.minimap
 end
 
--- Automatically manage MiniMap position using LibDBIcon
+-- Register the LDB object with LibDBIcon (guarded). Returns true on success.
 local function InitializeMiniMapIcon()
-    -- Ensure the minimap settings exist in the profile
-    local minimapSettings = IncCalloutDB.profiles.Default.minimap
-    if not minimapSettings then
-        minimapSettings = { minimapPos = 45, hide = false }
-        IncCalloutDB.profiles.Default.minimap = minimapSettings
+    if not LibStub then return false end
+    local ldb = LibStub("LibDataBroker-1.1", true)
+    local dbicon = LibStub("LibDBIcon-1.0", true)
+    if not dbicon or not ldb or not IncCalloutLDB then
+        -- library not loaded yet
+        return false
     end
 
-    -- Register the MiniMap icon with LibDBIcon
-    LibStub("LibDBIcon-1.0"):Register("IncCallout", IncCalloutLDB, minimapSettings)
+    local minimapSettings = EnsureMiniMapProfileTable()
 
-    -- Apply the visibility state
+    -- Register under canonical ID. Use pcall to avoid runtime errors if something odd occurs.
+    pcall(function()
+        dbicon:Register(LDB_ICON_ID, IncCalloutLDB, minimapSettings)
+    end)
+
+    -- Apply visibility according to saved setting
     if minimapSettings.hide then
-        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
+        pcall(function() dbicon:Hide(LDB_ICON_ID) end)
     else
-        LibStub("LibDBIcon-1.0"):Show("IncCallout")
+        pcall(function() dbicon:Show(LDB_ICON_ID) end)
+    end
+
+    return true
+end
+
+local LDB_ICON_ID = "IncCallout" -- canonical id used for LibDBIcon
+
+-- Create LDB object if missing (safe)
+if not IncCalloutLDB and LibStub and LibStub("LibDataBroker-1.1", true) then
+    local ldb = LibStub("LibDataBroker-1.1")
+    IncCalloutLDB = ldb:NewDataObject("Incoming-BG", {
+        type = "data source",
+        text = "Incoming-BG",
+        icon = "Interface\\AddOns\\IncCallout\\Icon\\INC.png",
+        OnClick = function(_, button)
+            if button == "LeftButton" then
+                if IncCallout and IncCallout:IsShown() then IncCallout:Hide() else if IncCallout then IncCallout:Show() end end
+            else
+                if Settings and Settings.OpenToCategory then Settings.OpenToCategory("Incoming-BG")
+                else print("|cffff0000Incoming-BG: Options panel unavailable.|r") end
+            end
+        end,
+        OnTooltipShow = function(tooltip)
+            tooltip:AddLine("|cff00ff00Incoming-BG|r")
+            tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1,1,1)
+            tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1,1,1)
+        end,
+    })
+end
+
+-- Ensure and return the minimap profile table used by LibDBIcon
+local function EnsureMiniMapProfileTable()
+    IncCalloutDB = IncCalloutDB or {}
+    IncCalloutDB.profiles = IncCalloutDB.profiles or {}
+    IncCalloutDB.profiles.Default = IncCalloutDB.profiles.Default or {}
+    IncCalloutDB.profiles.Default.minimap = IncCalloutDB.profiles.Default.minimap or { minimapPos = 45, hide = false }
+    return IncCalloutDB.profiles.Default.minimap
+end
+
+-- Register the LDB object with LibDBIcon (guarded)
+local function InitializeMiniMapIcon()
+    if not LibStub then
+        print("IncCallout: LibStub missing, cannot initialize minimap icon")
+        return false
+    end
+    local ldb = LibStub("LibDataBroker-1.1", true)
+    local dbicon = LibStub("LibDBIcon-1.0", true)
+    if not dbicon or not ldb or not IncCalloutLDB then
+        if not InitializeMiniMapIcon._warned then
+            print("IncCallout: LibDBIcon or LDB not ready yet, deferring icon registration")
+            InitializeMiniMapIcon._warned = true
+        end
+        return false
+    end
+
+    local minimapSettings = EnsureMiniMapProfileTable()
+
+    local ok, err = pcall(function()
+        dbicon:Register(LDB_ICON_ID, IncCalloutLDB, minimapSettings)
+    end)
+    if not ok then
+        print("IncCallout: error registering minimap icon:", tostring(err))
+        return false
+    end
+
+    if minimapSettings.hide then
+        pcall(function() dbicon:Hide(LDB_ICON_ID) end)
+        print("IncCallout: minimap icon registered (hidden by settings)")
+    else
+        pcall(function() dbicon:Show(LDB_ICON_ID) end)
+        print("IncCallout: minimap icon registered (shown)")
+    end
+
+    return true
+end
+
+-- Apply visibility according to the saved table
+local function UpdateMiniMapVisibility()
+    local dbicon = LibStub and LibStub("LibDBIcon-1.0", true)
+    if not dbicon then
+        print("IncCallout: LibDBIcon not available for UpdateMiniMapVisibility")
+        return
+    end
+    local minimapSettings = IncCalloutDB and IncCalloutDB.profiles and IncCalloutDB.profiles.Default and IncCalloutDB.profiles.Default.minimap
+    if minimapSettings and minimapSettings.hide then
+        pcall(function() dbicon:Hide(LDB_ICON_ID) end)
+        print("IncCallout: UpdateMiniMapVisibility -> Hide")
+    else
+        pcall(function() dbicon:Show(LDB_ICON_ID) end)
+        print("IncCallout: UpdateMiniMapVisibility -> Show")
     end
 end
 
--- Update MiniMap visibility based on settings
-local function UpdateMiniMapVisibility()
-    local minimapSettings = IncCalloutDB.profiles.Default.minimap
-    if minimapSettings and minimapSettings.hide then
-        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
-    else
-        LibStub("LibDBIcon-1.0"):Show("IncCallout")
-    end
+-- Toggle the minimap icon and persist the choice
+local function ToggleMiniMapButton(enable)
+    EnsureMiniMapProfileTable()
+    IncCalloutDB.profiles.Default.minimap.hide = not enable
+    UpdateMiniMapVisibility()
 end
+
+-- Debug helper (call from /run)
+local function DebugMiniMap()
+    print("IncCalloutLDB:", tostring(IncCalloutLDB))
+    print("LibDBIcon loaded:", tostring((LibStub and LibStub("LibDBIcon-1.0", true)) and true or false))
+    print("Saved minimap table:", tostring(IncCalloutDB and IncCalloutDB.profiles and IncCalloutDB.profiles.Default and IncCalloutDB.profiles.Default.minimap))
+end
+
+-- export helpers for options/other code
+addonNamespace.InitializeMiniMapIcon = InitializeMiniMapIcon
+addonNamespace.ToggleMiniMapButton = ToggleMiniMapButton
+addonNamespace.UpdateMiniMapVisibility = UpdateMiniMapVisibility
+addonNamespace.DebugMiniMap = DebugMiniMap
+
+-- Toggle the minimap icon and persist the choice
+local function ToggleMiniMapButton(enable)
+    EnsureMiniMapProfileTable()
+    IncCalloutDB.profiles.Default.minimap.hide = not enable
+    UpdateMiniMapVisibility()
+end
+
+-- Debug helper (call from /run if needed)
+local function DebugMiniMap()
+    print("IncCalloutLDB:", tostring(IncCalloutLDB))
+    local hasDbicon = LibStub and LibStub("LibDBIcon-1.0", true) and true or false
+    print("LibDBIcon loaded:", hasDbicon)
+    print("Saved minimap table:", tostring(IncCalloutDB and IncCalloutDB.profiles and IncCalloutDB.profiles.Default and IncCalloutDB.profiles.Default.minimap))
+end
+
+-- IMPORTANT: call InitializeMiniMapIcon() AFTER AceDB:New(...) (i.e. after your db/profile creation in ADDON_LOADED).
+-- Example (inside your existing ADDON_LOADED branch, right after db = AceDB:New(...)):
+--     InitializeMiniMapIcon()
+--     UpdateMiniMapVisibility()
+-- ------------------------------------------------------------------------------
+
+-- Optional convenience exports (so other code can call these functions)
+addonNamespace.InitializeMiniMapIcon = InitializeMiniMapIcon
+addonNamespace.ToggleMiniMapButton = ToggleMiniMapButton
+addonNamespace.UpdateMiniMapVisibility = UpdateMiniMapVisibility
+addonNamespace.DebugMiniMap = DebugMiniMap
 
 -- Ensure SavedVariables are loaded and initialized
 local function InitializeAddon()
@@ -2433,7 +2544,10 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     pvpStatsFrame:Show()
 end)
 
-
+-- Ensure buttons use saved font/size/texture immediately
+if ApplyFontSettings then ApplyFontSettings() end
+if applyStatusbarTexture then applyStatusbarTexture() end
+if applyButtonColor then applyButtonColor() end
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included
 pvpStatsButton:SetScript("OnEnter", function(self)

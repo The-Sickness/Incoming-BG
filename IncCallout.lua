@@ -66,6 +66,7 @@ local defaults = {
 local buttonTexts = {}
 local buttons = {}
 local playerFaction
+local SendMessage
  
 local buttonMessageIndices = {
     sendMore = 1,
@@ -106,8 +107,8 @@ closeButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
--- Create the PVP Stats window frame
-local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
+-- Create the PVP Stats window frame (avoid Blizzard-colliding global name)
+local pvpStatsFrame = CreateFrame("Frame", nil, UIParent, "BasicFrameTemplateWithInset")
 pvpStatsFrame:SetSize(700, 320)  
 pvpStatsFrame:SetPoint("CENTER")
 pvpStatsFrame:SetMovable(true)
@@ -345,15 +346,25 @@ local function GetSpecName(specID)
     return "N/A"
 end
 
+-- Replace the existing FetchSoloRBGStats and FetchSoloShuffleStats functions with these corrected versions.
+
 -- Function to fetch Solo RBG stats
 local function FetchSoloRBGStats()
-    local gamesPlayed = GetStatistic(40199) or "N/A"
-    local gamesWon = GetStatistic(40201) or "N/A"
-    local playedMost = GetStatistic(40200) or "N/A"
-    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_RBG_INDEX) -- Use the correct bracketIndex
+    local gamesPlayed = (GetStatistic and GetStatistic(40199)) or "N/A"
+    local gamesWon = (GetStatistic and GetStatistic(40201)) or "N/A"
+    local playedMost = (GetStatistic and GetStatistic(40200)) or "N/A"
 
-    if rating then
-        local specStats = C_PvP.GetPersonalRatedBGBlitzSpecStats() or {}
+    -- Try to safely read rated info (second return is rating)
+    local rating
+    if GetPersonalRatedInfo then
+        local ok, res = pcall(function() return { GetPersonalRatedInfo(SOLO_RBG_INDEX) } end)
+        if ok and res and res[2] then
+            rating = res[2]
+        end
+    end
+
+    if rating and rating ~= 0 then
+        local specStats = (C_PvP and C_PvP.GetPersonalRatedBGBlitzSpecStats and C_PvP.GetPersonalRatedBGBlitzSpecStats()) or {}
         local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
         local mostPlayedSpec = GetSpecName(mostPlayedSpecID)
         local currentRank = GetPvpRank(rating)
@@ -365,11 +376,25 @@ end
 
 -- Function to fetch Solo Shuffle stats
 local function FetchSoloShuffleStats()
-    local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
-    local shuffleSpecStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
+    -- We'll safely try to read rated info for the Solo Shuffle index and extract a few commonly-used fields.
+    local shuffleSeasonBest, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon
+
+    if GetPersonalRatedInfo then
+        local ok, res = pcall(function() return { GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX) } end)
+        if ok and res then
+            -- GetPersonalRatedInfo returns multiple values; indices depend on the API version.
+            -- Index mapping is approximate and guarded; fall back to "N/A" when not available.
+            shuffleSeasonBest = res[3] or "N/A"                  -- seasonBest (commonly index 3)
+            shuffleRoundsSeasonPlayed = res[13] or "N/A"         -- roundsSeasonPlayed (if present)
+            shuffleRoundsSeasonWon = res[14] or "N/A"            -- roundsSeasonWon (if present)
+        end
+    end
+
+    local shuffleSpecStats = (C_PvP and C_PvP.GetPersonalRatedSoloShuffleSpecStats and C_PvP.GetPersonalRatedSoloShuffleSpecStats()) or {}
     local shuffleMostPlayedSpecID = shuffleSpecStats.seasonMostPlayedSpecID or 0
     local shuffleMostPlayedSpecName = GetSpecName(shuffleMostPlayedSpecID)
-    return shuffleSeasonBest, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleMostPlayedSpecName
+
+    return shuffleSeasonBest or "N/A", shuffleRoundsSeasonPlayed or "N/A", shuffleRoundsSeasonWon or "N/A", shuffleMostPlayedSpecName
 end
 
 -- Function to save PvP stats
@@ -537,15 +562,16 @@ local function UpdateBGStatsFrame(character)
 end
 
 -- Function to create character dropdown
+local dropdown = CreateFrame("FRAME", nil, pvpStatsFrame, "UIDropDownMenuTemplate")
+dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
+
+UIDropDownMenu_SetWidth(dropdown, 150)
+UIDropDownMenu_SetText(dropdown, "Characters")
+
 local function CreateCharacterDropdown()
-    local dropdown = CreateFrame("FRAME", "SelectCharacterDropdown", pvpStatsFrame, "UIDropDownMenuTemplate")
-    dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
-
-    UIDropDownMenu_SetWidth(dropdown, 150)
-    UIDropDownMenu_SetText(dropdown, "Characters")
-
+    local dropdownLocal = dropdown
     local function OnClick(self)
-        UIDropDownMenu_SetSelectedID(dropdown, self:GetID(), true)
+        UIDropDownMenu_SetSelectedID(dropdownLocal, self:GetID(), true)
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
         local characterFullName = self:GetText()
         local characterNameOnly = string.match(characterFullName, "^[^%-]+")
@@ -655,8 +681,8 @@ CreateCharacterDropdown()
 -- Function to handle the OnShow event for the PvP stats frame
 pvpStatsFrame:SetScript("OnShow", function()
     local character = UnitName("player")
-    UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-    UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+    UIDropDownMenu_SetText(dropdown, character)
+    UIDropDownMenu_SetSelectedValue(dropdown, character)
     local stats = IncCalloutDB[character]
     if stats then
         tabs[1].playerNameValue:SetText(character or "Unknown")
@@ -705,7 +731,7 @@ pvpStatsFrame:SetScript("OnShow", function()
     UpdateSoloRBGStatsFrame(character)
     UpdateSoloShuffleStatsFrame(character)
     UpdateMiscStatsFrame(character)
-    UIDropDownMenu_SetText(SelectCharacterDropdown, "Characters")
+    UIDropDownMenu_SetText(dropdown, "Characters")
 end)
 
 local function DelayedSaveAndUpdate()
@@ -745,8 +771,8 @@ local eventHandlers = {
         DelayedSaveAndUpdate()
         C_Timer.After(2, function()
             local character = UnitName("player")
-            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+            UIDropDownMenu_SetText(dropdown, character)
+            UIDropDownMenu_SetSelectedValue(dropdown, character)
         end)
     end,
     ["ADDON_LOADED"] = function(addonName)
@@ -754,8 +780,8 @@ local eventHandlers = {
             DelayedSaveAndUpdate()
             C_Timer.After(2, function()
                 local character = UnitName("player")
-                UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-                UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+                UIDropDownMenu_SetText(dropdown, character)
+                UIDropDownMenu_SetSelectedValue(dropdown, character)
             end)
         end
     end,
@@ -763,8 +789,8 @@ local eventHandlers = {
         DelayedSaveAndUpdate()
         C_Timer.After(2, function()
             local character = UnitName("player")
-            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+            UIDropDownMenu_SetText(dropdown, character)
+            UIDropDownMenu_SetSelectedValue(dropdown, character)
         end)
     end,
     ["CHAT_MSG_COMBAT_HONOR_GAIN"] = function(honorGained)
@@ -792,11 +818,28 @@ local function EventHandler(self, event, ...)
     end
 end
 
-local frame = CreateFrame("Frame")
-for event in pairs(eventHandlers) do
-    frame:RegisterEvent(event)
+-- Safe helper for registering events that avoids throwing ADDON_ACTION_FORBIDDEN
+local function SafeRegisterOn(frameObj, ev)
+    local ok, err = pcall(frameObj.RegisterEvent, frameObj, ev)
+    if not ok then
+        print("IncCallout: failed to register event", ev, "error:", err)
+    end
 end
-frame:SetScript("OnEvent", EventHandler)
+
+-- Replace the ad-hoc OnUpdate frame with a named local
+local messageFrame = CreateFrame("Frame") -- anonymous, dedicated OnUpdate
+messageFrame:SetScript("OnUpdate", function(self, elapsed)
+    SendMessage()
+end)
+
+-- Central event frame for eventHandlers
+local eventFrame = CreateFrame("Frame") -- anonymous, dedicated to eventHandlers
+for event in pairs(eventHandlers) do
+    SafeRegisterOn(eventFrame, event)
+end
+eventFrame:SetScript("OnEvent", function(self, event, ...)
+    pcall(EventHandler, self, event, ...)
+end)
 
 local colorOptions = {
     { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
@@ -1020,10 +1063,6 @@ end
 
 local fontSize = 14
 
---local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
---bgTexture:SetColorTexture(0, 0, 0)
---bgTexture:SetAllPoints(IncCallout)
-
 IncCallout:SetScript("OnDragStart", function(self)
     if not IncDB.isLocked then
         self:StartMoving()
@@ -1213,6 +1252,7 @@ local function InitializeAddon()
     UpdateMiniMapVisibility()
 end
 
+-- Options table (healer/tracker related entries removed)
 local options = {
     name = "Incoming-BG",
     type = "group",
@@ -1549,7 +1589,7 @@ local options = {
                     },
                 },
             },
-        }, 
+        },
 
         appearanceSettings = {
             type = "group",
@@ -1730,7 +1770,7 @@ local options = {
                     order = 9,
                 },
             },
-        }, 
+        },
 
         mapSettings = {
             type = "group",
@@ -1772,7 +1812,7 @@ local options = {
                     end,
                 },
             },
-        }, 
+        },
 
         fontSettings = {
             type = "group",
@@ -1813,58 +1853,7 @@ local options = {
                     order = 2,
                 },
             },
-        }, 
-
-        trackerSettings = {
-            type = "group",
-            name = "Tracker Settings",
-            order = 99,
-            args = {
-                enableHealerIcon = {
-                    type = "toggle",
-                    name = "Enable Healer Icon Tracker",
-                    desc = "When enabled, identifies enemy healer players in battlegrounds and arenas by displaying a healer icon next to their nameplate. This makes it easier to target or call focus on enemy healers, improving team coordination and strategy.",
-                    order = 2,
-                    get = function() return IncDB.enableHealerIcon ~= false end,
-                    set = function(_, value)
-                        IncDB.enableHealerIcon = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                        if value then
-                            UpdateHealerIcons()
-                        else
-                            for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
-                                HideHealerIcon(plate)
-                            end
-                        end
-                    end,
-                },
-
-                healerIconSize = {
-                    type = "range",
-                    name = "Healer Icon Size",
-                    desc = "Adjust the size of the healer icon shown on nameplates.",
-                    min = 10, max = 64, step = 1,
-                    get = function() return IncDB.healerIconSize or 24 end,
-                    set = function(_, value)
-                        IncDB.healerIconSize = value
-                        UpdateHealerIcons()
-                    end,
-                    order = 4,
-                },
-
-                enableHealerMessage = {
-                    type = "toggle",
-                    name = "Enable Healer Message Announcements",
-                    desc = "If enabled, announces enemy healer detection in chat.",
-                    order = 5,
-                    get = function() return IncDB.enableHealerMessage ~= false end,
-                    set = function(_, value)
-                        IncDB.enableHealerMessage = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                    end,
-                },
-            },
-        }, 
+        },
 
         resetSettings = {
             type = "group",
@@ -1920,9 +1909,9 @@ local options = {
                     end,
                 },
             },
-        }, 
-    }, 
-} 
+        },
+    },
+}
 
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
@@ -1981,12 +1970,15 @@ local messageQueue = {}
 local timeLastMessageSent = 0
 local MESSAGE_DELAY = 1.5 
 
-local function SendMessage()
+SendMessage = function()
     if #messageQueue == 0 then return end
-    if time() - timeLastMessageSent < MESSAGE_DELAY then return end 
+    if time() - timeLastMessageSent < MESSAGE_DELAY then return end
 
     local message = table.remove(messageQueue, 1)
-    SendChatMessage(message.text, message.channel)
+    -- guard SendChatMessage to avoid unexpected runtime errors
+    if type(SendChatMessage) == "function" and message and message.text and message.channel then
+        pcall(SendChatMessage, message.text, message.channel)
+    end
     timeLastMessageSent = time()
 end
 
@@ -2026,60 +2018,134 @@ local function ListHealers()
     end
 end
 
--- Setup a frame to periodically attempt to send messages
-local frame = CreateFrame("Frame")
-frame:SetScript("OnUpdate", function(self, elapsed)
-    SendMessage()
+-- Create a single frame to handle all events (init)
+local initFrame = CreateFrame("Frame") -- anonymous init/boot frame
+
+local initEvents = {
+    "ADDON_LOADED", "PLAYER_LOGIN", "PLAYER_LOGOUT", "PLAYER_ENTERING_WORLD",
+    "PLAYER_LEAVING_WORLD", "CURRENCY_DISPLAY_UPDATE", "HONOR_XP_UPDATE",
+    "CHAT_MSG_INSTANCE_CHAT", "WEEKLY_REWARDS_UPDATE", "PVP_RATED_STATS_UPDATE",
+    "PVP_REWARDS_UPDATE", "ACTIVE_TALENT_GROUP_CHANGED", "CHAT_MSG_COMBAT_HONOR_GAIN",
+    "ZONE_CHANGED_NEW_AREA", "PVP_BRAWL_INFO_UPDATED", "PLAYER_REGEN_DISABLED",
+    "PLAYER_REGEN_ENABLED", "COMBAT_RATING_UPDATE", "ARENA_SEASON_WORLD_STATE",
+    "PLAYER_PVP_RANK_CHANGED",
+}
+
+for _, ev in ipairs(initEvents) do
+    SafeRegisterOn(initFrame, ev)
+end
+
+initFrame:SetScript("OnEvent", function(self, event, ...)
+    pcall(OnEvent, self, event, ...)
 end)
 
--- Create a table to map each location to itself
-local locationTable = {}
-for _, location in ipairs(battlegroundLocations) do
-    locationTable[location] = location
-end
- 
-local function isInBattleground()
-    local inInstance, instanceType = IsInInstance()
-    return inInstance and (instanceType == "pvp" or instanceType == "arena")
-end
- 
-local function ButtonOnClick(self)
-    if not isInBattleground() then
-        print("You are not in a battleground.")
-        return
-    end
+-- Ensure isIconRegistered is initialized
+local isIconRegistered = false
 
-    local currentLocation = GetSubZoneText()
-   
-    local message = self:GetText() .. " Incoming at " .. currentLocation
-    SendChatMessage(message, "INSTANCE_CHAT")
-end
+-- Event handler for ADDON_LOADED to initialize settings
+local function OnEvent(self, event, arg1, ...)
+    if event == "ADDON_LOADED" and arg1 == "IncCallout" then
+        -- Initialize AceDB for profile management
+        db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
+        IncDB = db.profile or {}
 
+        -- Ensure minimap settings exist in the profile
+        local minimapSettings = IncCalloutDB.profiles.Default.minimap
+        if not minimapSettings then
+            minimapSettings = { minimapPos = 45, hide = false }
+            IncCalloutDB.profiles.Default.minimap = minimapSettings
+        end
 
-local f = CreateFrame("Frame")
-f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+        -- Register the MiniMap icon if not already registered
+        if not isIconRegistered then
+        --    icon:Register("IncCallout", IncCalloutLDB, minimapSettings)
+            isIconRegistered = true
+        end
 
-local function UpdatePoints()
+        -- Initialize the MiniMap icon
+        InitializeMiniMapIcon()
 
-    if not IncDB then
-        return
-    end
+        -- Set default values for other settings if not already set
+        if not IncDB then
+            IncDB = {
+                buttonColor = { r = 1, g = 0, b = 0, a = 1 },
+                fontColor = { r = 1, g = 1, b = 1, a = 1 },
+            }
+        end
 
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-  
-end
+        -- Apply logo settings
+        if IncCallout.SetLogo then
+            IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw")
+        end
 
-IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-IncCallout:RegisterEvent("HONOR_XP_UPDATE")
-IncCallout:SetScript("OnEvent", function(self, event, ...)
-    if event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        -- Apply logo color settings
+        if IncDB.logoColor then
+            local color = IncDB.logoColor
+            logo:SetVertexColor(color.r, color.g, color.b, color.a)
+        end
+
+        -- Apply font color settings
+        if IncDB.fontColor then
+            local color = IncDB.fontColor
+            for _, buttonText in ipairs(buttonTexts) do
+                buttonText:SetTextColor(color.r, color.g, color.b, color.a)
+            end
+        end
+
+        -- Apply UI settings
+        applyBorderChange()
+        applyColorChange()
+        ApplyFontSettings()
+
+    elseif event == "PLAYER_LOGIN" then
+        SavePvPStats()
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+            IncCallout:Show()
+        else
+            IncCallout:Hide()
+        end
         UpdatePoints()
-		ApplyFontSettings()
-    end
-end)
+        ScaleGUI()
+        ApplyFontSettings()
+        applyButtonColor()
 
-UpdatePoints()
+    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        UpdatePvPStatsFrame()
+        UpdatePoints()
+
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        local inInstance, instanceType = IsInInstance()
+        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+            IncCallout:Show()
+        else
+            IncCallout:Hide()
+        end
+        UpdatePoints()
+        ScaleGUI()
+        ApplyFontSettings()
+        applyButtonColor()
+
+    elseif event == "PLAYER_LEAVING_WORLD" then
+        IncCallout:Hide()
+        applyButtonColor()
+
+    elseif event == "CHAT_MSG_INSTANCE_CHAT" then
+        local message = arg1
+        onChatMessage(message)
+
+    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
+        local index = 7  
+        local rating = select(2, GetPersonalRatedInfo(index))  
+        
+        UpdatePvPStatsFrame(rating)
+    end
+end
+
+-- Register a few safety-wrapped events on pvpStatsFrame if needed
+SafeRegisterOn(pvpStatsFrame, "PLAYER_ENTERING_WORLD")
+SafeRegisterOn(pvpStatsFrame, "CURRENCY_DISPLAY_UPDATE")
+SafeRegisterOn(pvpStatsFrame, "WEEKLY_REWARDS_UPDATE")
 
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
@@ -2331,140 +2397,12 @@ local function ApplyFontSettings()
   
 end
 
--- Create a single frame to handle all events
-local frame = CreateFrame("Frame", "IncCalloutFrame")
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("PLAYER_LOGOUT")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("PLAYER_LEAVING_WORLD")
-frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-frame:RegisterEvent("HONOR_XP_UPDATE")
-frame:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
-frame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
-frame:RegisterEvent("PVP_RATED_STATS_UPDATE")
-frame:RegisterEvent("PVP_REWARDS_UPDATE")
-frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-frame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
-frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-frame:RegisterEvent("COMBAT_RATING_UPDATE")
-frame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
-frame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
-frame:SetScript("OnEvent", EventHandler)
+-- Create event-handling frame(s) and register safely
 
--- Ensure isIconRegistered is initialized
-local isIconRegistered = false
+-- Register the events that used to be on IncCallout or on a named frame
+-- (initFrame above already registered most of these)
 
--- Event handler for ADDON_LOADED to initialize settings
-local function OnEvent(self, event, arg1, ...)
-    if event == "ADDON_LOADED" and arg1 == "IncCallout" then
-        -- Initialize AceDB for profile management
-        db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
-        IncDB = db.profile or {}
-
-        -- Ensure minimap settings exist in the profile
-        local minimapSettings = IncCalloutDB.profiles.Default.minimap
-        if not minimapSettings then
-            minimapSettings = { minimapPos = 45, hide = false }
-            IncCalloutDB.profiles.Default.minimap = minimapSettings
-        end
-
-        -- Register the MiniMap icon if not already registered
-        if not isIconRegistered then
-        --    icon:Register("IncCallout", IncCalloutLDB, minimapSettings)
-            isIconRegistered = true
-        end
-
-        -- Initialize the MiniMap icon
-        InitializeMiniMapIcon()
-
-        -- Set default values for other settings if not already set
-        if not IncDB then
-            IncDB = {
-                buttonColor = { r = 1, g = 0, b = 0, a = 1 },
-                fontColor = { r = 1, g = 1, b = 1, a = 1 },
-            }
-        end
-
-        -- Apply logo settings
-        if IncCallout.SetLogo then
-            IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw")
-        end
-
-        -- Apply logo color settings
-        if IncDB.logoColor then
-            local color = IncDB.logoColor
-            logo:SetVertexColor(color.r, color.g, color.b, color.a)
-        end
-
-        -- Apply font color settings
-        if IncDB.fontColor then
-            local color = IncDB.fontColor
-            for _, buttonText in ipairs(buttonTexts) do
-                buttonText:SetTextColor(color.r, color.g, color.b, color.a)
-            end
-        end
-
-        -- Apply UI settings
-        applyBorderChange()
-        applyColorChange()
-        ApplyFontSettings()
-
-    elseif event == "PLAYER_LOGIN" then
-        SavePvPStats()
-        local inInstance, instanceType = IsInInstance()
-        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-            IncCallout:Show()
-        else
-            IncCallout:Hide()
-        end
-        UpdatePoints()
-        ScaleGUI()
-        ApplyFontSettings()
-        applyButtonColor()
-
-    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
-        UpdatePvPStatsFrame()
-        UpdatePoints()
-
-    elseif event == "PLAYER_ENTERING_WORLD" then
-        local inInstance, instanceType = IsInInstance()
-        if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-            IncCallout:Show()
-        else
-            IncCallout:Hide()
-        end
-        UpdatePoints()
-        ScaleGUI()
-        ApplyFontSettings()
-        applyButtonColor()
-
-    elseif event == "PLAYER_LEAVING_WORLD" then
-        IncCallout:Hide()
-        applyButtonColor()
-
-    elseif event == "CHAT_MSG_INSTANCE_CHAT" then
-        local message = arg1
-        onChatMessage(message)
-
-    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
-        local index = 7  
-        local rating = select(2, GetPersonalRatedInfo(index))  
-        
-        UpdatePvPStatsFrame(rating)
-    end
-end
-
-frame:SetScript("OnEvent", OnEvent)
-
--- Register additional events for pvpStatsFrame
-pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
-
+-- Buttons and UI creation (unchanged)
 local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 35, -40, ButtonOnClick)
 local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 10, 0, ButtonOnClick)
 local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 10, 0, ButtonOnClick)
@@ -2584,10 +2522,5 @@ end
 SLASH_INCOMINGBGMSG1 = "/incmsg"
 SlashCmdList["INCOMINGBGMSG"] = IncomingBGMessageCommandHandler
  
-IncCallout:SetScript("OnEvent", OnEvent)
- 
--- Register the events
-IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
-IncCallout:RegisterEvent("PLAYER_LOGIN")
-IncCallout:RegisterEvent("PLAYER_LOGOUT")
-IncCallout:SetScript("OnEvent", OnEvent)
+-- Hook up the initFrame's OnEvent handler (already done above)
+-- Avoid calling IncCallout:RegisterEvent(...) or IncCallout:SetScript("OnEvent", ...) to prevent taint issues.

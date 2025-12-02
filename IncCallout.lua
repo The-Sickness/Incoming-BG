@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.6 - Midnight Beta
+-- v9.7 - Midnight Beta
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -373,7 +373,7 @@ local function FetchSoloRBGStats()
         return "N/A", gamesPlayed, gamesWon, "N/A", playedMost, "N/A"
     end
 end
-
+    
 -- Function to fetch Solo Shuffle stats
 local function FetchSoloShuffleStats()
     local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
@@ -1825,58 +1825,6 @@ local options = {
                 },
             },
         }, 
-
-        trackerSettings = {
-            type = "group",
-            name = "Tracker Settings",
-            order = 99,
-            args = {
-                enableHealerIcon = {
-                    type = "toggle",
-                    name = "Enable Healer Icon Tracker",
-                    desc = "When enabled, identifies enemy healer players in battlegrounds and arenas by displaying a healer icon next to their nameplate. This makes it easier to target or call focus on enemy healers, improving team coordination and strategy.",
-                    order = 2,
-                    get = function() return IncDB.enableHealerIcon ~= false end,
-                    set = function(_, value)
-                        IncDB.enableHealerIcon = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                        if value then
-                            UpdateHealerIcons()
-                        else
-                            for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
-                                HideHealerIcon(plate)
-                            end
-                        end
-                    end,
-                },
-
-                healerIconSize = {
-                    type = "range",
-                    name = "Healer Icon Size",
-                    desc = "Adjust the size of the healer icon shown on nameplates.",
-                    min = 10, max = 64, step = 1,
-                    get = function() return IncDB.healerIconSize or 24 end,
-                    set = function(_, value)
-                        IncDB.healerIconSize = value
-                        UpdateHealerIcons()
-                    end,
-                    order = 4,
-                },
-
-                enableHealerMessage = {
-                    type = "toggle",
-                    name = "Enable Healer Message Announcements",
-                    desc = "If enabled, announces enemy healer detection in chat.",
-                    order = 5,
-                    get = function() return IncDB.enableHealerMessage ~= false end,
-                    set = function(_, value)
-                        IncDB.enableHealerMessage = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                    end,
-                },
-            },
-        }, 
-
         resetSettings = {
             type = "group",
             name = "Reset",
@@ -2065,7 +2013,6 @@ local function ButtonOnClick(self)
     local message = self:GetText() .. " Incoming at " .. currentLocation
     SendChatMessage(message, "INSTANCE_CHAT")
 end
-
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
@@ -2505,7 +2452,6 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     pvpStatsFrame:Show()
 end)
-
 
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included

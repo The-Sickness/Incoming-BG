@@ -1887,21 +1887,21 @@ local options = {
 
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
-local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
+--local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
-if Settings then
-    local function RegisterOptionsPanel(panel)
-        local category = Settings.GetCategory(panel.name)
-        if not category then
-            category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-            Settings.RegisterAddOnCategory(category)
-        end
+--if Settings then
+ --   local function RegisterOptionsPanel(panel)
+  --      local category = Settings.GetCategory(panel.name)
+   --     if not category then
+     --       category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+     --       Settings.RegisterAddOnCategory(category)
+     --   end
 
-        panel.categoryID = category:GetID()
-    end
+     --   panel.categoryID = category:GetID()
+   -- end
 
-    RegisterOptionsPanel(optionsFrame)
-end
+  --  RegisterOptionsPanel(optionsFrame)
+--end
 
 
 function addonNamespace.getPreviewText(messageType)
@@ -2044,14 +2044,14 @@ end)
 
 UpdatePoints()
 
--- when you register your options UI
-AceConfig:RegisterOptionsTable("IncCallout", options)
-local blizzPanel = AceConfigDialog:AddToBlizOptions("IncCallout", "IncCallout")
+AceConfig:RegisterOptionsTable("Incoming-BG", options)
+local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
+ --12.0+ Settings category registration (capture numeric ID once)
 if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
-    local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "IncCallout", "IncCallout")
+    local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "Incoming-BG", "Incoming-BG")
     Settings.RegisterAddOnCategory(cat)
-    IncCalloutCategoryID = cat and cat.ID  -- numeric ID
+    IncCalloutCategoryID = cat and cat.ID
 end
 
 local function EnsureSettingsLoaded()
@@ -2064,12 +2064,12 @@ local function OpenIncCalloutSettings()
     EnsureSettingsLoaded()
 
     if IncCalloutCategoryID and Settings and Settings.OpenToCategory then
-        Settings.OpenToCategory(IncCalloutCategoryID)  -- numeric only
+        Settings.OpenToCategory(IncCalloutCategoryID)
         return
     end
 
     if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
-        C_SettingsUtil.OpenSettingsPanel(nil, "IncCallout") -- scroll hint fallback
+        C_SettingsUtil.OpenSettingsPanel(nil, "Incoming-BG") -- match the display name
         return
     end
 

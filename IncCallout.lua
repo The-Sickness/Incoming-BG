@@ -2028,11 +2028,10 @@ UpdatePoints()
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
--- 12.0+ Settings category registration (capture numeric ID once)
-if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
-    local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "Incoming-BG", "Incoming-BG")
-    Settings.RegisterAddOnCategory(cat)
-    IncCalloutCategoryID = cat and cat.ID  -- numeric ID for Settings.OpenToCategory
+-- Capture the numeric category ID created by AddToBlizOptions (no extra registration)
+if Settings and Settings.GetCategory then
+    local cat = Settings.GetCategory("Incoming-BG")
+    IncCalloutCategoryID = cat and cat.ID
 end
 
 local function EnsureSettingsLoaded()

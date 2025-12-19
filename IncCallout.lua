@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.7 - Midnight Beta
+-- v9.6 - Midnight Beta
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -374,6 +374,7 @@ local function FetchSoloRBGStats()
     end
 end
     
+
 -- Function to fetch Solo Shuffle stats
 local function FetchSoloShuffleStats()
     local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
@@ -1825,6 +1826,7 @@ local options = {
                 },
             },
         }, 
+
         resetSettings = {
             type = "group",
             name = "Reset",
@@ -1891,14 +1893,16 @@ if Settings then
     local function RegisterOptionsPanel(panel)
         local category = Settings.GetCategory(panel.name)
         if not category then
-            category, layout = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-            category.ID = panel.name
+            category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
             Settings.RegisterAddOnCategory(category)
         end
+
+        panel.categoryID = category:GetID()
     end
 
     RegisterOptionsPanel(optionsFrame)
 end
+
 
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "
@@ -2014,6 +2018,7 @@ local function ButtonOnClick(self)
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
+
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -2039,6 +2044,38 @@ end)
 
 UpdatePoints()
 
+-- when you register your options UI
+AceConfig:RegisterOptionsTable("IncCallout", options)
+local blizzPanel = AceConfigDialog:AddToBlizOptions("IncCallout", "IncCallout")
+
+if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+    local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "IncCallout", "IncCallout")
+    Settings.RegisterAddOnCategory(cat)
+    IncCalloutCategoryID = cat and cat.ID  -- numeric ID
+end
+
+local function EnsureSettingsLoaded()
+    if not Settings and LoadAddOn then
+        LoadAddOn("Blizzard_Settings")
+    end
+end
+
+local function OpenIncCalloutSettings()
+    EnsureSettingsLoaded()
+
+    if IncCalloutCategoryID and Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory(IncCalloutCategoryID)  -- numeric only
+        return
+    end
+
+    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
+        C_SettingsUtil.OpenSettingsPanel(nil, "IncCallout") -- scroll hint fallback
+        return
+    end
+
+    print("|cffff0000Options not available|r")
+end
+
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",
@@ -2051,21 +2088,17 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
             else
                 IncCallout:Show()
             end
-        else
-            if Settings.OpenToCategory then
-                Settings.OpenToCategory("Incoming-BG")
-            else
-                print("|cffff0000Options frame function not available|r")
-            end
+        elseif button == "RightButton" then
+            OpenIncCalloutSettings()
         end
     end,
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("|cff00ff00Incoming-BG|r") -- Green title
-        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1) -- Yellow label
-        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1) -- Yellow label
-        
+        tooltip:AddLine("|cff00ff00Incoming-BG|r")
+        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1)
+        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1)
     end,
 })
+
 
 -- Function to toggle MiniMap button visibility
 local function ToggleMiniMapButton(enable)
@@ -2452,6 +2485,7 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     pvpStatsFrame:Show()
 end)
+
 
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included

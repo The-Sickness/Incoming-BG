@@ -1873,9 +1873,8 @@ local options = {
                             if ScaleGUI then ScaleGUI() end
                             if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
                             if InitializeMiniMapIcon then InitializeMiniMapIcon() end
-                            if LibStub and LibStub("AceConfigRegistry-3.0") then
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
+                            if LibStub and LibStub("AceConfigRegistry-3.0") then                            
+                               LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
                             end
                         end)
                     end,
@@ -1884,25 +1883,6 @@ local options = {
         }, 
     }, 
 } 
-
-AceConfig:RegisterOptionsTable("Incoming-BG", options)
-
---local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
-
---if Settings then
- --   local function RegisterOptionsPanel(panel)
-  --      local category = Settings.GetCategory(panel.name)
-   --     if not category then
-     --       category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-     --       Settings.RegisterAddOnCategory(category)
-     --   end
-
-     --   panel.categoryID = category:GetID()
-   -- end
-
-  --  RegisterOptionsPanel(optionsFrame)
---end
-
 
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "
@@ -2044,14 +2024,15 @@ end)
 
 UpdatePoints()
 
+-- Register options UI once (single display name)
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
- --12.0+ Settings category registration (capture numeric ID once)
+-- 12.0+ Settings category registration (capture numeric ID once)
 if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
     local cat = Settings.RegisterCanvasLayoutCategory(blizzPanel, "Incoming-BG", "Incoming-BG")
     Settings.RegisterAddOnCategory(cat)
-    IncCalloutCategoryID = cat and cat.ID
+    IncCalloutCategoryID = cat and cat.ID  -- numeric ID for Settings.OpenToCategory
 end
 
 local function EnsureSettingsLoaded()
@@ -2069,7 +2050,7 @@ local function OpenIncCalloutSettings()
     end
 
     if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
-        C_SettingsUtil.OpenSettingsPanel(nil, "Incoming-BG") -- match the display name
+        C_SettingsUtil.OpenSettingsPanel(nil, "Incoming-BG") -- fallback scroll hint
         return
     end
 

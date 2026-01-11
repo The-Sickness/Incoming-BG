@@ -2029,9 +2029,10 @@ AceConfig:RegisterOptionsTable("Incoming-BG", options)
 local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
 -- Capture the numeric category ID created by AddToBlizOptions (no extra registration)
-if Settings and Settings.GetCategory then
-    local cat = Settings.GetCategory("Incoming-BG")
-    IncCalloutCategoryID = cat and cat.ID
+if Settings and Settings.RegisterAddOnCategory and Settings.RegisterCanvasLayoutCategory then
+    local category = Settings.RegisterCanvasLayoutCategory(blizzPanel, "Incoming-BG")
+    Settings.RegisterAddOnCategory(category)
+    IncCalloutCategoryID = category:GetID()
 end
 
 local function EnsureSettingsLoaded()
@@ -2043,19 +2044,27 @@ end
 local function OpenIncCalloutSettings()
     EnsureSettingsLoaded()
 
-    if IncCalloutCategoryID and Settings and Settings.OpenToCategory then
+    -- Preferred: 12.0 Settings panel
+    if Settings and Settings.OpenToCategory and type(IncCalloutCategoryID) == "number" then
         Settings.OpenToCategory(IncCalloutCategoryID)
         return
     end
 
-    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
-        C_SettingsUtil.OpenSettingsPanel(nil, "Incoming-BG") -- fallback scroll hint
+    -- Fallback: open AceConfig dialog directly
+    if AceConfigDialog and AceConfigDialog.Open then
+        AceConfigDialog:Open("Incoming-BG")
         return
     end
 
-    print("|cffff0000Options not available|r")
-end
+    -- Legacy fallback (if still present)
+    if InterfaceOptionsFrame_OpenToCategory then
+        InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
+        InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
+        return
+    end
 
+    print("|cffff0000Incoming-BG: Options not available.|r")
+end
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",

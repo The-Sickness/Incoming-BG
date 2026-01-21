@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.6 - Midnight Beta
+-- v9.7 - Midnight 
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -18,6 +18,7 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
+LibStub("AceConfigDialog-3.0"):SetDefaultSize("Incoming-BG", 900, 800)
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
@@ -2029,10 +2030,9 @@ AceConfig:RegisterOptionsTable("Incoming-BG", options)
 local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
 -- Capture the numeric category ID created by AddToBlizOptions (no extra registration)
-if Settings and Settings.RegisterAddOnCategory and Settings.RegisterCanvasLayoutCategory then
-    local category = Settings.RegisterCanvasLayoutCategory(blizzPanel, "Incoming-BG")
-    Settings.RegisterAddOnCategory(category)
-    IncCalloutCategoryID = category:GetID()
+if Settings and Settings.GetCategory then
+    local cat = Settings.GetCategory("Incoming-BG")
+    IncCalloutCategoryID = cat and cat.ID
 end
 
 local function EnsureSettingsLoaded()
@@ -2044,27 +2044,42 @@ end
 local function OpenIncCalloutSettings()
     EnsureSettingsLoaded()
 
-    -- Preferred: 12.0 Settings panel
+    -- Preferred: Modern Settings API introduced in Dragonflight (WoW 10.x+)
     if Settings and Settings.OpenToCategory and type(IncCalloutCategoryID) == "number" then
+        -- Ensure the main Settings frame is open
+        if InterfaceOptionsFrame then
+            InterfaceOptionsFrame:Show() -- Reopens the Options panel
+        end
+
+        -- Focus on your addon's specific settings
         Settings.OpenToCategory(IncCalloutCategoryID)
         return
     end
 
-    -- Fallback: open AceConfig dialog directly
+    -- Fallback: Opens AceConfig settings directly
     if AceConfigDialog and AceConfigDialog.Open then
+        -- Ensure the legacy InterfaceOptionsFrame is displayed
+        if InterfaceOptionsFrame then
+            InterfaceOptionsFrame:Show()
+        end
+
+        -- Open your addon's settings
         AceConfigDialog:Open("Incoming-BG")
         return
     end
 
-    -- Legacy fallback (if still present)
+    -- Legacy: Opens AddOns tab in the Interface Options panel (WoW pre-10.x)
     if InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
-        InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
+        InterfaceOptionsFrame:Show() -- Ensure the frame is visible
+        InterfaceOptionsFrame_OpenToCategory("Incoming-BG") -- Open AddOns tab
+        InterfaceOptionsFrame_OpenToCategory("Incoming-BG") -- Bug: Call twice to ensure focus
         return
     end
 
+    -- Error message if no suitable method is available
     print("|cffff0000Incoming-BG: Options not available.|r")
 end
+
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",

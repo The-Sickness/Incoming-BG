@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.7 - Midnight 
+-- v9.7 - Midnight Beta
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -18,7 +18,6 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
-LibStub("AceConfigDialog-3.0"):SetDefaultSize("Incoming-BG", 900, 800)
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
@@ -375,7 +374,6 @@ local function FetchSoloRBGStats()
     end
 end
     
-
 -- Function to fetch Solo Shuffle stats
 local function FetchSoloShuffleStats()
     local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
@@ -1827,7 +1825,6 @@ local options = {
                 },
             },
         }, 
-
         resetSettings = {
             type = "group",
             name = "Reset",
@@ -1874,8 +1871,9 @@ local options = {
                             if ScaleGUI then ScaleGUI() end
                             if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
                             if InitializeMiniMapIcon then InitializeMiniMapIcon() end
-                            if LibStub and LibStub("AceConfigRegistry-3.0") then                            
-                               LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
+                            if LibStub and LibStub("AceConfigRegistry-3.0") then
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
                             end
                         end)
                     end,
@@ -1884,6 +1882,23 @@ local options = {
         }, 
     }, 
 } 
+
+AceConfig:RegisterOptionsTable("Incoming-BG", options)
+
+local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
+
+if Settings then
+    local function RegisterOptionsPanel(panel)
+        local category = Settings.GetCategory(panel.name)
+        if not category then
+            category, layout = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+            category.ID = panel.name
+            Settings.RegisterAddOnCategory(category)
+        end
+    end
+
+    RegisterOptionsPanel(optionsFrame)
+end
 
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "
@@ -1999,7 +2014,6 @@ local function ButtonOnClick(self)
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
-
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -2025,61 +2039,6 @@ end)
 
 UpdatePoints()
 
--- Register options UI once (single display name)
-AceConfig:RegisterOptionsTable("Incoming-BG", options)
-local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
-
--- Capture the numeric category ID created by AddToBlizOptions (no extra registration)
-if Settings and Settings.GetCategory then
-    local cat = Settings.GetCategory("Incoming-BG")
-    IncCalloutCategoryID = cat and cat.ID
-end
-
-local function EnsureSettingsLoaded()
-    if not Settings and LoadAddOn then
-        LoadAddOn("Blizzard_Settings")
-    end
-end
-
-local function OpenIncCalloutSettings()
-    EnsureSettingsLoaded()
-
-    -- Preferred: Modern Settings API introduced in Dragonflight (WoW 10.x+)
-    if Settings and Settings.OpenToCategory and type(IncCalloutCategoryID) == "number" then
-        -- Ensure the main Settings frame is open
-        if InterfaceOptionsFrame then
-            InterfaceOptionsFrame:Show() -- Reopens the Options panel
-        end
-
-        -- Focus on your addon's specific settings
-        Settings.OpenToCategory(IncCalloutCategoryID)
-        return
-    end
-
-    -- Fallback: Opens AceConfig settings directly
-    if AceConfigDialog and AceConfigDialog.Open then
-        -- Ensure the legacy InterfaceOptionsFrame is displayed
-        if InterfaceOptionsFrame then
-            InterfaceOptionsFrame:Show()
-        end
-
-        -- Open your addon's settings
-        AceConfigDialog:Open("Incoming-BG")
-        return
-    end
-
-    -- Legacy: Opens AddOns tab in the Interface Options panel (WoW pre-10.x)
-    if InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame:Show() -- Ensure the frame is visible
-        InterfaceOptionsFrame_OpenToCategory("Incoming-BG") -- Open AddOns tab
-        InterfaceOptionsFrame_OpenToCategory("Incoming-BG") -- Bug: Call twice to ensure focus
-        return
-    end
-
-    -- Error message if no suitable method is available
-    print("|cffff0000Incoming-BG: Options not available.|r")
-end
-
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",
@@ -2092,17 +2051,21 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
             else
                 IncCallout:Show()
             end
-        elseif button == "RightButton" then
-            OpenIncCalloutSettings()
+        else
+            if Settings.OpenToCategory then
+                Settings.OpenToCategory("Incoming-BG")
+            else
+                print("|cffff0000Options frame function not available|r")
+            end
         end
     end,
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("|cff00ff00Incoming-BG|r")
-        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1)
-        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1)
+        tooltip:AddLine("|cff00ff00Incoming-BG|r") -- Green title
+        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1) -- Yellow label
+        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1) -- Yellow label
+        
     end,
 })
-
 
 -- Function to toggle MiniMap button visibility
 local function ToggleMiniMapButton(enable)
@@ -2489,7 +2452,6 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     pvpStatsFrame:Show()
 end)
-
 
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included

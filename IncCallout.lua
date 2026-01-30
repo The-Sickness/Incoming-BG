@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.6 - Midnight Beta
+-- v9.7 - Midnight 
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -18,16 +18,13 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
+LibStub("AceConfigDialog-3.0"):SetDefaultSize("Incoming-BG", 900, 800)
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
 IncCalloutDB = IncCalloutDB or {}
 addonNamespace.addon = addon
 addonNamespace.db = IncDB
-local ADDON_PREFIX = "Incoming-BG"
-
--- Register the addon-specific prefix
-C_ChatInfo.RegisterAddonMessagePrefix(ADDON_PREFIX)
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
@@ -1055,58 +1052,40 @@ IncCallout:SetScript("OnDragStop", function(self)
 end)
 
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
-    -- Create the button frame
-    local button = CreateFrame("Button", name, IncCallout, "UIPanelButtonTemplate")
+    local button = CreateFrame("Button", nil, IncCallout, "BackdropTemplate")
     button:SetSize(width, height)
     button:SetText(text)
-
-    -- Set the button's position
     if type(anchor) == "table" then
         button:SetPoint(anchor[1], anchor[2], anchor[3], xOffset, yOffset)
     else
         button:SetPoint(anchor, xOffset, yOffset)
     end
+    button:GetFontString():SetTextColor(1, 1, 1, 1)
+    button:SetBackdrop({
+        bgFile = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard"),
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile = true,
+        tileSize = 12,
+        edgeSize = 7,
+        insets = {left = 1, right = 1, top = 1, bottom = 1}
+    })
 
-    -- Font settings for button text
-    local fontString = button:GetFontString()
-    if fontString then
-        fontString:SetTextColor(1, 1, 1, 1) -- White text
-    end
-
-    -- Add a background texture
-    if not button.backgroundTexture then
-        button.backgroundTexture = button:CreateTexture(nil, "BACKGROUND")
-    end
-    button.backgroundTexture:SetColorTexture(0.2, 0.2, 0.2, 0.6) -- Default gray background
-    button.backgroundTexture:SetAllPoints()
-
-    -- Add a border texture
-    if not button.borderTexture then
-        button.borderTexture = button:CreateTexture(nil, "BORDER")
-    end
-    button.borderTexture:SetTexture("Interface/Tooltips/UI-Tooltip-Border")
-    button.borderTexture:SetAllPoints()
-
-    -- Keep track of this button in the buttons and buttonTexts tables
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
-
-    -- Mouse interaction scripts
+    
     button:SetScript("OnMouseDown", function(self)
-        self.backgroundTexture:SetColorTexture(0, 0, 0, 0.6) -- Slightly darker on mouse down
+        self:SetBackdropColor(0, 0, 0, 0) 
     end)
-
-    button:SetScript("OnMouseUp", function(self, buttonPressed)
-        if buttonPressed == "LeftButton" then
-            self.backgroundTexture:SetColorTexture(0.2, 0.2, 0.2, 0.6) -- Reset to default color
+    button:SetScript("OnMouseUp", function(self, mouseButton)
+        if mouseButton == "LeftButton" then
+            self:SetBackdropColor(0, 0, 0, 0)
         end
     end)
-
-    -- OnClick behavior
+    
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
             PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-            if onClick then
+            if onClick then 
                 onClick(self)
             end
         end
@@ -1115,58 +1094,36 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     return button
 end
 
+-- Function to handle chat messages
 local function onChatMessage(message)
-    -- Validate the `message` argument before doing anything
-    if type(message) ~= "string" then
-        -- Check explicitly if it's a "secret" value or invalid
-        if message == nil or type(message) == "userdata" then
-            print("[Incoming-BG] Invalid or secret value received. Skipping processing.")
-            return
-        end
-
-        -- Catch-all for other cases
-        print("Invalid message received: expected string, got " .. tostring(type(message)))
-        return
-    end
-
-    -- Now safely check if the message contains your intended string
     if string.find(message, "%[Incoming%-BG%]") then
-        -- For matched messages
-        print("Matched incoming chat message: " .. message)
-    else
-        -- For unmatched messages
-        print("Message received but did not match: " .. message)
+        
     end
 end
 
 local function applyButtonColor()
-    if not IncDB or not buttons then
+    if not IncDB then
         return
     end
 
-    -- Define the button color with fallbacks
-    local r, g, b, a = 1, 0, 0, 1 -- Default red color
+    local r, g, b, a
     if IncDB.buttonColor then
         r, g, b, a = IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a
+    else
+        r, g, b, a = 1, 0, 0, 1 
     end
 
-    -- Update each button appearance
     for _, button in ipairs(buttons) do
-        -- Remove existing background texture if any
-        if not button.backgroundTexture then
-            button.backgroundTexture = button:CreateTexture(nil, "BACKGROUND", nil, -7) -- Create the texture if it doesn't exist
-        end
-
-        -- Apply color to the background texture
-        button.backgroundTexture:SetColorTexture(r, g, b, a)
-        button.backgroundTexture:SetAllPoints(button)
-
-        -- Optionally, reset border and edge appearance (if needed in visuals)
-        if not button.borderTexture then
-            button.borderTexture = button:CreateTexture(nil, "BORDER")
-        end
-        button.borderTexture:SetTexture(0, 0, 0, 0) -- Transparent or no border
-        button.borderTexture:SetAllPoints(button)
+        button:SetBackdrop({
+            bgFile = LSM:Fetch("statusbar", IncDB.statusbarTexture),
+            edgeFile = nil, 
+            tile = false, 
+            tileSize = 0, 
+            edgeSize = 16, 
+            insets = {left = 0, right = 0, top = 0, bottom = 0} 
+        })
+        button:SetBackdropColor(r, g, b, a)
+        button:SetBackdropBorderColor(0, 0, 0, 0) 
     end
 end
 
@@ -1224,69 +1181,17 @@ local mapSizeOptions = {
 }
 
 local function applyStatusbarTexture()
-    if not LSM or not IncDB then return end
-
-    -- Fetch the texture from LibSharedMedia or default to Blizzard's texture
     local texture = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard")
-
-    -- Retrieve the button colors dynamically from the player's settings, or use a default blue
-    local r, g, b, a = 0, 0, 1, 1 -- Default to blue
-    if IncDB.buttonColor then
-        r, g, b, a = IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a
-    end
-
     for _, button in ipairs(buttons) do
-        -- Remove Blizzard's default textures that might interfere
-        if button.Left then button.Left:SetTexture(nil) end
-        if button.Middle then button.Middle:SetTexture(nil) end
-        if button.Right then button.Right:SetTexture(nil) end
-        if button.TopLeft then button.TopLeft:SetTexture(nil) end
-        if button.TopMiddle then button.TopMiddle:SetTexture(nil) end
-        if button.TopRight then button.TopRight:SetTexture(nil) end
-        if button.BottomLeft then button.BottomLeft:SetTexture(nil) end
-        if button.BottomMiddle then button.BottomMiddle:SetTexture(nil) end
-        if button.BottomRight then button.BottomRight:SetTexture(nil) end
-
-        -- Disable Blizzard's default highlight and push textures
-        button:SetHighlightTexture(nil)
-        button:SetPushedTexture(nil)
-
-        -- Create or reuse the button's custom background texture
-        if not button.backgroundTexture then
-            button.backgroundTexture = button:CreateTexture(nil, "BACKGROUND", nil, -7)
-        end
-
-        -- Apply the chosen texture and color to the button background
-        button.backgroundTexture:SetTexture(texture)
-        button.backgroundTexture:SetAllPoints(button)
-        button.backgroundTexture:SetColorTexture(r, g, b, a)
-
-        -- Event handlers for mouse interactions
-        button:SetScript("OnMouseDown", function(self)
-            self.backgroundTexture:SetColorTexture(r * 0.8, g * 0.8, b * 0.8, a) -- Darker shade on click
-        end)
-
-        button:SetScript("OnMouseUp", function(self, mouseButton)
-            if mouseButton == "LeftButton" then
-                self.backgroundTexture:SetColorTexture(r, g, b, a) -- Reset to default after release
-            end
-        end)
-
-        button:SetScript("OnEnter", function(self)
-            self.backgroundTexture:SetColorTexture(r * 1.2, g * 1.2, b * 1.2, a) -- Brighter shade on hover
-        end)
-
-        button:SetScript("OnLeave", function(self)
-            self.backgroundTexture:SetColorTexture(r, g, b, a) -- Reset to default when the mouse leaves
-        end)
-
-        -- Add a border texture for the button
-        if not button.borderTexture then
-            button.borderTexture = button:CreateTexture(nil, "BORDER")
-        end
-        button.borderTexture:SetTexture("Interface/Tooltips/UI-Tooltip-Border")
-        button.borderTexture:SetAllPoints(button)
-        button.borderTexture:SetColorTexture(0, 0, 0, 1) -- Black border
+        button:SetBackdrop({
+            bgFile = texture,
+            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+            tile = true,
+            tileSize = 12,
+            edgeSize = 7,
+            insets = {left = 1, right = 1, top = 1, bottom = 1}
+        })
+        applyButtonColor()
     end
 end
 
@@ -2025,7 +1930,7 @@ local function SendMessage()
     if time() - timeLastMessageSent < MESSAGE_DELAY then return end 
 
     local message = table.remove(messageQueue, 1)
-    MessageQueue.SendChatMessage(message.text, message.channel)
+    SendChatMessage(message.text, message.channel)
     timeLastMessageSent = time()
 end
 
@@ -2089,12 +1994,9 @@ local function ButtonOnClick(self)
     end
 
     local currentLocation = GetSubZoneText()
-    if not currentLocation or currentLocation == "" then
-        currentLocation = "an unknown location"
-    end
-
+   
     local message = self:GetText() .. " Incoming at " .. currentLocation
-    MessageQueue.C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "INSTANCE_CHAT")
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
 
 
@@ -2128,10 +2030,9 @@ AceConfig:RegisterOptionsTable("Incoming-BG", options)
 local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
 -- Capture the numeric category ID created by AddToBlizOptions (no extra registration)
-if Settings and Settings.RegisterAddOnCategory and Settings.RegisterCanvasLayoutCategory then
-    local category = Settings.RegisterCanvasLayoutCategory(blizzPanel, "Incoming-BG")
-    Settings.RegisterAddOnCategory(category)
-    IncCalloutCategoryID = category:GetID()
+if Settings and Settings.GetCategory then
+    local cat = Settings.GetCategory("Incoming-BG")
+    IncCalloutCategoryID = cat and cat.ID
 end
 
 local function EnsureSettingsLoaded()
@@ -2143,19 +2044,16 @@ end
 local function OpenIncCalloutSettings()
     EnsureSettingsLoaded()
 
-    -- Preferred: 12.0 Settings panel
     if Settings and Settings.OpenToCategory and type(IncCalloutCategoryID) == "number" then
         Settings.OpenToCategory(IncCalloutCategoryID)
         return
     end
 
-    -- Fallback: open AceConfig dialog directly
     if AceConfigDialog and AceConfigDialog.Open then
         AceConfigDialog:Open("Incoming-BG")
         return
     end
 
-    -- Legacy fallback (if still present)
     if InterfaceOptionsFrame_OpenToCategory then
         InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
         InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
@@ -2164,6 +2062,7 @@ local function OpenIncCalloutSettings()
 
     print("|cffff0000Incoming-BG: Options not available.|r")
 end
+
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",
@@ -2247,50 +2146,46 @@ end
 local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
-    if not location or location == "" then
+    if not location then
         print("You are not in a Battleground.")
         return
     end
     local message = IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[buttonMessageIndices.allClear]
     message = message .. " at " .. location
-
-    -- Send addon message
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "INSTANCE_CHAT")
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
 
 -- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
-    if not location or location == "" then
+    if not location then
         print("You are not in a Battleground.")
         return
     end
     local message = IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[buttonMessageIndices.sendMore]
     message = message .. " at " .. location
-
-    -- Send addon message
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "INSTANCE_CHAT")
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
 
 -- Function to handle the INC button click event
 local function IncButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
-    if not location or location == "" then
+    if not location then
         print("You are not in a Battleground.")
         return
     end
     local message = IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[buttonMessageIndices.inc]
     message = message .. " at " .. location
-
-    -- Send addon message
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "INSTANCE_CHAT")
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
 
 -- Define the OnClick function for EFC
 local function EFCButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    if not InCombatLockdown() then
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
     
     local inInstance, instanceType = IsInInstance()
     local chatType
@@ -2307,12 +2202,14 @@ local function EFCButtonOnClick()
     end
 
     local message = IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex]
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, chatType)
+    SendChatMessage(message, chatType)
 end
 
 -- Define the OnClick function for FC
 local function FCButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    if not InCombatLockdown() then
+        PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    end
     
     local inInstance, instanceType = IsInInstance()
     local chatType
@@ -2329,23 +2226,21 @@ local function FCButtonOnClick()
     end
 
     local message = IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex]
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, chatType)
+    SendChatMessage(message, chatType)
 end
 
 -- Function to handle the Heals button click event
 local function HealsButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local location = GetSubZoneText()
-    if not location or location == "" then
+    if not location then
         print("You are not in a Battleground.")
         return
     end
 
     local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex]
     message = message .. " Needed at " .. location
-
-    -- Send addon message
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "INSTANCE_CHAT")
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
 
 -- Function to handle the Buff Request button click event
@@ -2374,23 +2269,25 @@ local function BuffRequestButtonOnClick()
         return
     end
 
-    -- Send addon message
-    C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, chatType)
+    SendChatMessage(message, chatType)
 end
 
--- Function to handle the Share button click event
 local function ShareButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
     local inInstance, instanceType = IsInInstance()
-
     if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible
-        C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "INSTANCE_CHAT")
-    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-        C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, "PARTY")
+        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible, else PARTY
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            SendChatMessage(message, "INSTANCE_CHAT")
+        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+            SendChatMessage(message, "PARTY")
+        else
+            -- fallback to SAY if not in group (should be rare in BG)
+            SendChatMessage(message, "SAY")
+        end
     else
-        -- Fallback to SAY if not in a group (unusual in BGs)
+        -- Not in PvP: always use SAY
         SendChatMessage(message, "SAY")
     end
 end
@@ -2435,11 +2332,11 @@ frame:RegisterEvent("COMBAT_RATING_UPDATE")
 frame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
 frame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
 frame:SetScript("OnEvent", EventHandler)
-C_ChatInfo.RegisterAddonMessagePrefix(ADDON_PREFIX)
 
 -- Ensure isIconRegistered is initialized
 local isIconRegistered = false
 
+-- Event handler for ADDON_LOADED to initialize settings
 local function OnEvent(self, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
         -- Initialize AceDB for profile management
@@ -2462,9 +2359,13 @@ local function OnEvent(self, event, arg1, ...)
         -- Initialize the MiniMap icon
         InitializeMiniMapIcon()
 
-        -- Set default values for other settings (but don't overwrite user settings)
-        IncDB.buttonColor = IncDB.buttonColor or { r = 0, g = 0, b = 1, a = 1 } -- Default to blue
-        IncDB.fontColor = IncDB.fontColor or { r = 1, g = 1, b = 1, a = 1 }
+        -- Set default values for other settings if not already set
+        if not IncDB then
+            IncDB = {
+                buttonColor = { r = 1, g = 0, b = 0, a = 1 },
+                fontColor = { r = 1, g = 1, b = 1, a = 1 },
+            }
+        end
 
         -- Apply logo settings
         if IncCallout.SetLogo then
@@ -2523,31 +2424,14 @@ local function OnEvent(self, event, arg1, ...)
         IncCallout:Hide()
         applyButtonColor()
 
-    elseif event == "CHAT_MSG_ADDON" then
-        local prefix, message, channel, sender = ...
-        
-        -- Only process messages with the registered prefix
-        if prefix == ADDON_PREFIX then
-            if type(message) == "string" then
-                onChatMessage(message, channel, sender)
-            else
-                print("[Incoming-BG] Received invalid addon message format.")
-            end
-        end
-
     elseif event == "CHAT_MSG_INSTANCE_CHAT" then
-        -- Validate the first event argument before processing
-        local message = ...
-        if type(message) == "string" then
-            onChatMessage(message)
-        else
-            print("[Incoming-BG] Warning: Skipping invalid chat event value. Got: " .. tostring(type(message)))
-        end -- Ensure this end was not missing
+        local message = arg1
+        onChatMessage(message)
 
-    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
         local index = 7  
         local rating = select(2, GetPersonalRatedInfo(index))  
-
+        
         UpdatePvPStatsFrame(rating)
     end
 end
@@ -2670,9 +2554,9 @@ end
 -- New function to handle the '/incmsg' command
 local function IncomingBGMessageCommandHandler(msg)
     local messageType = "INSTANCE_CHAT"  
-    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."
+    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."  
 
-    MessageQueue.SendChatMessage(message, messageType)
+    SendChatMessage(message, messageType)
 end
 
 SLASH_INCOMINGBGMSG1 = "/incmsg"

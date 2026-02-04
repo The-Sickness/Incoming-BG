@@ -1929,10 +1929,18 @@ function addonNamespace.getPreviewText(messageType)
     return previewText .. "|r"
 end
 
+local SendChatMessageSafe = function(text, channel)
+    if C_ChatInfo and C_ChatInfo.SendChatMessage then
+        C_ChatInfo.SendChatMessage(text, channel)
+    else
+        _G.SendChatMessage(text, channel)
+    end
+end
+
 local function ListHealers()
     local groupType, groupSize
 
-    -- Determine whether the player is in a raid or party
+    -- Determine if the player is in a group (raid or party)
     if IsInRaid() then
         groupType = "raid"
         groupSize = GetNumGroupMembers()
@@ -1944,17 +1952,16 @@ local function ListHealers()
         return
     end
 
-    -- Find all healers in the group
+    -- Gather all healers' names in the group
     local healerNames = {}
     for i = 1, groupSize do
         local unit = groupType .. i
-        local role = UnitGroupRolesAssigned(unit)
-        if role == "HEALER" then
-            table.insert(healerNames, GetUnitName(unit, true)) -- Fetch healer's name
+        if UnitGroupRolesAssigned(unit) == "HEALER" then
+            table.insert(healerNames, GetUnitName(unit, true)) -- Add healer's name
         end
     end
 
-    -- Construct message for healers
+    -- Construct the appropriate healer message
     local message
     if #healerNames > 0 then
         local healerList = table.concat(healerNames, ", ")
@@ -1963,8 +1970,11 @@ local function ListHealers()
         message = "[Incoming-BG] We have no healers. Good luck!"
     end
 
-    -- Pre-fill the chat with the list of healers
-    ChatFrame_OpenChat("/i " .. message)
+    -- Debug message (optional)
+    print("|cff00ff00[DEBUG] Healer Message:|r ", message)
+
+    -- Send the message safely
+    SendChatMessageSafe(message, "INSTANCE_CHAT")
 end
 
 -- Create a table to map each location to itself
@@ -1979,19 +1989,35 @@ local function IsInBattleground()
 end
  
 local function ButtonOnClick(self)
+    if InCombatLockdown() then
+        print("|cffff0000[IncCallout] Cannot send messages during combat lockdown.|r")
+        return
+    end
+
     if not IsInBattleground() then
         print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
         return
     end
 
+    -- Get current location
     local location = GetSubZoneText()
-    if not location then
+    if not location or location == "" then
         print("|cff00ff00[IncCallout] Could not determine your location.|r")
         return
     end
 
-    local message = self:GetText() .. " Incoming at " .. location
-    ChatFrame_OpenChat("/i " .. message)
+    -- Ensure button label is valid
+    local label = self:GetText()
+    if not label or label == "" then
+        print("|cffff0000[IncCallout] Invalid button label.|r")
+        return
+    end
+
+    -- Contextual message
+    local message = label .. " Incoming at " .. location
+
+    -- Send the chat message safely
+    SendChatMessageSafe(message, "INSTANCE_CHAT")
 end
 
 local f = CreateFrame("Frame")
@@ -2106,51 +2132,48 @@ local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
     local location = GetSubZoneText()
-    if not location then
-        print("You are not in a Battleground.")
+    if not location or location == "" then
+        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
         return
     end
 
-    -- Retrieve the custom or default message
+    -- Fetch the appropriate message or fallback to default
     local message = IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[buttonMessageIndices.allClear]
     message = message .. " at " .. location
 
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/i " .. message)
+    SendChatMessageSafe(message, "INSTANCE_CHAT")
 end
 
 local function SendMoreButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
     local location = GetSubZoneText()
-    if not location then
-        print("You are not in a Battleground.")
+    if not location or location == "" then
+        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
         return
     end
 
-    -- Retrieve the custom or default message
+    -- Fetch the appropriate message or fallback to default
     local message = IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[buttonMessageIndices.sendMore]
     message = message .. " at " .. location
 
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/i " .. message)
+    SendChatMessageSafe(message, "INSTANCE_CHAT")
 end
 
 local function IncButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
     local location = GetSubZoneText()
-    if not location then
-        print("You are not in a Battleground.")
+    if not location or location == "" then
+        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
         return
     end
 
-    -- Retrieve the custom or default message
+    -- Fetch the appropriate message or fallback to default
     local message = IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[buttonMessageIndices.inc]
     message = message .. " at " .. location
 
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/i " .. message)
+    SendChatMessageSafe(message, "INSTANCE_CHAT")
 end
 
 local function EFCButtonOnClick()
@@ -2158,6 +2181,7 @@ local function EFCButtonOnClick()
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     end
 
+    -- Determine the chat type based on the player's activity
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2168,14 +2192,13 @@ local function EFCButtonOnClick()
     elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
         chatType = "PARTY"
     else
-        print("You're not in a PvP instance or any group.")
+        print("|cff00ff00[IncCallout] You're not in a PvP instance or any group.|r")
         return
     end
 
+    -- Fetch the appropriate message
     local message = IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex]
-    
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/" .. string.lower(chatType) .. " " .. message)
+    SendChatMessageSafe(message, chatType)
 end
 
 local function FCButtonOnClick()
@@ -2183,6 +2206,7 @@ local function FCButtonOnClick()
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     end
 
+    -- Determine the chat type based on the player's activity
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2193,31 +2217,29 @@ local function FCButtonOnClick()
     elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
         chatType = "PARTY"
     else
-        print("You're not in a PvP instance or any group.")
+        print("|cff00ff00[IncCallout] You're not in a PvP instance or any group.|r")
         return
     end
 
+    -- Fetch the appropriate message
     local message = IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex]
-
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/" .. string.lower(chatType) .. " " .. message)
+    SendChatMessageSafe(message, chatType)
 end
 
 local function HealsButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
     local location = GetSubZoneText()
-    if not location then
-        print("You are not in a Battleground.")
+    if not location or location == "" then
+        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
         return
     end
 
-    -- Retrieve the custom or default message
-    local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex]
+    -- Fetch the appropriate message or fallback to default
+    local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[buttonMessageIndices.healRequest]
     message = message .. " Needed at " .. location
 
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/i " .. message)
+    SendChatMessageSafe(message, "INSTANCE_CHAT")
 end
 
 local function BuffRequestButtonOnClick()
@@ -2226,11 +2248,12 @@ local function BuffRequestButtonOnClick()
     local messageIndex = buttonMessageIndices.buffRequest or 1
     local message = IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest or buttonMessages.buffRequest[messageIndex]
 
-    if not message then
-        print("No buff request message available.")
+    if not message or message == "" then
+        print("|cff00ff00[IncCallout] No buff request message available.|r")
         return
     end
 
+    -- Determine the chat type based on the player's activity
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2241,25 +2264,25 @@ local function BuffRequestButtonOnClick()
     elseif IsInGroup() then
         chatType = "PARTY"
     else
-        print("You're not in a PvP instance.")
+        print("|cff00ff00[IncCallout] You're not in a PvP instance.|r")
         return
     end
 
-    -- Pre-fill the chat frame
-    ChatFrame_OpenChat("/" .. string.lower(chatType) .. " " .. message)
+    SendChatMessageSafe(message, chatType)
 end
 
 local function ShareButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
+    -- Static promotional message
     local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
 
+    -- Determine the appropriate chat type
     if not IsInBattleground() then
-        ChatFrame_OpenChat("/say " .. message)
-        return
+        SendChatMessageSafe(message, "SAY")
+    else
+        SendChatMessageSafe(message, "INSTANCE_CHAT")
     end
-
-    ChatFrame_OpenChat("/i " .. message)
 end
 
 local function ApplyFontSettings()

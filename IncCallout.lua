@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.7 - Midnight 
+-- v9.7 - Midnight Beta
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -18,7 +18,6 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub("LibSharedMedia-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 LSM:Register("statusbar", "Blizzard", "Interface\\TargetingFrame\\UI-StatusBar")
-LibStub("AceConfigDialog-3.0"):SetDefaultSize("Incoming-BG", 900, 800)
 
 local addonName, addonNamespace = ...
 IncDB = IncDB or {}
@@ -375,7 +374,6 @@ local function FetchSoloRBGStats()
     end
 end
     
-
 -- Function to fetch Solo Shuffle stats
 local function FetchSoloShuffleStats()
     local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
@@ -1092,13 +1090,6 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     end)
 
     return button
-end
-
--- Function to handle chat messages
-local function onChatMessage(message)
-    if string.find(message, "%[Incoming%-BG%]") then
-        
-    end
 end
 
 local function applyButtonColor()
@@ -1827,7 +1818,6 @@ local options = {
                 },
             },
         }, 
-
         resetSettings = {
             type = "group",
             name = "Reset",
@@ -1874,8 +1864,9 @@ local options = {
                             if ScaleGUI then ScaleGUI() end
                             if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
                             if InitializeMiniMapIcon then InitializeMiniMapIcon() end
-                            if LibStub and LibStub("AceConfigRegistry-3.0") then                            
-                               LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
+                            if LibStub and LibStub("AceConfigRegistry-3.0") then
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
                             end
                         end)
                     end,
@@ -1884,6 +1875,23 @@ local options = {
         }, 
     }, 
 } 
+
+AceConfig:RegisterOptionsTable("Incoming-BG", options)
+
+local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
+
+if Settings then
+    local function RegisterOptionsPanel(panel)
+        local category = Settings.GetCategory(panel.name)
+        if not category then
+            category, layout = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+            category.ID = panel.name
+            Settings.RegisterAddOnCategory(category)
+        end
+    end
+
+    RegisterOptionsPanel(optionsFrame)
+end
 
 function addonNamespace.getPreviewText(messageType)
     local previewText = "|cff00ff00[Incoming-BG] "
@@ -1921,60 +1929,43 @@ function addonNamespace.getPreviewText(messageType)
     return previewText .. "|r"
 end
 
-local messageQueue = {}
-local timeLastMessageSent = 0
-local MESSAGE_DELAY = 1.5 
-
-local function SendMessage()
-    if #messageQueue == 0 then return end
-    if time() - timeLastMessageSent < MESSAGE_DELAY then return end 
-
-    local message = table.remove(messageQueue, 1)
-    SendChatMessage(message.text, message.channel)
-    timeLastMessageSent = time()
-end
-
-local function QueueMessage(text, channel)
-    table.insert(messageQueue, {text = text, channel = channel})
-end
-
 local function ListHealers()
     local groupType, groupSize
+
+    -- Determine whether the player is in a raid or party
     if IsInRaid() then
         groupType = "raid"
         groupSize = GetNumGroupMembers()
     elseif IsInGroup() then
         groupType = "party"
-        groupSize = GetNumGroupMembers() 
+        groupSize = GetNumGroupMembers()
     else
-        print("You are not in a group.")
+        print("|cff00ff00[IncCallout] You are not in a group.|r")
         return
     end
 
+    -- Find all healers in the group
     local healerNames = {}
     for i = 1, groupSize do
-        local unit = groupType..i
+        local unit = groupType .. i
         local role = UnitGroupRolesAssigned(unit)
         if role == "HEALER" then
-            table.insert(healerNames, GetUnitName(unit, true))
+            table.insert(healerNames, GetUnitName(unit, true)) -- Fetch healer's name
         end
     end
 
+    -- Construct message for healers
+    local message
     if #healerNames > 0 then
         local healerList = table.concat(healerNames, ", ")
-        QueueMessage("[Incoming-BG] Healers on our team: " .. healerList .. ". Now you know who to peel for.", "INSTANCE_CHAT")
+        message = "[Incoming-BG] Healers on our team: " .. healerList .. ". Now you know who to peel for."
     else
-        if IsInGroup() or IsInRaid() then
-            QueueMessage("[Incoming-BG] We have no heals, lol..", "INSTANCE_CHAT")
-        end
+        message = "[Incoming-BG] We have no healers. Good luck!"
     end
-end
 
--- Setup a frame to periodically attempt to send messages
-local frame = CreateFrame("Frame")
-frame:SetScript("OnUpdate", function(self, elapsed)
-    SendMessage()
-end)
+    -- Pre-fill the chat with the list of healers
+    ChatFrame_OpenChat("/i " .. message)
+end
 
 -- Create a table to map each location to itself
 local locationTable = {}
@@ -1982,23 +1973,26 @@ for _, location in ipairs(battlegroundLocations) do
     locationTable[location] = location
 end
  
-local function isInBattleground()
+local function IsInBattleground()
     local inInstance, instanceType = IsInInstance()
     return inInstance and (instanceType == "pvp" or instanceType == "arena")
 end
  
 local function ButtonOnClick(self)
-    if not isInBattleground() then
-        print("You are not in a battleground.")
+    if not IsInBattleground() then
+        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
         return
     end
 
-    local currentLocation = GetSubZoneText()
-   
-    local message = self:GetText() .. " Incoming at " .. currentLocation
-    SendChatMessage(message, "INSTANCE_CHAT")
-end
+    local location = GetSubZoneText()
+    if not location then
+        print("|cff00ff00[IncCallout] Could not determine your location.|r")
+        return
+    end
 
+    local message = self:GetText() .. " Incoming at " .. location
+    ChatFrame_OpenChat("/i " .. message)
+end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
@@ -2025,44 +2019,6 @@ end)
 
 UpdatePoints()
 
--- Register options UI once (single display name)
-AceConfig:RegisterOptionsTable("Incoming-BG", options)
-local blizzPanel = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
-
--- Capture the numeric category ID created by AddToBlizOptions (no extra registration)
-if Settings and Settings.GetCategory then
-    local cat = Settings.GetCategory("Incoming-BG")
-    IncCalloutCategoryID = cat and cat.ID
-end
-
-local function EnsureSettingsLoaded()
-    if not Settings and LoadAddOn then
-        LoadAddOn("Blizzard_Settings")
-    end
-end
-
-local function OpenIncCalloutSettings()
-    EnsureSettingsLoaded()
-
-    if Settings and Settings.OpenToCategory and type(IncCalloutCategoryID) == "number" then
-        Settings.OpenToCategory(IncCalloutCategoryID)
-        return
-    end
-
-    if AceConfigDialog and AceConfigDialog.Open then
-        AceConfigDialog:Open("Incoming-BG")
-        return
-    end
-
-    if InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
-        InterfaceOptionsFrame_OpenToCategory("Incoming-BG")
-        return
-    end
-
-    print("|cffff0000Incoming-BG: Options not available.|r")
-end
-
 -- Create the LibDataBroker object
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",
@@ -2075,17 +2031,21 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
             else
                 IncCallout:Show()
             end
-        elseif button == "RightButton" then
-            OpenIncCalloutSettings()
+        else
+            if Settings.OpenToCategory then
+                Settings.OpenToCategory("Incoming-BG")
+            else
+                print("|cffff0000Options frame function not available|r")
+            end
         end
     end,
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("|cff00ff00Incoming-BG|r")
-        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1)
-        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1)
+        tooltip:AddLine("|cff00ff00Incoming-BG|r") -- Green title
+        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1) -- Yellow label
+        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1) -- Yellow label
+        
     end,
 })
-
 
 -- Function to toggle MiniMap button visibility
 local function ToggleMiniMapButton(enable)
@@ -2142,51 +2102,62 @@ local function InitializeAddon()
     UpdateMiniMapVisibility()
 end
 
--- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
+
+    -- Retrieve the custom or default message
     local message = IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[buttonMessageIndices.allClear]
     message = message .. " at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/i " .. message)
 end
 
--- Function to handle the Send More button click event
 local function SendMoreButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
+
+    -- Retrieve the custom or default message
     local message = IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[buttonMessageIndices.sendMore]
     message = message .. " at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/i " .. message)
 end
 
--- Function to handle the INC button click event
 local function IncButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
+
+    -- Retrieve the custom or default message
     local message = IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[buttonMessageIndices.inc]
     message = message .. " at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/i " .. message)
 end
 
--- Define the OnClick function for EFC
 local function EFCButtonOnClick()
     if not InCombatLockdown() then
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     end
-    
+
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2202,15 +2173,16 @@ local function EFCButtonOnClick()
     end
 
     local message = IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex]
-    SendChatMessage(message, chatType)
+    
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/" .. string.lower(chatType) .. " " .. message)
 end
 
--- Define the OnClick function for FC
 local function FCButtonOnClick()
     if not InCombatLockdown() then
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     end
-    
+
     local inInstance, instanceType = IsInInstance()
     local chatType
 
@@ -2226,30 +2198,34 @@ local function FCButtonOnClick()
     end
 
     local message = IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex]
-    SendChatMessage(message, chatType)
+
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/" .. string.lower(chatType) .. " " .. message)
 end
 
--- Function to handle the Heals button click event
 local function HealsButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+
     local location = GetSubZoneText()
     if not location then
         print("You are not in a Battleground.")
         return
     end
 
+    -- Retrieve the custom or default message
     local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex]
     message = message .. " Needed at " .. location
-    SendChatMessage(message, "INSTANCE_CHAT")
+
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/i " .. message)
 end
 
--- Function to handle the Buff Request button click event
 local function BuffRequestButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
 
     local messageIndex = buttonMessageIndices.buffRequest or 1
     local message = IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest or buttonMessages.buffRequest[messageIndex]
-    
+
     if not message then
         print("No buff request message available.")
         return
@@ -2269,27 +2245,21 @@ local function BuffRequestButtonOnClick()
         return
     end
 
-    SendChatMessage(message, chatType)
+    -- Pre-fill the chat frame
+    ChatFrame_OpenChat("/" .. string.lower(chatType) .. " " .. message)
 end
 
 local function ShareButtonOnClick()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+
     local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible, else PARTY
-        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-            SendChatMessage(message, "INSTANCE_CHAT")
-        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-            SendChatMessage(message, "PARTY")
-        else
-            -- fallback to SAY if not in group (should be rare in BG)
-            SendChatMessage(message, "SAY")
-        end
-    else
-        -- Not in PvP: always use SAY
-        SendChatMessage(message, "SAY")
+
+    if not IsInBattleground() then
+        ChatFrame_OpenChat("/say " .. message)
+        return
     end
+
+    ChatFrame_OpenChat("/i " .. message)
 end
 
 local function ApplyFontSettings()
@@ -2424,9 +2394,9 @@ local function OnEvent(self, event, arg1, ...)
         IncCallout:Hide()
         applyButtonColor()
 
-    elseif event == "CHAT_MSG_INSTANCE_CHAT" then
-        local message = arg1
-        onChatMessage(message)
+  --  elseif event == "CHAT_MSG_INSTANCE_CHAT" then
+     --   local message = arg1
+    --    onChatMessage(message)
 
     elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
         local index = 7  
@@ -2472,7 +2442,6 @@ local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEF
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     pvpStatsFrame:Show()
 end)
-
 
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included
@@ -2551,12 +2520,12 @@ SlashCmdList["INC"] = function()
     end
 end
 
--- New function to handle the '/incmsg' command
+-- Function to handle the '/incmsg' command
 local function IncomingBGMessageCommandHandler(msg)
-    local messageType = "INSTANCE_CHAT"  
     local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."  
 
-    SendChatMessage(message, messageType)
+    -- Pre-fill the chat with the addon promotion message
+    ChatFrame_OpenChat("/i " .. message)
 end
 
 SLASH_INCOMINGBGMSG1 = "/incmsg"

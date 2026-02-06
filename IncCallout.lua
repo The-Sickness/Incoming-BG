@@ -1,5 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.3 - 11.2
+-- v9.7 - Midnight Beta
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -24,6 +24,17 @@ IncDB = IncDB or {}
 IncCalloutDB = IncCalloutDB or {}
 addonNamespace.addon = addon
 addonNamespace.db = IncDB
+
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
+frame:SetScript("OnEvent", function(self, event, arg1)
+    if event == "ADDON_LOADED" and arg1 == "IncCallout" then
+        self:UnregisterEvent("ADDON_LOADED")
+        self:RegisterEvent("PLAYER_LOGIN")
+    elseif event == "PLAYER_LOGIN" then
+        self:UnregisterEvent("PLAYER_LOGIN")
+    end
+end)
 
 local defaults = {
     profile = {
@@ -79,11 +90,9 @@ local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
 local blitzHonorGained = 0
 
-
-
 -- Main GUI Frame
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(225, 240)  
+IncCallout:SetSize(225, 280)  
 IncCallout:SetPoint("CENTER")
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
@@ -364,7 +373,7 @@ local function FetchSoloRBGStats()
         return "N/A", gamesPlayed, gamesWon, "N/A", playedMost, "N/A"
     end
 end
-
+    
 -- Function to fetch Solo Shuffle stats
 local function FetchSoloShuffleStats()
     local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
@@ -1022,9 +1031,9 @@ end
 
 local fontSize = 14
 
-local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
-bgTexture:SetColorTexture(0, 0, 0)
-bgTexture:SetAllPoints(IncCallout)
+--local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
+--bgTexture:SetColorTexture(0, 0, 0)
+--bgTexture:SetAllPoints(IncCallout)
 
 IncCallout:SetScript("OnDragStart", function(self)
     if not IncDB.isLocked then
@@ -1551,7 +1560,8 @@ local options = {
                     },
                 },
             },
-        },
+        }, 
+
         appearanceSettings = {
             type = "group",
             name = "Appearance Settings",
@@ -1563,7 +1573,7 @@ local options = {
                     desc = "Set the color of the button text.",
                     hasAlpha = true,
                     get = function()
-                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1} 
+                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
                         return color.r, color.g, color.b, color.a
                     end,
                     set = function(_, r, g, b, a)
@@ -1571,17 +1581,17 @@ local options = {
                         for _, buttonText in ipairs(buttonTexts) do
                             buttonText:SetTextColor(r, g, b, a)
                         end
-                    end, 
-                    order = 1, 
+                    end,
+                    order = 1,
                 },
                 buttonColor = {
                     type = "color",
                     name = "Button Color",
                     desc = "Select the color of the buttons.",
                     order = 2,
-                    hasAlpha = true, 
+                    hasAlpha = true,
                     get = function()
-                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1} 
+                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1}
                         return currentColor.r, currentColor.g, currentColor.b, currentColor.a
                     end,
                     set = function(_, r, g, b, a)
@@ -1594,15 +1604,15 @@ local options = {
                     type = "range",
                     name = "GUI Window Scale",
                     desc = "Adjust the scale of the GUI.",
-                    min = 0.5, 
-                    max = 2.0, 
-                    step = 0.05, 
+                    min = 0.5,
+                    max = 2.0,
+                    step = 0.05,
                     get = function()
-                        return IncDB.scale or 1 
+                        return IncDB.scale or 1
                     end,
                     set = function(_, value)
                         IncDB.scale = value
-                        ScaleGUI(value) 
+                        ScaleGUI(value)
                     end,
                 },
                 borderStyle = {
@@ -1658,9 +1668,8 @@ local options = {
                     set = function(_, newValue)
                         IncDB.statusbarTexture = newValue
                         applyButtonColor()
-					order = 5	
-              end,
-                 
+                    end,
+                    order = 5,
                 },
                 lockGUI = {
                     type = "toggle",
@@ -1701,38 +1710,39 @@ local options = {
                     get = function(info) return IncDB.selectedLogo end,
                     set = function(info, value)
                         IncDB.selectedLogo = value
-                        IncCallout:SetLogo(value)  
+                        IncCallout:SetLogo(value)
                     end,
                 },
                 logoColor = {
                     type = "color",
                     name = "Logo Color",
                     desc = "Set the color of the title logo.",
-                    hasAlpha = true, 
+                    hasAlpha = true,
                     get = function(info)
-                        local color = IncDB.logoColor or {1, 1, 1, 1} 
+                        local color = IncDB.logoColor or {1, 1, 1, 1}
                         return color.r, color.g, color.b, color.a
                     end,
                     set = function(info, r, g, b, a)
                         IncDB.logoColor = {r = r, g = g, b = b, a = a}
                         logo:SetVertexColor(r, g, b, a)
                     end,
-                    order = 8, 
-					},
-					minimapButtonEnable = {
-    type = "toggle",
-    name = "Enable MiniMap Button",
-    desc = "Toggle the visibility of the MiniMap button.",
-    get = function()
-        return not (IncDB.minimap and IncDB.minimap.hide)
-    end,
-    set = function(_, enable)
-        ToggleMiniMapButton(enable)
-    end,
-    order = 9,
+                    order = 8,
+                },
+                minimapButtonEnable = {
+                    type = "toggle",
+                    name = "Enable MiniMap Button",
+                    desc = "Toggle the visibility of the MiniMap button.",
+                    get = function()
+                        return not (IncDB.minimap and IncDB.minimap.hide)
+                    end,
+                    set = function(_, enable)
+                        ToggleMiniMapButton(enable)
+                    end,
+                    order = 9,
                 },
             },
-        },
+        }, 
+
         mapSettings = {
             type = "group",
             name = "Map Settings",
@@ -1773,11 +1783,12 @@ local options = {
                     end,
                 },
             },
-        },
+        }, 
+
         fontSettings = {
             type = "group",
             name = "Font Settings",
-            order = 3,
+            order = 4,
             args = {
                 font = {
                     type = "select",
@@ -1797,7 +1808,7 @@ local options = {
                     end,
                     order = 1,
                 },
-                                fontSize = {
+                fontSize = {
                     type = "range",
                     name = "Font Size",
                     desc = "Adjust the font size for the buttons.",
@@ -1813,106 +1824,65 @@ local options = {
                     order = 2,
                 },
             },
-        },
-        trackerSettings = {
+        }, 
+        resetSettings = {
             type = "group",
-            name = "Tracker Settings",
-            order = 99,
+            name = "Reset",
+            order = 100,
             args = {
-                enableCooldownTracker = {
-                    type = "toggle",
-                    name = "Enable Cooldown Tracker",
-                    desc = "When enabled, tracks and displays enemy cooldowns directly on their nameplates in PvP. This helps you anticipate their next abilities (such as trinkets, interrupts, or major defensives) and plan your plays accordingly. Only works in battlegrounds and arenas.",
-                    order = 1,
-                    get = function()
-                        return IncDB.enableCooldownTracker ~= false
+                resetToDefaults = {
+                    type = "execute",
+                    name = "Reset to Defaults",
+                    desc = "Reset all Incoming-BG settings to their default values. This will overwrite the current profile.",
+                    confirm = function()
+                        return "Are you sure you want to reset Incoming-BG settings to defaults? This cannot be undone."
                     end,
-                    set = function(_, value)
-                        IncDB.enableCooldownTracker = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                        if value then
-                            UpdateCooldownIcons()
+                    func = function()
+                        -- Preferred: use AceDB to reset the current profile if available
+                        if db and type(db.ResetProfile) == "function" then
+                            db:ResetProfile()
+                            IncDB = db.profile
+                            print("|cff00ff00Incoming-BG: Settings reset to defaults (AceDB ResetProfile).|r")
                         else
-                            HideAllCooldownIcons()
-                        end
-                    end,
-                },
-                enableHealerIcon = {
-                    type = "toggle",
-                    name = "Enable Healer Icon Tracker",
-                    desc = "When enabled, identifies enemy healer players in battlegrounds and arenas by displaying a healer icon next to their nameplate. This makes it easier to target or call focus on enemy healers, improving team coordination and strategy.",
-                    order = 2,
-                    get = function()
-                        return IncDB.enableHealerIcon ~= false
-                    end,
-                    set = function(_, value)
-                        IncDB.enableHealerIcon = value
-                        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                        if value then
-                            UpdateHealerIcons()
-                        else
-                            for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
-                                HideHealerIcon(plate)
+                            -- Fallback: deep-copy defaults.profile into IncDB
+                            local function deepcopy(orig)
+                                if type(orig) ~= "table" then return orig end
+                                local copy = {}
+                                for k, v in pairs(orig) do copy[k] = deepcopy(v) end
+                                return copy
                             end
-                        end
-                    end,
-					},
-					cooldownIconSize = {
-    type = "range",
-    name = "Cooldown Icon Size",
-    desc = "Adjust the size of displayed cooldown icons on nameplates.",
-    min = 10, max = 64, step = 1,
-    get = function() return IncDB.cooldownIconSize or 24 end,
-    set = function(_, value)
-        IncDB.cooldownIconSize = value
-        UpdateCooldownIcons() -- Re-apply size to visible icons
-    end,
-    order = 3,
-},
 
-healerIconSize = {
-    type = "range",
-    name = "Healer Icon Size",
-    desc = "Adjust the size of the healer icon shown on nameplates.",
-    min = 10, max = 64, step = 1,
-    get = function() return IncDB.healerIconSize or 24 end,
-    set = function(_, value)
-        IncDB.healerIconSize = value
-        UpdateHealerIcons() -- Re-apply size to healer icons
-    end,
-    order = 4,
-	},
-	
-	enableHealerMessage = {
-    type = "toggle",
-    name = "Enable Healer Message Announcements",
-    desc = "If enabled, announces enemy healer detection in chat.",
-    order = 5,
-    get = function()
-        return IncDB.enableHealerMessage ~= false
-    end,
-    set = function(_, value)
-        IncDB.enableHealerMessage = value
-        LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-    end,
-	},
-	maxCooldownIcons = {
-    type = "range",
-    name = "Max Cooldown Icons",
-    desc = "Set the maximum number of cooldown icons displayed per enemy nameplate.",
-    min = 1, max = 8, step = 1,
-    get = function() return IncDB.maxCooldownIcons or 4 end,
-    set = function(_, value)
-        IncDB.maxCooldownIcons = value
-        UpdateCooldownIcons() -- Refresh displayed icons
-    end,
-    order = 4.1,
-	
+                            IncDB = IncDB or {}
+                            local newProfile = deepcopy(defaults.profile)
+                            for k in pairs(IncDB) do IncDB[k] = nil end
+                            for k, v in pairs(newProfile) do IncDB[k] = v end
+
+                            if db and db.profile then db.profile = IncDB end
+
+                            print("|cff00ff00Incoming-BG: Settings reset to defaults (fallback).|r")
+                        end
+
+                        -- Reapply visual and functional settings
+                        pcall(function()
+                            if ApplyFontSettings then ApplyFontSettings() end
+                            if applyButtonColor then applyButtonColor() end
+                            if applyBorderChange then applyBorderChange() end
+                            if applyColorChange then applyColorChange() end
+                            if ScaleGUI then ScaleGUI() end
+                            if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
+                            if InitializeMiniMapIcon then InitializeMiniMapIcon() end
+                            if LibStub and LibStub("AceConfigRegistry-3.0") then
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                                LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
+                            end
+                        end)
+                    end,
                 },
             },
-        },
-    },
-}
+        }, 
+    }, 
+} 
+
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 
 local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
@@ -2044,7 +2014,6 @@ local function ButtonOnClick(self)
     SendChatMessage(message, "INSTANCE_CHAT")
 end
 
-
 local f = CreateFrame("Frame")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 
@@ -2152,9 +2121,6 @@ local function InitializeAddon()
     InitializeMiniMapIcon()
     UpdateMiniMapVisibility()
 end
-
-
-
 
 -- Function to handle the All Clear button click event
 local function AllClearButtonOnClick()
@@ -2284,6 +2250,26 @@ local function BuffRequestButtonOnClick()
     end
 
     SendChatMessage(message, chatType)
+end
+
+local function ShareButtonOnClick()
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        -- In PvP (BG or Arena): use INSTANCE_CHAT if possible, else PARTY
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            SendChatMessage(message, "INSTANCE_CHAT")
+        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+            SendChatMessage(message, "PARTY")
+        else
+            -- fallback to SAY if not in group (should be rare in BG)
+            SendChatMessage(message, "SAY")
+        end
+    else
+        -- Not in PvP: always use SAY
+        SendChatMessage(message, "SAY")
+    end
 end
 
 local function ApplyFontSettings()
@@ -2449,10 +2435,13 @@ local healsButton = createButton("healsButton", 95, 22, "Heals", {"LEFT", allCle
 local efcButton = createButton("efcButton", 95, 22, "EFC", {"TOP", allClearButton, "BOTTOM"}, 0, -10, EFCButtonOnClick)
 local fcButton = createButton("fcButton", 95, 22, "FC", {"LEFT", efcButton, "RIGHT"}, 10, 0, FCButtonOnClick)
 local buffButton = createButton("buffButton", 95, 22, "Buffs", {"TOP", efcButton, "BOTTOM"}, 0, -10, BuffRequestButtonOnClick)
+
 local mapButton = createButton("mapButton", 95, 22, "Map", {"LEFT", buffButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
     ToggleWorldMap()
 end)
+
+local shareButton = createButton("shareButton", 95, 22, "Share", {"BOTTOM", IncCallout, "BOTTOM"}, 0, 10, ShareButtonOnClick)
 
 local healerButton = createButton("healerButton", 95, 22, "Healers", {"TOP", buffButton, "BOTTOM"}, 0, -10, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
@@ -2461,9 +2450,9 @@ end)
 
 local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
     PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-	
     pvpStatsFrame:Show()
 end)
+
 
 -- Tooltip setup for the pvpStatsButton with Conquest Cap included
 pvpStatsButton:SetScript("OnEnter", function(self)
@@ -2483,6 +2472,23 @@ pvpStatsButton:SetScript("OnEnter", function(self)
     GameTooltip:Show()
 end)
 
+shareButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Share Incoming-BG Addon", 1, 1, 1)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Let your teammates know about Incoming-BG!", 0, 1, 0, true)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("• In a battleground or arena: Sends a recommendation to your team in instance or party chat.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Outside PvP: Sends a message in /say to nearby players.", 1, 1, 1, true)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Incoming-BG makes calling out important battleground events fast and easy with one-click buttons for INCOMING, SEND MORE, FC, and more.", 0.8, 0.8, 0.8, true)
+    GameTooltip:Show()
+end)
+
+shareButton:SetScript("OnLeave", function(self)
+    GameTooltip:Hide()
+end)
+
 pvpStatsButton:SetScript("OnLeave", function(self)
     GameTooltip:Hide()
 end)
@@ -2494,6 +2500,7 @@ applyButtonColor()
 allClearButton:SetScript("OnClick", AllClearButtonOnClick)
 sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
 incButton:SetScript("OnClick", IncButtonOnClick)
+
 
 -- Apply the PostClick script to each button
 for _, button in ipairs(buttons) do
@@ -2541,4 +2548,3 @@ IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
 IncCallout:RegisterEvent("PLAYER_LOGIN")
 IncCallout:RegisterEvent("PLAYER_LOGOUT")
 IncCallout:SetScript("OnEvent", OnEvent)
-

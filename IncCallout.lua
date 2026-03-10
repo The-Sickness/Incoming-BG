@@ -1,5 +1,14 @@
 -- Made by Sharpedge_Gaming
--- v9.7 - Midnight Beta
+-- v9.8 - Midnight (Fixed)
+-- Fixes applied:
+--   - Removed OnUpdate frame and entire message queue system (was poisoning hardware event chain)
+--   - Removed ChatFrameUtil.SubstituteChatMessageBeforeSend (was tainting SendChatMessage)
+--   - Removed C_ChatInfo.SendChatMessage wrapper attempts
+--   - Raw SendChatMessage called ONLY from direct button OnClick handlers
+--   - Fixed three shadowed 'local frame' declarations (consolidated into one named frame)
+--   - Removed dead SendMessage / QueueMessage functions
+--   - Removed stray duplicate SetScript("OnEvent", OnEvent) calls at bottom of file
+--   - Removed duplicate allClearButton/sendMoreButton/incButton SetScript("OnClick") calls
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -25,38 +34,25 @@ IncCalloutDB = IncCalloutDB or {}
 addonNamespace.addon = addon
 addonNamespace.db = IncDB
 
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("ADDON_LOADED")
-frame:SetScript("OnEvent", function(self, event, arg1)
-    if event == "ADDON_LOADED" and arg1 == "IncCallout" then
-        self:UnregisterEvent("ADDON_LOADED")
-        self:RegisterEvent("PLAYER_LOGIN")
-    elseif event == "PLAYER_LOGIN" then
-        self:UnregisterEvent("PLAYER_LOGIN")
-    end
-end)
-
 local defaults = {
     profile = {
-        buttonColor = {r = 1, g = 0, b = 0, a = 1}, 
-        fontColor = {r = 1, g = 1, b = 1, a = 1},  
+        buttonColor = {r = 1, g = 0, b = 0, a = 1},
+        fontColor = {r = 1, g = 1, b = 1, a = 1},
         opacity = 1,
         sendMoreIndex = 1,
         incIndex = 1,
         allClearIndex = 1,
-        logoColor = {r = 1, g = 1, b = 1, a = 1}, 
+        logoColor = {r = 1, g = 1, b = 1, a = 1},
         scale = 1,
-		--enableMiniMap = true,
-		--minimap = { minimapPos = 180 },
         isLocked = false,
         worldMapScale = 1,
         conquestFont = "Friz Quadrata TT",
         conquestFontSize = 14,
-        conquestFontColor = {r = 1, g = 1, b = 1, a = 1}, 
+        conquestFontColor = {r = 1, g = 1, b = 1, a = 1},
         honorFont = "Friz Quadrata TT",
         honorFontSize = 14,
-        honorFontColor = {r = 1, g = 1, b = 1, a = 1}, 
-        selectedLogo = "None", 
+        honorFontColor = {r = 1, g = 1, b = 1, a = 1},
+        selectedLogo = "None",
         buffRequestIndex = 1,
         healRequestIndex = 1,
         efcRequestIndex = 1,
@@ -69,7 +65,6 @@ local defaults = {
             healRequest = "",
             efcRequest = "",
             fcRequest = "",
-			
         },
     },
 }
@@ -77,7 +72,7 @@ local defaults = {
 local buttonTexts = {}
 local buttons = {}
 local playerFaction
- 
+
 local buttonMessageIndices = {
     sendMore = 1,
     inc = 1,
@@ -88,26 +83,33 @@ SLASH_INC1 = "/inc"
 
 local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID = 1792
-local blitzHonorGained = 0
 
+-- ============================================================
 -- Main GUI Frame
+-- ============================================================
+
 local IncCallout = CreateFrame("Frame", "IncCalloutMainFrame", UIParent, "BackdropTemplate")
-IncCallout:SetSize(225, 280)  
+IncCallout:SetSize(225, 280)
 IncCallout:SetPoint("CENTER")
 IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
 IncCallout:RegisterForDrag("LeftButton")
-IncCallout:SetScript("OnDragStart", IncCallout.StartMoving)
-IncCallout:SetScript("OnDragStop", IncCallout.StopMovingOrSizing)
+IncCallout:SetScript("OnDragStart", function(self)
+    if not IncDB.isLocked then
+        self:StartMoving()
+    end
+end)
+IncCallout:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+end)
 
 local closeButton = CreateFrame("Button", nil, IncCallout, "UIPanelCloseButton")
 closeButton:SetPoint("TOPRIGHT", IncCallout, "TOPRIGHT", -5, -5)
-closeButton:SetSize(24, 24)  
+closeButton:SetSize(24, 24)
 closeButton:SetScript("OnClick", function()
-PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    IncCallout:Hide()  
+    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
+    IncCallout:Hide()
 end)
-
 closeButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     GameTooltip:SetText("Close the Window", nil, nil, nil, nil, true)
@@ -117,9 +119,12 @@ closeButton:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
--- Create the PVP Stats window frame
+-- ============================================================
+-- PVP Stats Window
+-- ============================================================
+
 local pvpStatsFrame = CreateFrame("Frame", "PVPStatsFrame", UIParent, "BasicFrameTemplateWithInset")
-pvpStatsFrame:SetSize(700, 320)  
+pvpStatsFrame:SetSize(700, 320)
 pvpStatsFrame:SetPoint("CENTER")
 pvpStatsFrame:SetMovable(true)
 pvpStatsFrame:EnableMouse(true)
@@ -132,17 +137,15 @@ pvpStatsFrame.title = pvpStatsFrame:CreateFontString(nil, "OVERLAY", "GameFontHi
 pvpStatsFrame.title:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -3)
 pvpStatsFrame.title:SetText("PvP Statistics")
 
-local TOP_MARGIN = -25
-
 local function createStatLabelAndValueHorizontal(parent, labelText, xOffset, yOffset, labelTextColor)
     local label = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", xOffset, yOffset)
     label:SetText(labelText)
     label:SetTextColor(unpack(labelTextColor))
-    
+
     local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
-    value:SetTextColor(1, 0.84, 0) 
+    value:SetTextColor(1, 0.84, 0)
     return label, value
 end
 
@@ -154,7 +157,6 @@ local function HideAllTabs()
     end
 end
 
--- Create the tab frame
 local tabFrame = CreateFrame("Frame", nil, pvpStatsFrame)
 tabFrame:SetPoint("TOP", pvpStatsFrame, "TOP", 0, -30)
 tabFrame:SetSize(700, 25)
@@ -166,7 +168,6 @@ local function ResetTabColors()
     end
 end
 
--- Create a function to create tabs
 local function CreateTabButton(parent, text, id)
     local tab = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     tab:SetText(text)
@@ -181,7 +182,6 @@ local function CreateTabButton(parent, text, id)
     return tab
 end
 
--- Create the tabs
 local generalTab = CreateTabButton(tabFrame, "General", 1)
 generalTab:SetPoint("LEFT", tabFrame, "LEFT", 10, 0)
 table.insert(tabFrame.tabButtons, generalTab)
@@ -202,104 +202,75 @@ local miscTab = CreateTabButton(tabFrame, "Misc", 5)
 miscTab:SetPoint("LEFT", soloShuffleTab, "RIGHT", 5, 0)
 table.insert(tabFrame.tabButtons, miscTab)
 
--- Create tab frames
-tabs[1] = CreateFrame("Frame", nil, pvpStatsFrame)
-tabs[1]:SetSize(700, 300)
-tabs[1]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
-tabs[1]:Show()
-
-tabs[2] = CreateFrame("Frame", nil, pvpStatsFrame)
-tabs[2]:SetSize(700, 300)
-tabs[2]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
-tabs[2]:Hide()
-
-tabs[3] = CreateFrame("Frame", nil, pvpStatsFrame)
-tabs[3]:SetSize(700, 300)
-tabs[3]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
-tabs[3]:Hide()
-
-tabs[4] = CreateFrame("Frame", nil, pvpStatsFrame)
-tabs[4]:SetSize(700, 300)
-tabs[4]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
-tabs[4]:Hide()
-
-tabs[5] = CreateFrame("Frame", nil, pvpStatsFrame)
-tabs[5]:SetSize(700, 300)
-tabs[5]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
-tabs[5]:Hide()
+for i = 1, 5 do
+    tabs[i] = CreateFrame("Frame", nil, pvpStatsFrame)
+    tabs[i]:SetSize(700, 300)
+    tabs[i]:SetPoint("TOP", tabFrame, "BOTTOM", 0, -10)
+    tabs[i]:Hide()
+end
 
 HideAllTabs()
 tabs[1]:Show()
 generalTab:SetNormalFontObject("GameFontHighlight")
 
--- Add PvP Stats to the General Tab
 local generalStats = {
-    {"Player Name:", "playerNameValue", {0, 1, 0}},
-    {"Conquest Points:", "conquestValue", {1, 0, 0}},
-    {"Honor Points:", "honorValue", {0, 0.75, 1}},
-    {"Honor Level:", "honorLevelValue", {0.58, 0, 0.82}},
-    {"Conquest Cap:", "conquestCapValue", {1, 0.5, 0}},
-    {"Solo Shuffle Rating:", "soloShuffleRatingValue", {0, 0.75, 1}},
+    {"Player Name:",           "playerNameValue",       {0, 1, 0}},
+    {"Conquest Points:",       "conquestValue",         {1, 0, 0}},
+    {"Honor Points:",          "honorValue",            {0, 0.75, 1}},
+    {"Honor Level:",           "honorLevelValue",       {0.58, 0, 0.82}},
+    {"Conquest Cap:",          "conquestCapValue",      {1, 0.5, 0}},
+    {"Solo Shuffle Rating:",   "soloShuffleRatingValue",{0, 0.75, 1}},
 }
-
 for i, stat in ipairs(generalStats) do
-    local label, value = createStatLabelAndValueHorizontal(tabs[1], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    local label, value = createStatLabelAndValueHorizontal(tabs[1], stat[1], 10, -10 - (i-1)*40, stat[3])
     tabs[1][stat[2]] = value
 end
 
--- Add BG Stats to the BG Tab
 local bgStats = {
-    {"BGs Played:", "bgPlayedValue", {0, 1, 0}},
-    {"BGs Won:", "bgWonValue", {1, 0, 0}},
-    {"BGs Lost:", "bgLostValue", {0, 0.75, 1}},
-    {"Total Honorable Kills:", "totalHonorableKillsValue", {0.58, 0, 0.82}},
-    {"Battleground Honorable Kills:", "battlegroundHonorableKillsValue", {1, 0.5, 0}},
+    {"BGs Played:",                    "bgPlayedValue",                  {0, 1, 0}},
+    {"BGs Won:",                       "bgWonValue",                     {1, 0, 0}},
+    {"BGs Lost:",                      "bgLostValue",                    {0, 0.75, 1}},
+    {"Total Honorable Kills:",         "totalHonorableKillsValue",       {0.58, 0, 0.82}},
+    {"Battleground Honorable Kills:",  "battlegroundHonorableKillsValue",{1, 0.5, 0}},
 }
-
 for i, stat in ipairs(bgStats) do
-    local label, value = createStatLabelAndValueHorizontal(tabs[2], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    local label, value = createStatLabelAndValueHorizontal(tabs[2], stat[1], 10, -10 - (i-1)*40, stat[3])
     tabs[2][stat[2]] = value
 end
 
--- Add Solo RBG Stats to the Solo RBG Tab
 local soloRBGStats = {
-    {"Best Rating:", "bestRatingValue", {0, 1, 0}},
-    {"Games Won:", "gamesWonValue", {1, 0, 0}},
-    {"Games Played:", "gamesPlayedValue", {0, 0.75, 1}},
-    {"Most Played Spec:", "mostPlayedSpecValue", {0.58, 0, 0.82}},
-    {"Played the Most:", "playedMostValue", {1, 0.5, 0}},
-    {"Current Rank:", "currentRankValue", {0, 1, 0}}
+    {"Best Rating:",      "bestRatingValue",    {0, 1, 0}},
+    {"Games Won:",        "gamesWonValue",      {1, 0, 0}},
+    {"Games Played:",     "gamesPlayedValue",   {0, 0.75, 1}},
+    {"Most Played Spec:", "mostPlayedSpecValue",{0.58, 0, 0.82}},
+    {"Played the Most:",  "playedMostValue",    {1, 0.5, 0}},
+    {"Current Rank:",     "currentRankValue",   {0, 1, 0}},
 }
-
 for i, stat in ipairs(soloRBGStats) do
-    local label, value = createStatLabelAndValueHorizontal(tabs[3], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    local label, value = createStatLabelAndValueHorizontal(tabs[3], stat[1], 10, -10 - (i-1)*40, stat[3])
     tabs[3][stat[2]] = value
 end
 
--- Add Solo Shuffle Stats to the Solo Shuffle Tab
 local soloShuffleStats = {
-    {"Best Rating:", "shuffleBestRatingValue", {0, 1, 0}},
-    {"Rounds Won:", "shuffleRoundsWonValue", {0, 0.75, 1}},
-    {"Rounds Played:", "shuffleRoundsPlayedValue", {1, 0, 0}},
-    {"Most Played Spec:", "shuffleMostPlayedSpecValue", {0.58, 0, 0.82}},
+    {"Best Rating:",      "shuffleBestRatingValue",    {0, 1, 0}},
+    {"Rounds Won:",       "shuffleRoundsWonValue",     {0, 0.75, 1}},
+    {"Rounds Played:",    "shuffleRoundsPlayedValue",  {1, 0, 0}},
+    {"Most Played Spec:", "shuffleMostPlayedSpecValue",{0.58, 0, 0.82}},
 }
-
 for i, stat in ipairs(soloShuffleStats) do
-    local label, value = createStatLabelAndValueHorizontal(tabs[4], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    local label, value = createStatLabelAndValueHorizontal(tabs[4], stat[1], 10, -10 - (i-1)*40, stat[3])
     tabs[4][stat[2]] = value
 end
 
--- Add Misc Stats to the Misc Tab
 local miscStats = {
-    {"Total Kills (Exp or Honor):", "totalKillsValue", {0, 1, 0}},
-    {"Total Killing Blows:", "totalKillingBlowsValue", {1, 0, 0}},
-    {"Battleground Killing Blows:", "battlegroundKillingBlowsValue", {0, 0.75, 1}},
-    {"Total Deaths:", "totalDeathsValue", {0.58, 0, 0.82}},
-    {"Battleground Deaths:", "battlegroundDeathsValue", {1, 0.5, 0}},
+    {"Total Kills (Exp or Honor):",    "totalKillsValue",               {0, 1, 0}},
+    {"Total Killing Blows:",           "totalKillingBlowsValue",        {1, 0, 0}},
+    {"Battleground Killing Blows:",    "battlegroundKillingBlowsValue", {0, 0.75, 1}},
+    {"Total Deaths:",                  "totalDeathsValue",              {0.58, 0, 0.82}},
+    {"Battleground Deaths:",           "battlegroundDeathsValue",       {1, 0.5, 0}},
 }
-
 for i, stat in ipairs(miscStats) do
-    local label, value = createStatLabelAndValueHorizontal(tabs[5], stat[1], 10, -10 - (i - 1) * 40, stat[3])
+    local label, value = createStatLabelAndValueHorizontal(tabs[5], stat[1], 10, -10 - (i-1)*40, stat[3])
     tabs[5][stat[2]] = value
 end
 
@@ -307,48 +278,36 @@ local SOLO_RBG_INDEX = 9
 local SOLO_SHUFFLE_INDEX = 7
 
 local function GetPvpRank(rating)
-    if rating < 1000 then
-        return "Unranked"
-    elseif rating < 1200 then
-        return "Combatant 1"
-    elseif rating < 1400 then
-        return "Combatant 2"
-    elseif rating < 1600 then
-        return "Challenger 1"
-    elseif rating < 1800 then
-        return "Challenger 2"
-    elseif rating < 2100 then
-        return "Rival"
-    elseif rating < 2400 then
-        return "Duelist"
-    else
-        return "Elite"
+    if rating < 1000 then return "Unranked"
+    elseif rating < 1200 then return "Combatant 1"
+    elseif rating < 1400 then return "Combatant 2"
+    elseif rating < 1600 then return "Challenger 1"
+    elseif rating < 1800 then return "Challenger 2"
+    elseif rating < 2100 then return "Rival"
+    elseif rating < 2400 then return "Duelist"
+    else return "Elite"
     end
 end
 
--- Function to fetch BG stats
 local function FetchBGStats()
     local bgPlayed = GetStatistic(839) or "N/A"
-    local bgWon = GetStatistic(840) or "N/A"
+    local bgWon    = GetStatistic(840) or "N/A"
     local bgLost
     if tonumber(bgPlayed) and tonumber(bgWon) then
         bgLost = tonumber(bgPlayed) - tonumber(bgWon)
     else
         bgLost = "N/A"
     end
-    local totalHonorableKills = GetStatistic(588) or "N/A"
+    local totalHonorableKills        = GetStatistic(588) or "N/A"
     local battlegroundHonorableKills = GetStatistic(382) or "N/A"
-
     return bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills
 end
 
--- Function to fetch Great Vault slots
 local function FetchGreatVaultSlots()
     local weeklyProgress = C_WeeklyRewards.GetConquestWeeklyProgress()
     return weeklyProgress and weeklyProgress.unlocksCompleted or 0
 end
 
--- Function to get spec name safely
 local function GetSpecName(specID)
     if specID and specID > 0 then
         return GetSpecializationNameForSpecID(specID) or "N/A"
@@ -356,34 +315,29 @@ local function GetSpecName(specID)
     return "N/A"
 end
 
--- Function to fetch Solo RBG stats
 local function FetchSoloRBGStats()
     local gamesPlayed = GetStatistic(40199) or "N/A"
-    local gamesWon = GetStatistic(40201) or "N/A"
-    local playedMost = GetStatistic(40200) or "N/A"
-    local rating, seasonBest, weeklyBest, seasonPlayed, seasonWon, weeklyPlayed, weeklyWon, lastWeeksBest, hasWon, pvpTier, ranking, roundsSeasonPlayed, roundsSeasonWon, roundsWeeklyPlayed, roundsWeeklyWon = GetPersonalRatedInfo(SOLO_RBG_INDEX) -- Use the correct bracketIndex
-
+    local gamesWon    = GetStatistic(40201) or "N/A"
+    local playedMost  = GetStatistic(40200) or "N/A"
+    local rating = GetPersonalRatedInfo(SOLO_RBG_INDEX)
     if rating then
         local specStats = C_PvP.GetPersonalRatedBGBlitzSpecStats() or {}
-        local mostPlayedSpecID = specStats.seasonMostPlayedSpecID or 0
-        local mostPlayedSpec = GetSpecName(mostPlayedSpecID)
+        local mostPlayedSpec = GetSpecName(specStats.seasonMostPlayedSpecID or 0)
         local currentRank = GetPvpRank(rating)
         return rating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost, currentRank
     else
         return "N/A", gamesPlayed, gamesWon, "N/A", playedMost, "N/A"
     end
 end
-    
--- Function to fetch Solo Shuffle stats
+
 local function FetchSoloShuffleStats()
-    local shuffleRating, shuffleSeasonBest, shuffleWeeklyBest, shuffleSeasonPlayed, shuffleSeasonWon, shuffleWeeklyPlayed, shuffleWeeklyWon, shuffleLastWeeksBest, shuffleHasWon, shufflePvpTier, shuffleRanking, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleRoundsWeeklyPlayed, shuffleRoundsWeeklyWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
+    local _, shuffleSeasonBest, _, _, _, _, _, _, _, _, _,
+        shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon = GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)
     local shuffleSpecStats = C_PvP.GetPersonalRatedSoloShuffleSpecStats() or {}
-    local shuffleMostPlayedSpecID = shuffleSpecStats.seasonMostPlayedSpecID or 0
-    local shuffleMostPlayedSpecName = GetSpecName(shuffleMostPlayedSpecID)
+    local shuffleMostPlayedSpecName = GetSpecName(shuffleSpecStats.seasonMostPlayedSpecID or 0)
     return shuffleSeasonBest, shuffleRoundsSeasonPlayed, shuffleRoundsSeasonWon, shuffleMostPlayedSpecName
 end
 
--- Function to save PvP stats
 local function SavePvPStats()
     IncCalloutDB = IncCalloutDB or {}
     local character = UnitName("player")
@@ -395,98 +349,89 @@ local function SavePvPStats()
 
     local SavedSettings = IncCalloutDB[character]
 
-    local loadedOrLoading, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
-    if not loaded then
-        C_AddOns.LoadAddOn("Blizzard_PVPUI")
-    end
+    local _, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
+    if not loaded then C_AddOns.LoadAddOn("Blizzard_PVPUI") end
 
     local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-    local honorLevel = UnitHonorLevel("player")
+    local honorInfo    = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+    local honorLevel   = UnitHonorLevel("player")
     local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
 
-    SavedSettings.conquestValue = conquestInfo and conquestInfo.quantity or 0
+    SavedSettings.conquestValue    = conquestInfo and conquestInfo.quantity or 0
     SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.totalEarned .. " / " .. (conquestInfo.maxQuantity > 0 and conquestInfo.maxQuantity or "No Cap")) or "N/A"
-    SavedSettings.honorValue = honorInfo and honorInfo.quantity or "N/A"
-    SavedSettings.honorLevelValue = honorLevel
+    SavedSettings.honorValue       = honorInfo and honorInfo.quantity or "N/A"
+    SavedSettings.honorLevelValue  = honorLevel
     SavedSettings.soloShuffleRatingValue = soloShuffleRating
 
-    -- Save BG Stats
     local bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills = FetchBGStats()
-    SavedSettings.bgPlayed = bgPlayed
-    SavedSettings.bgWon = bgWon
-    SavedSettings.bgLost = bgLost
-    SavedSettings.totalHonorableKills = totalHonorableKills
-    SavedSettings.battlegroundHonorableKills = battlegroundHonorableKills
-    SavedSettings.greatVaultSlots = FetchGreatVaultSlots()
+    SavedSettings.bgPlayed                    = bgPlayed
+    SavedSettings.bgWon                       = bgWon
+    SavedSettings.bgLost                      = bgLost
+    SavedSettings.totalHonorableKills         = totalHonorableKills
+    SavedSettings.battlegroundHonorableKills  = battlegroundHonorableKills
+    SavedSettings.greatVaultSlots             = FetchGreatVaultSlots()
 
-    -- Save Solo RBG Stats
     local bestRating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost, currentRank = FetchSoloRBGStats()
-    SavedSettings.bestRatingValue = bestRating
-    SavedSettings.gamesPlayedValue = gamesPlayed
-    SavedSettings.gamesWonValue = gamesWon
-    SavedSettings.mostPlayedSpecValue = mostPlayedSpec
-    SavedSettings.playedMostValue = playedMost
-    SavedSettings.currentRankValue = currentRank
+    SavedSettings.bestRatingValue    = bestRating
+    SavedSettings.gamesPlayedValue   = gamesPlayed
+    SavedSettings.gamesWonValue      = gamesWon
+    SavedSettings.mostPlayedSpecValue= mostPlayedSpec
+    SavedSettings.playedMostValue    = playedMost
+    SavedSettings.currentRankValue   = currentRank
 
-    -- Save Solo Shuffle Stats
     local shuffleBestRating, shuffleRoundsPlayed, shuffleRoundsWon, shuffleMostPlayedSpec = FetchSoloShuffleStats()
-    SavedSettings.shuffleBestRatingValue = shuffleBestRating or "N/A"
-    SavedSettings.shuffleRoundsWonValue = shuffleRoundsWon or "N/A"
-    SavedSettings.shuffleRoundsPlayedValue = shuffleRoundsPlayed or "N/A"
-    SavedSettings.shuffleMostPlayedSpecValue = shuffleMostPlayedSpec
+    SavedSettings.shuffleBestRatingValue    = shuffleBestRating or "N/A"
+    SavedSettings.shuffleRoundsWonValue     = shuffleRoundsWon or "N/A"
+    SavedSettings.shuffleRoundsPlayedValue  = shuffleRoundsPlayed or "N/A"
+    SavedSettings.shuffleMostPlayedSpecValue= shuffleMostPlayedSpec
 
-    -- Save Misc Stats
-    local totalKills = GetStatistic(1198) or "N/A"
-    local totalKillingBlows = GetStatistic(1487) or "N/A"
-    local battlegroundKillingBlows = GetStatistic(1491) or "N/A"
-    local totalDeaths = GetStatistic(60) or "N/A"
-    local battlegroundDeaths = GetStatistic(14786) or "N/A"
-
-    SavedSettings.totalKillsValue = totalKills
-    SavedSettings.totalKillingBlowsValue = totalKillingBlows
-    SavedSettings.battlegroundKillingBlowsValue = battlegroundKillingBlows
-    SavedSettings.totalDeathsValue = totalDeaths
-    SavedSettings.battlegroundDeathsValue = battlegroundDeaths
+    SavedSettings.totalKillsValue              = GetStatistic(1198)  or "N/A"
+    SavedSettings.totalKillingBlowsValue       = GetStatistic(1487)  or "N/A"
+    SavedSettings.battlegroundKillingBlowsValue= GetStatistic(1491)  or "N/A"
+    SavedSettings.totalDeathsValue             = GetStatistic(60)    or "N/A"
+    SavedSettings.battlegroundDeathsValue      = GetStatistic(14786) or "N/A"
 end
 
--- Update the Solo RBG Stats
 local function UpdateSoloRBGStatsFrame(character)
     local stats = IncCalloutDB[character]
-    if stats then
-        tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
-        tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
-        tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
-        tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
-        tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
-        tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
-    end
+    if not stats then return end
+    tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
+    tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
+    tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
+    tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
+    tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
+    tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
 end
 
--- Function to update Solo Shuffle stats frame
 local function UpdateSoloShuffleStatsFrame(character)
     local stats = IncCalloutDB[character]
-    if stats then
-        tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
-        tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
-        tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
-        tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
-    end
+    if not stats then return end
+    tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
+    tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
+    tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
+    tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
 end
 
--- Function to update Misc stats frame
 local function UpdateMiscStatsFrame(character)
     local stats = IncCalloutDB[character]
-    if stats then
-        tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
-        tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
-        tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
-        tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
-        tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
-    end
+    if not stats then return end
+    tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
+    tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
+    tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
+    tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
+    tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
 end
 
--- Function to update tab values
+local function UpdateBGStatsFrame(character)
+    local stats = IncCalloutDB[character]
+    if not stats then return end
+    tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
+    tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
+    tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
+    tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
+    tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
+end
+
 local function UpdateTabValues(tab, stats)
     tab.playerNameValue:SetText(stats.playerName or "N/A")
     tab.playerNameValue:SetTextColor(stats.playerColor.r or 1, stats.playerColor.g or 1, stats.playerColor.b or 1)
@@ -497,61 +442,52 @@ local function UpdateTabValues(tab, stats)
     tab.soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
 end
 
--- Function to update PvP stats frame
 local function UpdatePvPStatsFrame(character)
-    local loadedOrLoading, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
-    if not loaded then
-        C_AddOns.LoadAddOn("Blizzard_PVPUI")
-    end
+    local _, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
+    if not loaded then C_AddOns.LoadAddOn("Blizzard_PVPUI") end
 
     local stats = IncCalloutDB[character]
     if stats then
         local name = string.match(character, "^[^%-]+")
-        local classColor = RAID_CLASS_COLORS[stats.class] or {r = 1, g = 1, b = 1}
-        local tabStats = {
+        local classColor = RAID_CLASS_COLORS[stats.class] or {r=1, g=1, b=1}
+        UpdateTabValues(tabs[1], {
             playerName = name,
             playerColor = classColor,
             conquestValue = stats.conquestValue,
             conquestCapValue = stats.conquestCapValue,
             honorValue = stats.honorValue,
             honorLevelValue = stats.honorLevelValue,
-            soloShuffleRatingValue = stats.soloShuffleRatingValue
-        }
-        UpdateTabValues(tabs[1], tabStats)
+            soloShuffleRatingValue = stats.soloShuffleRatingValue,
+        })
     end
 
-    -- Adjust PvP UI buttons based on current PvP availability
-    local canUseRated = C_PvP.CanPlayerUseRatedPVPUI()
-    local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
-
-    if (canUseRated) then
+    local canUseRated  = C_PvP.CanPlayerUseRatedPVPUI()
+    local canUsePremade= C_LFGInfo.CanPlayerUsePremadeGroup()
+    if canUseRated and PVPQueueFrame then
         PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton2, true)
         PVPQueueFrame.CategoryButton2.tooltip = nil
     end
-
-    if (canUsePremade) then
+    if canUsePremade and PVPQueueFrame then
         PVPQueueFrame_SetCategoryButtonState(PVPQueueFrame.CategoryButton3, true)
         PVPQueueFrame.CategoryButton3.tooltip = nil
     end
 end
 
--- Function to update BG stats frame
-local function UpdateBGStatsFrame(character)
-    local stats = IncCalloutDB[character]
-    if stats then
-        tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
-        tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
-        tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
-        tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
-        tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
-    end
+local function UpdateAllStatsFrames(character)
+    UpdatePvPStatsFrame(character)
+    UpdateBGStatsFrame(character)
+    UpdateSoloRBGStatsFrame(character)
+    UpdateSoloShuffleStatsFrame(character)
+    UpdateMiscStatsFrame(character)
 end
 
--- Function to create character dropdown
+-- ============================================================
+-- Character Dropdown
+-- ============================================================
+
 local function CreateCharacterDropdown()
     local dropdown = CreateFrame("FRAME", "SelectCharacterDropdown", pvpStatsFrame, "UIDropDownMenuTemplate")
     dropdown:SetPoint("BOTTOMLEFT", pvpStatsFrame, "BOTTOMLEFT", -15, -30)
-
     UIDropDownMenu_SetWidth(dropdown, 150)
     UIDropDownMenu_SetText(dropdown, "Characters")
 
@@ -563,93 +499,57 @@ local function CreateCharacterDropdown()
         local stats = IncCalloutDB[characterFullName]
 
         if stats then
-            local classColor = RAID_CLASS_COLORS[stats.class]
+            local classColor = RAID_CLASS_COLORS[stats.class] or {r=1,g=1,b=1}
             tabs[1].playerNameValue:SetText(characterNameOnly)
             tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
-
             tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
             tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
             tabs[1].honorValue:SetText(stats.honorValue or "N/A")
             tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
             tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
-
             tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
             tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
             tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
             tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
             tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
-
             tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
             tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
             tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
             tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
             tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
             tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
-
             tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
             tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
             tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
             tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
-
             tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
             tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
             tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
             tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
             tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
-
-            UpdateSoloRBGStatsFrame(characterFullName)
-            UpdateSoloShuffleStatsFrame(characterFullName)
-            UpdateMiscStatsFrame(characterFullName)
         else
+            -- No data found: clear all to N/A
             tabs[1].playerNameValue:SetText(characterNameOnly)
-            tabs[1].playerNameValue:SetTextColor(1, 1, 1)
-
-            tabs[1].conquestValue:SetText("N/A")
-            tabs[1].conquestCapValue:SetText("N/A")
-            tabs[1].honorValue:SetText("N/A")
-            tabs[1].honorLevelValue:SetText("N/A")
-            tabs[1].soloShuffleRatingValue:SetText("N/A")
-
-            tabs[2].bgPlayedValue:SetText("N/A")
-            tabs[2].bgWonValue:SetText("N/A")
-            tabs[2].bgLostValue:SetText("N/A")
-            tabs[2].totalHonorableKillsValue:SetText("N/A")
-            tabs[2].battlegroundHonorableKillsValue:SetText("N/A")
-
-            tabs[3].bestRatingValue:SetText("N/A")
-            tabs[3].gamesWonValue:SetText("N/A")
-            tabs[3].gamesPlayedValue:SetText("N/A")
-            tabs[3].mostPlayedSpecValue:SetText("N/A")
-            tabs[3].playedMostValue:SetText("N/A")
-            tabs[3].currentRankValue:SetText("N/A")
-
-            tabs[4].shuffleBestRatingValue:SetText("N/A")
-            tabs[4].shuffleRoundsWonValue:SetText("N/A")
-            tabs[4].shuffleRoundsPlayedValue:SetText("N/A")
-            tabs[4].shuffleMostPlayedSpecValue:SetText("N/A")
-
-            tabs[5].totalKillsValue:SetText("N/A")
-            tabs[5].totalKillingBlowsValue:SetText("N/A")
-            tabs[5].battlegroundKillingBlowsValue:SetText("N/A")
-            tabs[5].totalDeathsValue:SetText("N/A")
-            tabs[5].battlegroundDeathsValue:SetText("N/A")
-
-            UpdateSoloRBGStatsFrame(characterFullName)
-            UpdateSoloShuffleStatsFrame(characterFullName)
-            UpdateMiscStatsFrame(characterFullName)
+            tabs[1].playerNameValue:SetTextColor(1,1,1)
+            for _, tab in ipairs(tabs) do
+                for k, v in pairs(tab) do
+                    if type(v) == "table" and v.SetText then
+                        v:SetText("N/A")
+                    end
+                end
+            end
         end
+        UIDropDownMenu_SetText(dropdown, "Characters")
     end
 
     local function Initialize(self, level)
         local info = UIDropDownMenu_CreateInfo()
-        local selectedCharacter = UIDropDownMenu_GetText(dropdown)
-
         for k, v in pairs(IncCalloutDB) do
             if type(k) == "string" and k ~= "profileKeys" and k ~= "settings" and k ~= "profiles" then
-                info.text = k
+                info.text     = k
                 info.menuList = k
-                info.func = OnClick
-                info.checked = (k == selectedCharacter)
+                info.func     = OnClick
+                info.checked  = false
                 info.isNotRadio = true
                 UIDropDownMenu_AddButton(info, level)
             end
@@ -663,59 +563,12 @@ end
 
 CreateCharacterDropdown()
 
--- Function to handle the OnShow event for the PvP stats frame
 pvpStatsFrame:SetScript("OnShow", function()
     local character = UnitName("player")
     UIDropDownMenu_SetText(SelectCharacterDropdown, character)
     UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
-    local stats = IncCalloutDB[character]
-    if stats then
-        tabs[1].playerNameValue:SetText(character or "Unknown")
-        local classColor = RAID_CLASS_COLORS[stats.class]
-        if classColor then
-            tabs[1].playerNameValue:SetTextColor(classColor.r, classColor.g, classColor.b)
-        end
-
-        tabs[1].conquestValue:SetText(stats.conquestValue or "N/A")
-        tabs[1].conquestCapValue:SetText(stats.conquestCapValue or "N/A")
-        tabs[1].honorValue:SetText(stats.honorValue or "N/A")
-        tabs[1].honorLevelValue:SetText(stats.honorLevelValue or "N/A")
-        tabs[1].soloShuffleRatingValue:SetText(stats.soloShuffleRatingValue or "N/A")
-
-        tabs[2].bgPlayedValue:SetText(stats.bgPlayed or "N/A")
-        tabs[2].bgWonValue:SetText(stats.bgWon or "N/A")
-        tabs[2].bgLostValue:SetText(stats.bgLost or "N/A")
-        tabs[2].totalHonorableKillsValue:SetText(stats.totalHonorableKills or "N/A")
-        tabs[2].battlegroundHonorableKillsValue:SetText(stats.battlegroundHonorableKills or "N/A")
-
-        tabs[3].bestRatingValue:SetText(stats.bestRatingValue or "N/A")
-        tabs[3].gamesWonValue:SetText(stats.gamesWonValue or "N/A")
-        tabs[3].gamesPlayedValue:SetText(stats.gamesPlayedValue or "N/A")
-        tabs[3].mostPlayedSpecValue:SetText(stats.mostPlayedSpecValue or "N/A")
-        tabs[3].playedMostValue:SetText(stats.playedMostValue or "N/A")
-        tabs[3].currentRankValue:SetText(stats.currentRankValue or "N/A")
-
-        tabs[4].shuffleBestRatingValue:SetText(stats.shuffleBestRatingValue or "N/A")
-        tabs[4].shuffleRoundsWonValue:SetText(stats.shuffleRoundsWonValue or "N/A")
-        tabs[4].shuffleRoundsPlayedValue:SetText(stats.shuffleRoundsPlayedValue or "N/A")
-        tabs[4].shuffleMostPlayedSpecValue:SetText(stats.shuffleMostPlayedSpecValue or "N/A")
-
-        tabs[5].totalKillsValue:SetText(stats.totalKillsValue or "N/A")
-        tabs[5].totalKillingBlowsValue:SetText(stats.totalKillingBlowsValue or "N/A")
-        tabs[5].battlegroundKillingBlowsValue:SetText(stats.battlegroundKillingBlowsValue or "N/A")
-        tabs[5].totalDeathsValue:SetText(stats.totalDeathsValue or "N/A")
-        tabs[5].battlegroundDeathsValue:SetText(stats.battlegroundDeathsValue or "N/A")
-
-        UpdateSoloRBGStatsFrame(character)
-        UpdateSoloShuffleStatsFrame(character)
-        UpdateMiscStatsFrame(character)
-    end
     SavePvPStats()
-    UpdatePvPStatsFrame(character)
-    UpdateBGStatsFrame(character)
-    UpdateSoloRBGStatsFrame(character)
-    UpdateSoloShuffleStatsFrame(character)
-    UpdateMiscStatsFrame(character)
+    UpdateAllStatsFrames(character)
     UIDropDownMenu_SetText(SelectCharacterDropdown, "Characters")
 end)
 
@@ -724,330 +577,205 @@ local function DelayedSaveAndUpdate()
         RequestRatedInfo()
         SavePvPStats()
         local character = UnitName("player")
-        UpdatePvPStatsFrame(character)
-        UpdateBGStatsFrame(character)
-        UpdateSoloRBGStatsFrame(character)
-        UpdateSoloShuffleStatsFrame(character)
-        UpdateMiscStatsFrame(character)
+        UpdateAllStatsFrames(character)
     end)
 end
 
-local eventHandlers = {
-    ["PVP_RATED_STATS_UPDATE"] = function()
-        local character = UnitName("player")
-        SavePvPStats()
-        UpdatePvPStatsFrame(character)
-        UpdateBGStatsFrame(character)
-        UpdateSoloRBGStatsFrame(character)
-        UpdateSoloShuffleStatsFrame(character)
-        UpdateMiscStatsFrame(character)
-    end,
-    ["PVP_REWARDS_UPDATE"] = function()
-        local character = UnitName("player")
-        SavePvPStats()
-        UpdatePvPStatsFrame(character)
-        UpdateBGStatsFrame(character)
-        UpdateSoloRBGStatsFrame(character)
-        UpdateSoloShuffleStatsFrame(character)
-        UpdateMiscStatsFrame(character)
-    end,
-    ["ZONE_CHANGED_NEW_AREA"] = DelayedSaveAndUpdate,
-    ["PLAYER_ENTERING_WORLD"] = function()
-        DelayedSaveAndUpdate()
-        C_Timer.After(2, function()
-            local character = UnitName("player")
-            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
-        end)
-    end,
-    ["ADDON_LOADED"] = function(addonName)
-        if addonName == "IncCallout" then
-            DelayedSaveAndUpdate()
-            C_Timer.After(2, function()
-                local character = UnitName("player")
-                UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-                UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
-            end)
-        end
-    end,
-    ["PLAYER_LOGIN"] = function()
-        DelayedSaveAndUpdate()
-        C_Timer.After(2, function()
-            local character = UnitName("player")
-            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
-            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
-        end)
-    end,
-    ["CHAT_MSG_COMBAT_HONOR_GAIN"] = function(honorGained)
-        if isInBGBlitz then
-            local character = UnitName("player")
-            if IncCalloutDB[character] then
-                IncCalloutDB[character].blitzHonor = (IncCalloutDB[character].blitzHonor or 0) + tonumber(honorGained)
-                UpdateSoloRBGStatsFrame(character)
-            end
-        end
-    end
-}
-
-local function EventHandler(self, event, ...)
-    if eventHandlers[event] then
-        eventHandlers[event](...)
-    else
-        SavePvPStats()
-        local character = UnitName("player")
-        UpdatePvPStatsFrame(character)
-        UpdateBGStatsFrame(character)
-        UpdateSoloRBGStatsFrame(character)
-        UpdateSoloShuffleStatsFrame(character)
-        UpdateMiscStatsFrame(character)
-    end
-end
-
-local frame = CreateFrame("Frame")
-for event in pairs(eventHandlers) do
-    frame:RegisterEvent(event)
-end
-frame:SetScript("OnEvent", EventHandler)
+-- ============================================================
+-- Color / Border / Map Options
+-- ============================================================
 
 local colorOptions = {
-    { name = "Semi-Transparent Black", color = {0, 0, 0, 0.5} },
-    { name = "Solid Black", color = {0, 0, 0, 1} },
-    { name = "Semi-Transparent White", color = {1, 1, 1, 0.5} },
-    { name = "Solid White", color = {1, 1, 1, 1} },
-    { name = "Semi-Transparent Red", color = {1, 0, 0, 0.5} },
-    { name = "Solid Red", color = {1, 0, 0, 1} },
-    { name = "Semi-Transparent Green", color = {0, 1, 0, 0.5} },
-    { name = "Solid Green", color = {0, 1, 0, 1} },
-    { name = "Semi-Transparent Blue", color = {0, 0, 1, 0.5} },
-    { name = "Solid Blue", color = {0, 0, 1, 1} },
-    { name = "Semi-Transparent Yellow", color = {1, 1, 0, 0.5} },
-    { name = "Solid Yellow", color = {1, 1, 0, 1} },
-    { name = "Semi-Transparent Cyan", color = {0, 1, 1, 0.5} },
-    { name = "Solid Cyan", color = {0, 1, 1, 1} },
+    { name = "Semi-Transparent Black",   color = {0, 0, 0, 0.5} },
+    { name = "Solid Black",              color = {0, 0, 0, 1} },
+    { name = "Semi-Transparent White",   color = {1, 1, 1, 0.5} },
+    { name = "Solid White",              color = {1, 1, 1, 1} },
+    { name = "Semi-Transparent Red",     color = {1, 0, 0, 0.5} },
+    { name = "Solid Red",                color = {1, 0, 0, 1} },
+    { name = "Semi-Transparent Green",   color = {0, 1, 0, 0.5} },
+    { name = "Solid Green",              color = {0, 1, 0, 1} },
+    { name = "Semi-Transparent Blue",    color = {0, 0, 1, 0.5} },
+    { name = "Solid Blue",               color = {0, 0, 1, 1} },
+    { name = "Semi-Transparent Yellow",  color = {1, 1, 0, 0.5} },
+    { name = "Solid Yellow",             color = {1, 1, 0, 1} },
+    { name = "Semi-Transparent Cyan",    color = {0, 1, 1, 0.5} },
+    { name = "Solid Cyan",               color = {0, 1, 1, 1} },
     { name = "Semi-Transparent Magenta", color = {1, 0, 1, 0.5} },
-    { name = "Solid Magenta", color = {1, 0, 1, 1} },
-    { name = "Semi-Transparent Orange", color = {1, 0.5, 0, 0.5} },
-    { name = "Solid Orange", color = {1, 0.5, 0, 1} },
-    { name = "Semi-Transparent Purple", color = {0.5, 0, 0.5, 0.5} },
-    { name = "Solid Purple", color = {0.5, 0, 0.5, 1} },
-    { name = "Semi-Transparent Grey", color = {0.5, 0.5, 0.5, 0.5} },
-    { name = "Solid Grey", color = {0.5, 0.5, 0.5, 1} },
-    { name = "Semi-Transparent Teal", color = {0, 0.5, 0.5, 0.5} },
-    { name = "Solid Teal", color = {0, 0.5, 0.5, 1} },
-    { name = "Semi-Transparent Pink", color = {1, 0.75, 0.8, 0.5} },
-    { name = "Solid Pink", color = {1, 0.75, 0.8, 1} },
-	
+    { name = "Solid Magenta",            color = {1, 0, 1, 1} },
+    { name = "Semi-Transparent Orange",  color = {1, 0.5, 0, 0.5} },
+    { name = "Solid Orange",             color = {1, 0.5, 0, 1} },
+    { name = "Semi-Transparent Purple",  color = {0.5, 0, 0.5, 0.5} },
+    { name = "Solid Purple",             color = {0.5, 0, 0.5, 1} },
+    { name = "Semi-Transparent Grey",    color = {0.5, 0.5, 0.5, 0.5} },
+    { name = "Solid Grey",               color = {0.5, 0.5, 0.5, 1} },
+    { name = "Semi-Transparent Teal",    color = {0, 0.5, 0.5, 0.5} },
+    { name = "Solid Teal",               color = {0, 0.5, 0.5, 1} },
+    { name = "Semi-Transparent Pink",    color = {1, 0.75, 0.8, 0.5} },
+    { name = "Solid Pink",               color = {1, 0.75, 0.8, 1} },
 }
 
 local borderOptions = {
-    { name = "Azerite", file = "Interface/Tooltips/UI-Tooltip-Border-Azerite" },
-    { name = "Classic", file = "Interface/Tooltips/UI-Tooltip-Border" },
-    { name = "Sleek", file = "Interface/DialogFrame/UI-DialogBox-Border" },
-    { name = "Corrupted", file = "Interface/Tooltips/UI-Tooltip-Border-Corrupted" },
-    { name = "Maw", file = "Interface/Tooltips/UI-Tooltip-Border-Maw" },
-    { name = "Smooth", file = "Interface/LFGFRAME/LFGBorder" },
-	{ name = "Glass", file = "Interface/DialogFrame/UI-DialogBox-TestWatermark-Border" },
-	{ name = "Gold", file = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border" },
-	{ name = "Slide", file = "Interface\\FriendsFrame\\UI-Toast-Border" },
-	{ name = "Glow", file = "Interface\\TutorialFrame\\UI-TutorialFrame-CalloutGlow" },
-	{ name = "Glow 2", file = "Interface\\AddOns\\IncCallout\\Textures\\BG15.blp" },
-	{ name = "Grey", file = "Interface\\Tooltips\\UI-Tooltip-Background" },
-	{ name = "Blue", file = "Interface\\AddOns\\IncCallout\\Textures\\BG1.png" },
-	{ name = "Black Gloss", file = "Interface\\AddOns\\IncCallout\\Textures\\BG2.blp" },
-	{ name = "Silverish", file = "Interface\\AddOns\\IncCallout\\Textures\\BG3.blp" },
-	{ name = "Bevel", file = "Interface\\AddOns\\IncCallout\\Textures\\BG4.blp" },
-	{ name = "Bevel 2", file = "Interface\\AddOns\\IncCallout\\Textures\\BG5.blp" },
-	{ name = "Fade", file = "Interface\\AddOns\\IncCallout\\Textures\\BG6.blp" },
-	{ name = "Fade 2", file = "Interface\\AddOns\\IncCallout\\Textures\\BG7.blp" },
-	{ name = "Thin Line", file = "Interface\\AddOns\\IncCallout\\Textures\\BG8.blp" },
-	{ name = "2 Tone", file = "Interface\\AddOns\\IncCallout\\Textures\\BG9.blp" },
-	{ name = "Bluish", file = "Interface\\AddOns\\IncCallout\\Textures\\BG10.blp" },
-	{ name = "Neon Yellow", file = "Interface\\AddOns\\IncCallout\\Textures\\BG11.blp" },
-	{ name = "Neon Red", file = "Interface\\AddOns\\IncCallout\\Textures\\BG12.blp" },
-	{ name = "Neon Green", file = "Interface\\AddOns\\IncCallout\\Textures\\BG13.blp" },
-	{ name = "Neon Blue", file = "Interface\\AddOns\\IncCallout\\Textures\\BG14.blp" },
-	{ name = "Double Yellow", file = "Interface\\AddOns\\IncCallout\\Textures\\BG16.blp" },
-			
+    { name = "Azerite",       file = "Interface/Tooltips/UI-Tooltip-Border-Azerite" },
+    { name = "Classic",       file = "Interface/Tooltips/UI-Tooltip-Border" },
+    { name = "Sleek",         file = "Interface/DialogFrame/UI-DialogBox-Border" },
+    { name = "Corrupted",     file = "Interface/Tooltips/UI-Tooltip-Border-Corrupted" },
+    { name = "Maw",           file = "Interface/Tooltips/UI-Tooltip-Border-Maw" },
+    { name = "Smooth",        file = "Interface/LFGFRAME/LFGBorder" },
+    { name = "Glass",         file = "Interface/DialogFrame/UI-DialogBox-TestWatermark-Border" },
+    { name = "Gold",          file = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border" },
+    { name = "Slide",         file = "Interface\\FriendsFrame\\UI-Toast-Border" },
+    { name = "Glow",          file = "Interface\\TutorialFrame\\UI-TutorialFrame-CalloutGlow" },
+    { name = "Glow 2",        file = "Interface\\AddOns\\IncCallout\\Textures\\BG15.blp" },
+    { name = "Grey",          file = "Interface\\Tooltips\\UI-Tooltip-Background" },
+    { name = "Blue",          file = "Interface\\AddOns\\IncCallout\\Textures\\BG1.png" },
+    { name = "Black Gloss",   file = "Interface\\AddOns\\IncCallout\\Textures\\BG2.blp" },
+    { name = "Silverish",     file = "Interface\\AddOns\\IncCallout\\Textures\\BG3.blp" },
+    { name = "Bevel",         file = "Interface\\AddOns\\IncCallout\\Textures\\BG4.blp" },
+    { name = "Bevel 2",       file = "Interface\\AddOns\\IncCallout\\Textures\\BG5.blp" },
+    { name = "Fade",          file = "Interface\\AddOns\\IncCallout\\Textures\\BG6.blp" },
+    { name = "Fade 2",        file = "Interface\\AddOns\\IncCallout\\Textures\\BG7.blp" },
+    { name = "Thin Line",     file = "Interface\\AddOns\\IncCallout\\Textures\\BG8.blp" },
+    { name = "2 Tone",        file = "Interface\\AddOns\\IncCallout\\Textures\\BG9.blp" },
+    { name = "Bluish",        file = "Interface\\AddOns\\IncCallout\\Textures\\BG10.blp" },
+    { name = "Neon Yellow",   file = "Interface\\AddOns\\IncCallout\\Textures\\BG11.blp" },
+    { name = "Neon Red",      file = "Interface\\AddOns\\IncCallout\\Textures\\BG12.blp" },
+    { name = "Neon Green",    file = "Interface\\AddOns\\IncCallout\\Textures\\BG13.blp" },
+    { name = "Neon Blue",     file = "Interface\\AddOns\\IncCallout\\Textures\\BG14.blp" },
+    { name = "Double Yellow", file = "Interface\\AddOns\\IncCallout\\Textures\\BG16.blp" },
 }
- 
+
+local mapSizeOptions = {
+    { name = "Very Small",   value = 0.4 },
+    { name = "Small",        value = 0.5 },
+    { name = "Medium Small", value = 0.65 },
+    { name = "Medium",       value = 0.75 },
+    { name = "Medium Large", value = 0.85 },
+    { name = "Large",        value = 1.0 },
+    { name = "Very Large",   value = 1.15 },
+    { name = "Huge",         value = 1.3 },
+    { name = "Gigantic",     value = 1.45 },
+    { name = "Colossal",     value = 1.6 },
+}
+
+-- ============================================================
+-- Button Messages
+-- ============================================================
+
 local battlegroundLocations = {
     "Stables", "Blacksmith", "Lumber Mill", "Gold Mine", "Mine", "Trollbane Hall", "Defiler's Den", "Farm",
-    "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins", 
+    "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins",
     "The Broken Temple", "Cauldron of Flames", "Central Bridge", "The Chilled Quagemire",
     "Eastern Bridge", "Flamewatch Tower", "The Forest of Shadows", "Glacial Falls", "The Steppe of Life",
-    "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress", "Eastpark Workshop", "Westpark Workshop ",
+    "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress",
+    "Eastpark Workshop", "Westpark Workshop",
     "Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep", "Market",
     "Hangar", "Refinery", "Quarry", "Wildhammer Stronghold", "Dragonmaw Stronghold",
     "Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
     "The Restless Front", "Wellson Shipyard", "Largo's Overlook", "Farson Hold",
-    "Forgotten Hill", "Hellscream's Grasp","Stormpike Graveyard", "Irondeep Mine", "Dun Baldar",
-    "Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard", 
+    "Forgotten Hill", "Hellscream's Grasp", "Stormpike Graveyard", "Irondeep Mine", "Dun Baldar",
+    "Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard",
     "Iceblood Garrison", "Tower Point", "Coldtooth Mine", "Dun Baldar Pass", "Icewing Bunker",
-    "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass", 
-    "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village", 
-    "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf","Temple of Kotmogu",  "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
-    "Ashran", "StormShield", "The Ringing Deeps", "Deephaul Ravine",  
+    "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass",
+    "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village",
+    "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf", "Temple of Kotmogu",
+    "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
+    "Ashran", "StormShield", "The Ringing Deeps", "Deephaul Ravine",
 }
- 
+
 local buttonMessages = {
     sendMore = {
-        "We need more peeps",
-        "Need help",
-        "We are outnumbered",
-        "Need a few more",
-        "Need more",
-        "Backup required",
-        "We could use some help",
-        "Calling for backup",
-        "Could use some backup",
-        "Reinforcements needed",
-        "In need of additional support",
-        "Calling all hands on deck",
-        "Require extra manpower",
-        "Assistance urgently needed",
-        "Requesting more participants",
+        "We need more peeps", "Need help", "We are outnumbered", "Need a few more", "Need more",
+        "Backup required", "We could use some help", "Calling for backup", "Could use some backup",
+        "Reinforcements needed", "In need of additional support", "Calling all hands on deck",
+        "Require extra manpower", "Assistance urgently needed", "Requesting more participants",
     },
     inc = {
-        "Incoming",
-        "INC INC INC",
-        "INC",
-        "Gotta INC",
-        "BIG INC",
-        "Incoming enemy forces",
-        "Incoming threat",
-        "Enemy push incoming",
-        "Enemy blitz incoming",
-        "Enemy strike team inbound",
-        "Incoming attack alert",
-        "Enemy wave inbound",
-        "Enemy squad closing in",
-        "Anticipate enemy push",
-        "Enemy forces are closing in",
+        "Incoming", "INC INC INC", "INC", "Gotta INC", "BIG INC",
+        "Incoming enemy forces", "Incoming threat", "Enemy push incoming", "Enemy blitz incoming",
+        "Enemy strike team inbound", "Incoming attack alert", "Enemy wave inbound",
+        "Enemy squad closing in", "Anticipate enemy push", "Enemy forces are closing in",
     },
     allClear = {
-        "We are all clear",
-        "All clear",
-        "Looks like a ghost town",
-        "All good",
-        "Looking good",
-        "Area secure",
-        "All quiet on the front",
-        "Situation is under control",
-        "All quiet here",
-        "We are looking good",
-        "Perimeter is secured",
-        "Situation is calm",
-        "No threats detected",
-        "All quiet on this end",
-        "Area is threat-free",
+        "We are all clear", "All clear", "Looks like a ghost town", "All good", "Looking good",
+        "Area secure", "All quiet on the front", "Situation is under control", "All quiet here",
+        "We are looking good", "Perimeter is secured", "Situation is calm", "No threats detected",
+        "All quiet on this end", "Area is threat-free",
     },
     buffRequest = {
-        "Need buffs please!",
-        "Buff up, team!",
-        "Could use some buffs here!",
-        "Calling for all buffs, let's gear up!",
-        "Looking for that magical boost, buffs needed!",
-        "Time to get enchanted, where are those buffs?",
-        "Let’s get buffed for the battle ahead!",
-        "Buffs are our best friends, let’s have them!",
-        "Ready for buffs, let's enhance our strength!",
-        "Buffs needed for extra might and magic!",
-        "Gimme some buffs, let’s not fall behind!"
+        "Need buffs please!", "Buff up, team!", "Could use some buffs here!",
+        "Calling for all buffs, let's gear up!", "Looking for that magical boost, buffs needed!",
+        "Time to get enchanted, where are those buffs?", "Let's get buffed for the battle ahead!",
+        "Buffs are our best friends, let's have them!", "Ready for buffs, let's enhance our strength!",
+        "Buffs needed for extra might and magic!", "Gimme some buffs, let's not fall behind!",
     },
     healRequest = {
-        "Need heals ASAP!",
-        "Healing needed at my position!",
-        "Can someone heal me, please?",
-        "Healers, your assistance is required!",
-        "I'm in dire need of healing!",
-        "Could use some healing here!",
-        "Healers, please focus on our location!",
-        "Urgent healing needed to stay in the fight!",
-        "Heal me up to keep the pressure on!",
-        "Healers, attention needed here now!"
+        "Need heals ASAP!", "Healing needed at my position!", "Can someone heal me, please?",
+        "Healers, your assistance is required!", "I'm in dire need of healing!",
+        "Could use some healing here!", "Healers, please focus on our location!",
+        "Urgent healing needed to stay in the fight!", "Heal me up to keep the pressure on!",
+        "Healers, attention needed here now!",
     },
     efcRequest = {
-        "Get the EFC!!",
-        "EFC spotted, group up to kill and recover our flag!",
-        "Kill the EFC on sight, let's bring that flag home!",
-        "EFC is vulnerable, kill them now!",
-        "Everyone on the EFC!",
-        "Close in and kill the EFC, no escape allowed!",
-        "EFC heading towards their base—kill them before they cap!",
-        "The EFC is weak, finish them off!",
+        "Get the EFC!!", "EFC spotted, group up to kill and recover our flag!",
+        "Kill the EFC on sight, let's bring that flag home!", "EFC is vulnerable, kill them now!",
+        "Everyone on the EFC!", "Close in and kill the EFC, no escape allowed!",
+        "EFC heading towards their base—kill them before they cap!", "The EFC is weak, finish them off!",
         "Kill the EFC now, they're almost at their base!",
-        "It’s a race against time, kill the EFC and secure our victory!"
+        "It's a race against time, kill the EFC and secure our victory!",
     },
     fcRequest = {
-        "Protect our FC!",
-        "FC needs help!!",
-        "Heals on FC!",
-        "Need some help with the FC.",
-        "Someone needs to get the flag.",
-    }
+        "Protect our FC!", "FC needs help!!", "Heals on FC!",
+        "Need some help with the FC.", "Someone needs to get the flag.",
+    },
 }
 
--- Define available logos
+-- ============================================================
+-- Logos
+-- ============================================================
+
 local logos = {
-    None = "",
-    BearClaw = "Interface\\AddOns\\IncCallout\\Textures\\BearClaw.png",
+    None        = "",
+    BearClaw    = "Interface\\AddOns\\IncCallout\\Textures\\BearClaw.png",
     BreatheFire = "Interface\\AddOns\\IncCallout\\Textures\\BreatheFire.png",
-    Bloody = "Interface\\AddOns\\IncCallout\\Textures\\Bloody.png",
-    Impact = "Interface\\AddOns\\IncCallout\\Textures\\Impact.png",
-    Shock = "Interface\\AddOns\\IncCallout\\Textures\\Shock.png",
-    Rifle = "Interface\\AddOns\\IncCallout\\Textures\\Rifle.png",
-    Condiment = "Interface\\AddOns\\IncCallout\\Textures\\Condiment.png",
-    Duplex = "Interface\\AddOns\\IncCallout\\Textures\\Duplex.png",
-    Eraser = "Interface\\AddOns\\IncCallout\\Textures\\Eraser.png",
-    Ogre = "Interface\\AddOns\\IncCallout\\Textures\\Ogre.png",	
-	SuperSunday = "Interface\\AddOns\\IncCallout\\Textures\\SuperSunday.png",	
-	GOW = "Interface\\AddOns\\IncCallout\\Textures\\GOW.png",
-	Maiden = "Interface\\AddOns\\IncCallout\\Textures\\Maiden.png",
-	Metal = "Interface\\AddOns\\IncCallout\\Textures\\Metal.png",
-	Alligator = "Interface\\AddOns\\IncCallout\\Textures\\Alligator.png",
-	SourceCode = "Interface\\AddOns\\IncCallout\\Textures\\SourceCode.png",
-	InkFree = "Interface\\AddOns\\IncCallout\\Textures\\InkFree.png",
+    Bloody      = "Interface\\AddOns\\IncCallout\\Textures\\Bloody.png",
+    Impact      = "Interface\\AddOns\\IncCallout\\Textures\\Impact.png",
+    Shock       = "Interface\\AddOns\\IncCallout\\Textures\\Shock.png",
+    Rifle       = "Interface\\AddOns\\IncCallout\\Textures\\Rifle.png",
+    Condiment   = "Interface\\AddOns\\IncCallout\\Textures\\Condiment.png",
+    Duplex      = "Interface\\AddOns\\IncCallout\\Textures\\Duplex.png",
+    Eraser      = "Interface\\AddOns\\IncCallout\\Textures\\Eraser.png",
+    Ogre        = "Interface\\AddOns\\IncCallout\\Textures\\Ogre.png",
+    SuperSunday = "Interface\\AddOns\\IncCallout\\Textures\\SuperSunday.png",
+    GOW         = "Interface\\AddOns\\IncCallout\\Textures\\GOW.png",
+    Maiden      = "Interface\\AddOns\\IncCallout\\Textures\\Maiden.png",
+    Metal       = "Interface\\AddOns\\IncCallout\\Textures\\Metal.png",
+    Alligator   = "Interface\\AddOns\\IncCallout\\Textures\\Alligator.png",
+    SourceCode  = "Interface\\AddOns\\IncCallout\\Textures\\SourceCode.png",
+    InkFree     = "Interface\\AddOns\\IncCallout\\Textures\\InkFree.png",
 }
 
--- Initial logo setup
 local logo = IncCallout:CreateTexture(nil, "ARTWORK")
 logo:SetSize(180, 30)
 logo:SetPoint("TOP", IncCallout, "TOP", -5, 30)
-logo:SetTexture(logos.BearClaw) 
+logo:SetTexture(logos.BearClaw)
 
 function IncCallout:SetLogo(selectedLogo)
     if selectedLogo == "None" then
-        logo:Hide()  
+        logo:Hide()
     else
         local path = logos[selectedLogo]
         if path then
             logo:SetTexture(path)
             logo:Show()
-        else
-            print("Logo path not found for:", selectedLogo)
         end
     end
 end
 
 local fontSize = 14
 
---local bgTexture = IncCallout:CreateTexture(nil, "BACKGROUND")
---bgTexture:SetColorTexture(0, 0, 0)
---bgTexture:SetAllPoints(IncCallout)
-
-IncCallout:SetScript("OnDragStart", function(self)
-    if not IncDB.isLocked then
-        self:StartMoving()
-    end
-end)
-
-IncCallout:SetScript("OnDragStop", function(self)
-    self:StopMovingOrSizing()
-    
-    if not IncDB.isLocked then
-               
-    end
-end)
+-- ============================================================
+-- Button Factory
+-- ============================================================
 
 local function createButton(name, width, height, text, anchor, xOffset, yOffset, onClick)
     local button = CreateFrame("Button", nil, IncCallout, "BackdropTemplate")
@@ -1060,159 +788,109 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset,
     end
     button:GetFontString():SetTextColor(1, 1, 1, 1)
     button:SetBackdrop({
-        bgFile = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard"),
+        bgFile   = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard"),
         edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-        tile = true,
-        tileSize = 12,
-        edgeSize = 7,
-        insets = {left = 1, right = 1, top = 1, bottom = 1}
+        tile     = true, tileSize = 12, edgeSize = 7,
+        insets   = {left=1, right=1, top=1, bottom=1},
     })
-
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
-    
+
     button:SetScript("OnMouseDown", function(self)
-        self:SetBackdropColor(0, 0, 0, 0) 
+        self:SetBackdropColor(0, 0, 0, 0)
     end)
     button:SetScript("OnMouseUp", function(self, mouseButton)
         if mouseButton == "LeftButton" then
             self:SetBackdropColor(0, 0, 0, 0)
         end
     end)
-    
     button:SetScript("OnClick", function(self, mouseButton, down)
         if mouseButton == "LeftButton" and not down then
             PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-            if onClick then 
-                onClick(self)
-            end
+            if onClick then onClick(self) end
         end
     end)
-
     return button
 end
 
--- Function to handle chat messages
-local function onChatMessage(message)
-    if string.find(message, "%[Incoming%-BG%]") then
-        
-    end
-end
+-- ============================================================
+-- Appearance helpers
+-- ============================================================
 
 local function applyButtonColor()
-    if not IncDB then
-        return
-    end
-
+    if not IncDB then return end
     local r, g, b, a
     if IncDB.buttonColor then
         r, g, b, a = IncDB.buttonColor.r, IncDB.buttonColor.g, IncDB.buttonColor.b, IncDB.buttonColor.a
     else
-        r, g, b, a = 1, 0, 0, 1 
+        r, g, b, a = 1, 0, 0, 1
     end
-
     for _, button in ipairs(buttons) do
         button:SetBackdrop({
-            bgFile = LSM:Fetch("statusbar", IncDB.statusbarTexture),
-            edgeFile = nil, 
-            tile = false, 
-            tileSize = 0, 
-            edgeSize = 16, 
-            insets = {left = 0, right = 0, top = 0, bottom = 0} 
+            bgFile   = LSM:Fetch("statusbar", IncDB.statusbarTexture),
+            edgeFile = nil, tile = false, tileSize = 0, edgeSize = 16,
+            insets   = {left=0, right=0, top=0, bottom=0},
         })
         button:SetBackdropColor(r, g, b, a)
-        button:SetBackdropBorderColor(0, 0, 0, 0) 
+        button:SetBackdropBorderColor(0, 0, 0, 0)
     end
 end
 
-IncCallout:SetScript("OnShow", function()
-    if IncDB then
-        applyButtonColor()
-    end
-end)
-
 local function applyBorderChange()
-    local selectedIndex = IncDB.selectedBorderIndex or 1
+    local selectedIndex  = IncDB.selectedBorderIndex or 1
     local selectedBorder = borderOptions[selectedIndex].file
-
-    local backdropSettings = {
-        bgFile = "Interface/Tooltips/UI-Tooltip-Background",
+    IncCallout:SetBackdrop({
+        bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
         edgeFile = selectedBorder,
-        tile = false,
-        tileSize = 16,
-        edgeSize = 8,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 }
-    }
-
-    IncCallout:SetBackdrop(backdropSettings)	
+        tile = false, tileSize = 16, edgeSize = 8,
+        insets = {left=4, right=4, top=4, bottom=4},
+    })
 end
 
 local function applyColorChange()
     local selectedIndex = IncDB.selectedColorIndex or 1
     local selectedColor = colorOptions[selectedIndex].color
-
     IncCallout:SetBackdropColor(unpack(selectedColor))
 end
 
 local function ScaleGUI()
-    local scaleFactor = IncDB.scale or 1; 
-    IncCallout:SetScale(scaleFactor);
-    
-    local adjustedFontSize = math.floor(fontSize * scaleFactor);
-      
+    local scaleFactor    = IncDB.scale or 1
+    IncCallout:SetScale(scaleFactor)
+    local adjustedFontSize = math.floor(fontSize * scaleFactor)
     for _, buttonText in ipairs(buttonTexts) do
-        buttonText:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize);
+        buttonText:SetFont("Fonts\\FRIZQT__.TTF", adjustedFontSize)
     end
 end
 
-local mapSizeOptions = {
-    { name = "Very Small", value = 0.4 },
-    { name = "Small", value = 0.5 },
-    { name = "Medium Small", value = 0.65 },
-    { name = "Medium", value = 0.75 }, 
-    { name = "Medium Large", value = 0.85 },
-    { name = "Large", value = 1.0 },
-    { name = "Very Large", value = 1.15 },
-    { name = "Huge", value = 1.3 },
-    { name = "Gigantic", value = 1.45 },
-    { name = "Colossal", value = 1.6 }
-}
-
-local function applyStatusbarTexture()
-    local texture = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard")
-    for _, button in ipairs(buttons) do
-        button:SetBackdrop({
-            bgFile = texture,
-            edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-            tile = true,
-            tileSize = 12,
-            edgeSize = 7,
-            insets = {left = 1, right = 1, top = 1, bottom = 1}
-        })
-        applyButtonColor()
+local function ApplyFontSettings()
+    if not IncDB then return end
+    IncDB.font     = IncDB.font     or "Friz Quadrata TT"
+    IncDB.fontSize = IncDB.fontSize or 14
+    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT
+    for _, text in ipairs(buttonTexts) do
+        text:SetFont(fontPath, IncDB.fontSize)
     end
 end
 
--- Function to toggle the MiniMap visibility
-local function UpdateMiniMapVisibility()
-    if IncDB.enableMiniMap then
-        icon:Show("IncomingBG") -- Show the MiniMap icon
-    else
-        icon:Hide("IncomingBG") -- Hide the MiniMap icon
-    end
-end
+IncCallout:SetScript("OnShow", function()
+    if IncDB then applyButtonColor() end
+end)
 
--- Function to toggle MiniMap button visibility
+-- ============================================================
+-- MiniMap
+-- ============================================================
+
 local function ToggleMiniMapButton(enable)
-    -- Ensure IncDB.minimap exists with default fields
-    if not IncDB.minimap then
-        IncDB.minimap = { hide = false, minimapPos = 45 }
+    local minimapSettings = IncCalloutDB.profiles and IncCalloutDB.profiles.Default and IncCalloutDB.profiles.Default.minimap
+    if not minimapSettings then
+        if IncCalloutDB.profiles and IncCalloutDB.profiles.Default then
+            IncCalloutDB.profiles.Default.minimap = { minimapPos = 45, hide = false }
+            minimapSettings = IncCalloutDB.profiles.Default.minimap
+        else
+            return
+        end
     end
-
-    -- Update the visibility state using `hide`
-    IncDB.minimap.hide = not enable
-
-    -- Toggle the MiniMap button visibility using `LibDBIcon`
+    minimapSettings.hide = not enable
     if enable then
         LibStub("LibDBIcon-1.0"):Show("IncCallout")
     else
@@ -1220,734 +898,52 @@ local function ToggleMiniMapButton(enable)
     end
 end
 
-local function InitializeAddon()
-    UpdateMiniMapVisibility()
-end
-
-local options = {
-    name = "Incoming-BG",
-    type = "group",
-    args = {
-        messageSettings = {
-            type = "group",
-            name = "Message Settings",
-            order = 1,
-            args = {
-                sendMore = {
-                    type = "group",
-                    name = "Send More Message",
-                    inline = true,
-                    order = 1,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'Send More' button",
-                            values = buttonMessages.sendMore,
-                            get = function() return IncDB.sendMoreIndex end,
-                            set = function(_, newValue)
-                                IncDB.sendMoreIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'Send More' button",
-                            get = function() return IncDB.customMessages.sendMore end,
-                            set = function(_, value)
-                                IncDB.customMessages.sendMore = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'Send More'",
-                            func = function()
-                                IncDB.customMessages.sendMore = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewSendMore = {
-                            type = "description",
-                            name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("sendMore") .. "|r" end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-                inc = {
-                    type = "group",
-                    name = "INC Message",
-                    inline = true,
-                    order = 2,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'INC' button",
-                            values = buttonMessages.inc,
-                            get = function() return IncDB.incIndex end,
-                            set = function(_, newValue)
-                                IncDB.incIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'INC' button",
-                            get = function() return IncDB.customMessages.inc end,
-                            set = function(_, value)
-                                IncDB.customMessages.inc = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'INC'",
-                            func = function()
-                                IncDB.customMessages.inc = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewInc = {
-                            type = "description",
-                            name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("inc") .. "|r" end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-                allClear = {
-                    type = "group",
-                    name = "All Clear Message",
-                    inline = true,
-                    order = 3,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'All Clear' button",
-                            values = buttonMessages.allClear,
-                            get = function() return IncDB.allClearIndex end,
-                            set = function(_, newValue)
-                                IncDB.allClearIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'All Clear' button",
-                            get = function() return IncDB.customMessages.allClear end,
-                            set = function(_, value)
-                                IncDB.customMessages.allClear = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'All Clear'",
-                            func = function()
-                                IncDB.customMessages.allClear = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewAllClear = {
-                            type = "description",
-                            name = function() return "|cff00ff00Preview: " .. addonNamespace.getPreviewText("allClear") .. "|r" end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-                buffRequest = {
-                    type = "group",
-                    name = "Buff Request Message",
-                    inline = true,
-                    order = 4,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'Request Buffs' button",
-                            values = buttonMessages.buffRequest,
-                            get = function() return IncDB.buffRequestIndex end,
-                            set = function(_, newValue)
-                                buttonMessageIndices.buffRequest = newValue
-                                IncDB.buffRequestIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'Request Buffs' button",
-                            get = function() return IncDB.customMessages.buffRequest end,
-                            set = function(_, value)
-                                IncDB.customMessages.buffRequest = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'Request Buffs'",
-                            func = function()
-                                IncDB.customMessages.buffRequest = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewBuffRequest = {
-                            type = "description",
-                            name = function() return addonNamespace.getPreviewText("buffRequest") end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-                healRequest = {
-                    type = "group",
-                    name = "Heal Request Message",
-                    inline = true,
-                    order = 5,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'Need Heals' button",
-                            values = buttonMessages.healRequest,
-                            get = function() return IncDB.healRequestIndex end,
-                            set = function(_, newValue)
-                                buttonMessageIndices.healRequest = newValue
-                                IncDB.healRequestIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'Need Heals' button",
-                            get = function() return IncDB.customMessages.healRequest end,
-                            set = function(_, value)
-                                IncDB.customMessages.healRequest = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'Need Heals'",
-                            func = function()
-                                IncDB.customMessages.healRequest = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewHealRequest = {
-                            type = "description",
-                            name = function() return addonNamespace.getPreviewText("healRequest") end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-                efcRequest = {
-                    type = "group",
-                    name = "EFC Request Message",
-                    inline = true,
-                    order = 6,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'EFC' button",
-                            values = buttonMessages.efcRequest,
-                            get = function() return IncDB.efcRequestIndex end,
-                            set = function(_, newValue)
-                                buttonMessageIndices.efcRequest = newValue
-                                IncDB.efcRequestIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'EFC' button",
-                            get = function() return IncDB.customMessages.efcRequest end,
-                            set = function(_, value)
-                                IncDB.customMessages.efcRequest = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'EFC'",
-                            func = function()
-                                IncDB.customMessages.efcRequest = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewEFCRequest = {
-                            type = "description",
-                            name = function() return addonNamespace.getPreviewText("efcRequest") end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-                fcRequest = {
-                    type = "group",
-                    name = "FC Request Message",
-                    inline = true,
-                    order = 7,
-                    args = {
-                        predefined = {
-                            type = "select",
-                            name = "Predefined",
-                            desc = "Select the message for the 'FC' button",
-                            values = buttonMessages.fcRequest,
-                            get = function() return IncDB.fcRequestIndex end,
-                            set = function(_, newValue)
-                                buttonMessageIndices.fcRequest = newValue
-                                IncDB.fcRequestIndex = newValue
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 1,
-                        },
-                        custom = {
-                            type = "input",
-                            name = "Custom",
-                            desc = "Enter a custom message for the 'FC' button",
-                            get = function() return IncDB.customMessages.fcRequest end,
-                            set = function(_, value)
-                                IncDB.customMessages.fcRequest = value
-                            end,
-                            order = 2,
-                        },
-                        clear = {
-                            type = "execute",
-                            name = "Clear",
-                            desc = "Clear custom message for 'FC'",
-                            func = function()
-                                IncDB.customMessages.fcRequest = ""
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                            end,
-                            order = 3,
-                        },
-                        previewFCRequest = {
-                            type = "description",
-                            name = function() return addonNamespace.getPreviewText("fcRequest") end,
-                            fontSize = "medium",
-                            order = 4,
-                        },
-                    },
-                },
-            },
-        }, 
-
-        appearanceSettings = {
-            type = "group",
-            name = "Appearance Settings",
-            order = 2,
-            args = {
-                fontColor = {
-                    type = "color",
-                    name = "Button Font Color",
-                    desc = "Set the color of the button text.",
-                    hasAlpha = true,
-                    get = function()
-                        local color = IncDB.fontColor or {r = 1, g = 1, b = 1, a = 1}
-                        return color.r, color.g, color.b, color.a
-                    end,
-                    set = function(_, r, g, b, a)
-                        IncDB.fontColor = {r = r, g = g, b = b, a = a}
-                        for _, buttonText in ipairs(buttonTexts) do
-                            buttonText:SetTextColor(r, g, b, a)
-                        end
-                    end,
-                    order = 1,
-                },
-                buttonColor = {
-                    type = "color",
-                    name = "Button Color",
-                    desc = "Select the color of the buttons.",
-                    order = 2,
-                    hasAlpha = true,
-                    get = function()
-                        local currentColor = IncDB.buttonColor or {r = 1, g = 0, b = 0, a = 1}
-                        return currentColor.r, currentColor.g, currentColor.b, currentColor.a
-                    end,
-                    set = function(_, r, g, b, a)
-                        local color = {r = r, g = g, b = b, a = a}
-                        IncDB.buttonColor = color
-                        applyButtonColor()
-                    end,
-                },
-                scaleOption = {
-                    type = "range",
-                    name = "GUI Window Scale",
-                    desc = "Adjust the scale of the GUI.",
-                    min = 0.5,
-                    max = 2.0,
-                    step = 0.05,
-                    get = function()
-                        return IncDB.scale or 1
-                    end,
-                    set = function(_, value)
-                        IncDB.scale = value
-                        ScaleGUI(value)
-                    end,
-                },
-                borderStyle = {
-                    type = "select",
-                    name = "Border Style",
-                    desc = "Select the border style for the frame.",
-                    style = "dropdown",
-                    order = 3,
-                    values = function()
-                        local values = {}
-                        for i, option in ipairs(borderOptions) do
-                            values[i] = option.name
-                        end
-                        return values
-                    end,
-                    get = function()
-                        return IncDB.selectedBorderIndex or 1
-                    end,
-                    set = function(_, selectedIndex)
-                        IncDB.selectedBorderIndex = selectedIndex
-                        applyBorderChange()
-                        applyColorChange()
-                    end,
-                },
-                backdropColor = {
-                    type = "select",
-                    name = "Backdrop Color",
-                    desc = "Select the backdrop color and transparency for the frame.",
-                    style = "dropdown",
-                    order = 4,
-                    values = function()
-                        local values = {}
-                        for i, option in ipairs(colorOptions) do
-                            values[i] = option.name
-                        end
-                        return values
-                    end,
-                    get = function()
-                        return IncDB.selectedColorIndex or 1
-                    end,
-                    set = function(_, selectedIndex)
-                        IncDB.selectedColorIndex = selectedIndex
-                        applyColorChange()
-                    end,
-                },
-                statusbarTexture = {
-                    type = "select",
-                    name = "Statusbar Texture",
-                    desc = "Select the texture for the statusbar.",
-                    dialogControl = 'LSM30_Statusbar',
-                    values = LSM:HashTable("statusbar"),
-                    get = function() return IncDB.statusbarTexture or "Blizzard" end,
-                    set = function(_, newValue)
-                        IncDB.statusbarTexture = newValue
-                        applyButtonColor()
-                    end,
-                    order = 5,
-                },
-                lockGUI = {
-                    type = "toggle",
-                    name = "Lock GUI Window",
-                    desc = "Lock or unlock the GUI window's position.",
-                    order = 6,
-                    get = function() return IncDB.isLocked end,
-                    set = function(_, value)
-                        IncDB.isLocked = value
-                    end,
-                },
-                logoSelection = {
-                    type = "select",
-                    name = "Logo Selection",
-                    desc = "Choose a logo to display at the top of the frame.",
-                    style = "dropdown",
-                    order = 7,
-                    values = {
-                        ["None"] = "NONE",
-                        ["BearClaw"] = "BearClaw",
-                        ["BreatheFire"] = "BreatheFire",
-                        ["Bloody"] = "Bloody",
-                        ["Impact"] = "Impact",
-                        ["Shock"] = "Shock",
-                        ["Rifle"] = "Rifle",
-                        ["Condiment"] = "Condiment",
-                        ["Duplex"] = "Duplex",
-                        ["Eraser"] = "Eraser",
-                        ["Ogre"] = "Ogre",
-                        ["SuperSunday"] = "SuperSunday",
-                        ["Alligator"] = "Alligator",
-                        ["GOW"] = "GOW",
-                        ["Maiden"] = "Maiden",
-                        ["Metal"] = "Metal",
-                        ["SourceCode"] = "SourceCode",
-                        ["InkFree"] = "InkFree",
-                    },
-                    get = function(info) return IncDB.selectedLogo end,
-                    set = function(info, value)
-                        IncDB.selectedLogo = value
-                        IncCallout:SetLogo(value)
-                    end,
-                },
-                logoColor = {
-                    type = "color",
-                    name = "Logo Color",
-                    desc = "Set the color of the title logo.",
-                    hasAlpha = true,
-                    get = function(info)
-                        local color = IncDB.logoColor or {1, 1, 1, 1}
-                        return color.r, color.g, color.b, color.a
-                    end,
-                    set = function(info, r, g, b, a)
-                        IncDB.logoColor = {r = r, g = g, b = b, a = a}
-                        logo:SetVertexColor(r, g, b, a)
-                    end,
-                    order = 8,
-                },
-                minimapButtonEnable = {
-                    type = "toggle",
-                    name = "Enable MiniMap Button",
-                    desc = "Toggle the visibility of the MiniMap button.",
-                    get = function()
-                        return not (IncDB.minimap and IncDB.minimap.hide)
-                    end,
-                    set = function(_, enable)
-                        ToggleMiniMapButton(enable)
-                    end,
-                    order = 9,
-                },
-            },
-        }, 
-
-        mapSettings = {
-            type = "group",
-            name = "Map Settings",
-            order = 3,
-            args = {
-                mapSizeChoice = {
-                    type = "select",
-                    name = "Map Size",
-                    desc = "Select the preferred size of the WorldMap.",
-                    order = 6,
-                    style = "dropdown",
-                    values = function()
-                        local values = {}
-                        for _, sizeOption in ipairs(mapSizeOptions) do
-                            values[sizeOption.value] = sizeOption.name
-                        end
-                        return values
-                    end,
-                    get = function() return IncCalloutDB.settings.mapScale end,
-                    set = function(_, selectedValue)
-                        IncCalloutDB.settings.mapScale = selectedValue
-                        if addonNamespace.ResizeWorldMap then
-                            addonNamespace.ResizeWorldMap()
-                        end
-                    end,
-                },
-                resizeInPvPOnly = {
-                    type = "toggle",
-                    name = "Resize Map in PvP Only",
-                    desc = "Enable to resize the WorldMap only in PvP scenarios.",
-                    order = 7,
-                    get = function() return IncCalloutDB.settings.resizeInPvPOnly end,
-                    set = function(_, value)
-                        IncCalloutDB.settings.resizeInPvPOnly = value
-                        if addonNamespace.ResizeWorldMap then
-                            addonNamespace.ResizeWorldMap()
-                        end
-                    end,
-                },
-            },
-        }, 
-
-        fontSettings = {
-            type = "group",
-            name = "Font Settings",
-            order = 4,
-            args = {
-                font = {
-                    type = "select",
-                    name = "Font",
-                    desc = "Select the font for the buttons.",
-                    dialogControl = "LSM30_Font",
-                    values = LSM:HashTable("font"),
-                    get = function()
-                        return IncDB.font or "Friz Quadrata TT"
-                    end,
-                    set = function(_, newValue)
-                        IncDB.font = newValue
-                        local size = IncDB.fontSize or 14
-                        for _, text in ipairs(buttonTexts) do
-                            text:SetFont(LSM:Fetch("font", newValue), size)
-                        end
-                    end,
-                    order = 1,
-                },
-                fontSize = {
-                    type = "range",
-                    name = "Font Size",
-                    desc = "Adjust the font size for the buttons.",
-                    min = 8, max = 24, step = 1,
-                    get = function() return IncDB.fontSize or 14 end,
-                    set = function(_, newValue)
-                        IncDB.fontSize = newValue
-                        local font = IncDB.font or "Friz Quadrata TT"
-                        for _, text in ipairs(buttonTexts) do
-                            text:SetFont(LSM:Fetch("font", font), newValue)
-                        end
-                    end,
-                    order = 2,
-                },
-            },
-        }, 
-        resetSettings = {
-            type = "group",
-            name = "Reset",
-            order = 100,
-            args = {
-                resetToDefaults = {
-                    type = "execute",
-                    name = "Reset to Defaults",
-                    desc = "Reset all Incoming-BG settings to their default values. This will overwrite the current profile.",
-                    confirm = function()
-                        return "Are you sure you want to reset Incoming-BG settings to defaults? This cannot be undone."
-                    end,
-                    func = function()
-                        -- Preferred: use AceDB to reset the current profile if available
-                        if db and type(db.ResetProfile) == "function" then
-                            db:ResetProfile()
-                            IncDB = db.profile
-                            print("|cff00ff00Incoming-BG: Settings reset to defaults (AceDB ResetProfile).|r")
-                        else
-                            -- Fallback: deep-copy defaults.profile into IncDB
-                            local function deepcopy(orig)
-                                if type(orig) ~= "table" then return orig end
-                                local copy = {}
-                                for k, v in pairs(orig) do copy[k] = deepcopy(v) end
-                                return copy
-                            end
-
-                            IncDB = IncDB or {}
-                            local newProfile = deepcopy(defaults.profile)
-                            for k in pairs(IncDB) do IncDB[k] = nil end
-                            for k, v in pairs(newProfile) do IncDB[k] = v end
-
-                            if db and db.profile then db.profile = IncDB end
-
-                            print("|cff00ff00Incoming-BG: Settings reset to defaults (fallback).|r")
-                        end
-
-                        -- Reapply visual and functional settings
-                        pcall(function()
-                            if ApplyFontSettings then ApplyFontSettings() end
-                            if applyButtonColor then applyButtonColor() end
-                            if applyBorderChange then applyBorderChange() end
-                            if applyColorChange then applyColorChange() end
-                            if ScaleGUI then ScaleGUI() end
-                            if IncCallout and IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
-                            if InitializeMiniMapIcon then InitializeMiniMapIcon() end
-                            if LibStub and LibStub("AceConfigRegistry-3.0") then
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
-                            end
-                        end)
-                    end,
-                },
-            },
-        }, 
-    }, 
-} 
-
-AceConfig:RegisterOptionsTable("Incoming-BG", options)
-
-local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
-
-if Settings then
-    local function RegisterOptionsPanel(panel)
-        local category = Settings.GetCategory(panel.name)
-        if not category then
-            category, layout = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-            category.ID = panel.name
-            Settings.RegisterAddOnCategory(category)
-        end
+local function InitializeMiniMapIcon(minimapSettings)
+    LibStub("LibDBIcon-1.0"):Register("IncCallout", LibStub("LibDataBroker-1.1"):GetDataObjectByName("Incoming-BG") or {}, minimapSettings)
+    if minimapSettings.hide then
+        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
+    else
+        LibStub("LibDBIcon-1.0"):Show("IncCallout")
     end
-
-    RegisterOptionsPanel(optionsFrame)
 end
 
-function addonNamespace.getPreviewText(messageType)
-    local previewText = "|cff00ff00[Incoming-BG] "
-
-    if messageType == "sendMore" and IncDB.customMessages.sendMore ~= "" then
-        previewText = previewText .. IncDB.customMessages.sendMore
-    elseif messageType == "sendMore" and IncDB.sendMoreIndex and buttonMessages.sendMore[IncDB.sendMoreIndex] then
-        previewText = previewText .. buttonMessages.sendMore[IncDB.sendMoreIndex]
-    elseif messageType == "inc" and IncDB.customMessages.inc ~= "" then
-        previewText = previewText .. IncDB.customMessages.inc
-    elseif messageType == "inc" and IncDB.incIndex and buttonMessages.inc[IncDB.incIndex] then
-        previewText = previewText .. buttonMessages.inc[IncDB.incIndex]
-    elseif messageType == "allClear" and IncDB.customMessages.allClear ~= "" then
-        previewText = previewText .. IncDB.customMessages.allClear
-    elseif messageType == "allClear" and IncDB.allClearIndex and buttonMessages.allClear[IncDB.allClearIndex] then
-        previewText = previewText .. buttonMessages.allClear[IncDB.allClearIndex]
-    elseif messageType == "buffRequest" and IncDB.customMessages.buffRequest ~= "" then
-        previewText = previewText .. IncDB.customMessages.buffRequest
-    elseif messageType == "buffRequest" and IncDB.buffRequestIndex and buttonMessages.buffRequest[IncDB.buffRequestIndex] then
-        previewText = previewText .. buttonMessages.buffRequest[IncDB.buffRequestIndex]
-    elseif messageType == "healRequest" and IncDB.customMessages.healRequest ~= "" then
-        previewText = previewText .. IncDB.customMessages.healRequest
-    elseif messageType == "healRequest" and IncDB.healRequestIndex and buttonMessages.healRequest[IncDB.healRequestIndex] then
-        previewText = previewText .. buttonMessages.healRequest[IncDB.healRequestIndex]
-    elseif messageType == "efcRequest" and IncDB.customMessages.efcRequest ~= "" then
-        previewText = previewText .. IncDB.customMessages.efcRequest
-    elseif messageType == "efcRequest" and IncDB.efcRequestIndex and buttonMessages.efcRequest[IncDB.efcRequestIndex] then
-        previewText = previewText .. buttonMessages.efcRequest[IncDB.efcRequestIndex]
-    elseif messageType == "fcRequest" and IncDB.customMessages.fcRequest ~= "" then
-        previewText = previewText .. IncDB.customMessages.fcRequest
-    elseif messageType == "fcRequest" and IncDB.fcRequestIndex and buttonMessages.fcRequest[IncDB.fcRequestIndex] then
-        previewText = previewText .. buttonMessages.fcRequest[IncDB.fcRequestIndex]
+local function UpdateMiniMapVisibility()
+    local minimapSettings = IncCalloutDB.profiles and IncCalloutDB.profiles.Default and IncCalloutDB.profiles.Default.minimap
+    if minimapSettings and minimapSettings.hide then
+        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
+    else
+        LibStub("LibDBIcon-1.0"):Show("IncCallout")
     end
-
-    return previewText .. "|r"
 end
 
--- Use Blizzard's message processing to avoid taint
-local function SendBGMessageSafely(message, chatType)
-    if not message or message == "" then
-        return
+-- ============================================================
+-- Helpers: in-BG check, location
+-- ============================================================
+
+local function isInBattleground()
+    local inInstance, instanceType = IsInInstance()
+    return inInstance and (instanceType == "pvp" or instanceType == "arena")
+end
+
+local function GetLocation()
+    return GetSubZoneText() or "Unknown Location"
+end
+
+local function GetInstanceChatType()
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        return "INSTANCE_CHAT"
+    elseif IsInRaid() then
+        return "RAID"
+    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+        return "PARTY"
     end
-    
-    -- Process the message like Blizzard does in ChatFrameEditBoxBaseMixin:SendText()
-    local processedMessage = ChatFrameUtil.SubstituteChatMessageBeforeSend(message)
-    
-    -- Then send using the modern API
-    C_ChatInfo.SendChatMessage(processedMessage, chatType)
+    return nil
 end
+
+-- ============================================================
+-- List Healers
+-- ============================================================
 
 local function ListHealers()
     local groupType, groupSize
@@ -1956,7 +952,7 @@ local function ListHealers()
         groupSize = GetNumGroupMembers()
     elseif IsInGroup() then
         groupType = "party"
-        groupSize = GetNumGroupMembers() 
+        groupSize = GetNumGroupMembers()
     else
         print("|cff00ff00[IncCallout] You are not in a group.|r")
         return
@@ -1964,96 +960,158 @@ local function ListHealers()
 
     local healerNames = {}
     for i = 1, groupSize do
-        local unit = groupType..i
-        local role = UnitGroupRolesAssigned(unit)
-        if role == "HEALER" then
+        local unit = groupType .. i
+        if UnitGroupRolesAssigned(unit) == "HEALER" then
             table.insert(healerNames, GetUnitName(unit, true))
         end
     end
 
+    local chatType = GetInstanceChatType()
+    if not chatType then
+        print("|cff00ff00[IncCallout] Not in a valid group or instance.|r")
+        return
+    end
+
     local message
     if #healerNames > 0 then
-        local healerList = table.concat(healerNames, ", ")
-        message = "[Incoming-BG] Healers on our team: " .. healerList .. ". Now you know who to peel for."
+        message = "[Incoming-BG] Healers on our team: " .. table.concat(healerNames, ", ") .. ". Now you know who to peel for."
     else
         message = "[Incoming-BG] We have no healers. Good luck!"
     end
-
-    SendBGMessageSafely(message, "INSTANCE_CHAT")
+    SendChatMessage(message, chatType)
 end
 
--- Setup a frame to periodically attempt to send messages
-local frame = CreateFrame("Frame")
-frame:SetScript("OnUpdate", function(self, elapsed)
-    SendMessage()
-end)
+-- ============================================================
+-- Button OnClick Handlers
+-- NOTE: SendChatMessage is called ONLY here, directly from
+-- player click handlers. No queues, no OnUpdate, no wrappers.
+-- ============================================================
 
--- Create a table to map each location to itself
-local locationTable = {}
-for _, location in ipairs(battlegroundLocations) do
-    locationTable[location] = location
-end
- 
-local function isInBattleground()
-    local inInstance, instanceType = IsInInstance()
-    return inInstance and (instanceType == "pvp" or instanceType == "arena")
-end
- 
 local function ButtonOnClick(self)
-    local inInstance, instanceType = IsInInstance()
-    if not (inInstance and (instanceType == "pvp" or instanceType == "arena")) then
+    if not isInBattleground() then
         print("|cff00ff00[IncCallout] You are not in a battleground.|r")
         return
     end
-
-    local currentLocation = GetSubZoneText()
-    if not currentLocation or currentLocation == "" then
-        currentLocation = "Unknown Location"
-    end
-   
-    local message = self:GetText() .. " Incoming at " .. currentLocation
-    SendBGMessageSafely(message, "INSTANCE_CHAT")
+    local message = self:GetText() .. " Incoming at " .. GetLocation()
+    SendChatMessage(message, "INSTANCE_CHAT")
 end
 
-local f = CreateFrame("Frame")
-f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-
-local function UpdatePoints()
-
-    if not IncDB then
+local function IncButtonOnClick()
+    if not isInBattleground() then
+        print("|cff00ff00[IncCallout] You are not in a battleground.|r")
         return
     end
-
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(CONQUEST_CURRENCY_ID)
-    local honorInfo = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-  
+    local message = (IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc
+                    or buttonMessages.inc[IncDB.incIndex or 1])
+    SendChatMessage(message .. " at " .. GetLocation(), "INSTANCE_CHAT")
 end
 
-IncCallout:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-IncCallout:RegisterEvent("HONOR_XP_UPDATE")
-IncCallout:SetScript("OnEvent", function(self, event, ...)
-    if event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
-        UpdatePoints()
-		ApplyFontSettings()
+local function SendMoreButtonOnClick()
+    if not isInBattleground() then
+        print("|cff00ff00[IncCallout] You are not in a battleground.|r")
+        return
     end
-end)
+    local message = (IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore
+                    or buttonMessages.sendMore[IncDB.sendMoreIndex or 1])
+    SendChatMessage(message .. " at " .. GetLocation(), "INSTANCE_CHAT")
+end
 
-UpdatePoints()
+local function AllClearButtonOnClick()
+    if not isInBattleground() then
+        print("|cff00ff00[IncCallout] You are not in a battleground.|r")
+        return
+    end
+    local message = (IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear
+                    or buttonMessages.allClear[IncDB.allClearIndex or 1])
+    SendChatMessage(message .. " at " .. GetLocation(), "INSTANCE_CHAT")
+end
 
--- Create the LibDataBroker object
+local function HealsButtonOnClick()
+    if not isInBattleground() then
+        print("|cff00ff00[IncCallout] You are not in a battleground.|r")
+        return
+    end
+    local message = (IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest
+                    or buttonMessages.healRequest[IncDB.healRequestIndex or 1])
+    SendChatMessage(message .. " Needed at " .. GetLocation(), "INSTANCE_CHAT")
+end
+
+local function EFCButtonOnClick()
+    local chatType = GetInstanceChatType()
+    if not chatType then
+        print("|cffff0000[IncCallout] You're not in a PvP instance or any group.|r")
+        return
+    end
+    local message = (IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest
+                    or buttonMessages.efcRequest[IncDB.efcRequestIndex or 1])
+    SendChatMessage(message, chatType)
+end
+
+local function FCButtonOnClick()
+    local chatType = GetInstanceChatType()
+    if not chatType then
+        print("|cffff0000[IncCallout] You're not in a PvP instance or any group.|r")
+        return
+    end
+    local message = (IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest
+                    or buttonMessages.fcRequest[IncDB.fcRequestIndex or 1])
+    SendChatMessage(message, chatType)
+end
+
+local function BuffRequestButtonOnClick()
+    local chatType = GetInstanceChatType()
+    if not chatType then
+        print("|cffff0000[IncCallout] You're not in a PvP instance.|r")
+        return
+    end
+    local message = (IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest
+                    or buttonMessages.buffRequest[IncDB.buffRequestIndex or 1])
+    if not message then
+        print("|cffff0000[IncCallout] No buff request message available.|r")
+        return
+    end
+    SendChatMessage(message, chatType)
+end
+
+local function ShareButtonOnClick()
+    local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+            SendChatMessage(message, "INSTANCE_CHAT")
+        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+            SendChatMessage(message, "PARTY")
+        else
+            SendChatMessage(message, "SAY")
+        end
+    else
+        SendChatMessage(message, "SAY")
+    end
+end
+
+-- ============================================================
+-- UpdatePoints
+-- ============================================================
+
+local function UpdatePoints()
+    if not IncDB then return end
+    -- Currency info is fetched for display; no UI update needed here
+    -- (conquest/honor labels are driven by SavePvPStats)
+end
+
+-- ============================================================
+-- LibDataBroker Object (must be created before InitializeMiniMapIcon)
+-- ============================================================
+
 local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", {
     type = "data source",
     text = "Incoming-BG",
     icon = "Interface\\AddOns\\IncCallout\\Icon\\INC.png",
     OnClick = function(_, button)
         if button == "LeftButton" then
-            if IncCallout:IsShown() then
-                IncCallout:Hide()
-            else
-                IncCallout:Show()
-            end
+            if IncCallout:IsShown() then IncCallout:Hide() else IncCallout:Show() end
         else
-            if Settings.OpenToCategory then
+            if Settings and Settings.OpenToCategory then
                 Settings.OpenToCategory("Incoming-BG")
             else
                 print("|cffff0000Options frame function not available|r")
@@ -2061,303 +1119,510 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
         end
     end,
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("|cff00ff00Incoming-BG|r") -- Green title
-        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1) -- Yellow label
-        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1) -- Yellow label
-        
+        tooltip:AddLine("|cff00ff00Incoming-BG|r")
+        tooltip:AddLine("|cffffff00Left-Click:|r Toggle the main window", 1, 1, 1)
+        tooltip:AddLine("|cffffff00Right-Click:|r Open settings", 1, 1, 1)
     end,
 })
 
--- Function to toggle MiniMap button visibility
-local function ToggleMiniMapButton(enable)
-   
-    local minimapSettings = IncCalloutDB.profiles.Default.minimap
-    if not minimapSettings then
-        IncCalloutDB.profiles.Default.minimap = { minimapPos = 45, hide = false }
+-- ============================================================
+-- Preview Text Helper
+-- ============================================================
+
+function addonNamespace.getPreviewText(messageType)
+    local previewText = "|cff00ff00[Incoming-BG] "
+    local custom = IncDB.customMessages[messageType]
+    local idx    = IncDB[messageType .. "Index"]
+    local msgs   = buttonMessages[messageType]
+
+    if custom and custom ~= "" then
+        previewText = previewText .. custom
+    elseif idx and msgs and msgs[idx] then
+        previewText = previewText .. msgs[idx]
     end
 
-    -- Update the visibility state using `hide`
-    IncCalloutDB.profiles.Default.minimap.hide = not enable
-
-    -- Toggle the MiniMap button visibility using LibDBIcon
-    if enable then
-        LibStub("LibDBIcon-1.0"):Show("IncCallout")
-    else
-        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
-    end
+    return previewText .. "|r"
 end
 
--- Automatically manage MiniMap position using LibDBIcon
-local function InitializeMiniMapIcon()
-    -- Ensure the minimap settings exist in the profile
-    local minimapSettings = IncCalloutDB.profiles.Default.minimap
-    if not minimapSettings then
-        minimapSettings = { minimapPos = 45, hide = false }
-        IncCalloutDB.profiles.Default.minimap = minimapSettings
-    end
+-- ============================================================
+-- AceConfig Options Table
+-- ============================================================
 
-    -- Register the MiniMap icon with LibDBIcon
-    LibStub("LibDBIcon-1.0"):Register("IncCallout", IncCalloutLDB, minimapSettings)
+local options = {
+    name = "Incoming-BG",
+    type = "group",
+    args = {
+        messageSettings = {
+            type = "group", name = "Message Settings", order = 1,
+            args = {
+                sendMore = {
+                    type = "group", name = "Send More Message", inline = true, order = 1,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            desc = "Select the message for the 'Send More' button",
+                            values = buttonMessages.sendMore,
+                            get = function() return IncDB.sendMoreIndex end,
+                            set = function(_, v) IncDB.sendMoreIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.sendMore end,
+                            set = function(_, v) IncDB.customMessages.sendMore = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.sendMore = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("sendMore") end,
+                        },
+                    },
+                },
+                inc = {
+                    type = "group", name = "INC Message", inline = true, order = 2,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            values = buttonMessages.inc,
+                            get = function() return IncDB.incIndex end,
+                            set = function(_, v) IncDB.incIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.inc end,
+                            set = function(_, v) IncDB.customMessages.inc = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.inc = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("inc") end,
+                        },
+                    },
+                },
+                allClear = {
+                    type = "group", name = "All Clear Message", inline = true, order = 3,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            values = buttonMessages.allClear,
+                            get = function() return IncDB.allClearIndex end,
+                            set = function(_, v) IncDB.allClearIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.allClear end,
+                            set = function(_, v) IncDB.customMessages.allClear = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.allClear = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("allClear") end,
+                        },
+                    },
+                },
+                buffRequest = {
+                    type = "group", name = "Buff Request Message", inline = true, order = 4,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            values = buttonMessages.buffRequest,
+                            get = function() return IncDB.buffRequestIndex end,
+                            set = function(_, v) IncDB.buffRequestIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.buffRequest end,
+                            set = function(_, v) IncDB.customMessages.buffRequest = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.buffRequest = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("buffRequest") end,
+                        },
+                    },
+                },
+                healRequest = {
+                    type = "group", name = "Heal Request Message", inline = true, order = 5,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            values = buttonMessages.healRequest,
+                            get = function() return IncDB.healRequestIndex end,
+                            set = function(_, v) IncDB.healRequestIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.healRequest end,
+                            set = function(_, v) IncDB.customMessages.healRequest = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.healRequest = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("healRequest") end,
+                        },
+                    },
+                },
+                efcRequest = {
+                    type = "group", name = "EFC Request Message", inline = true, order = 6,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            values = buttonMessages.efcRequest,
+                            get = function() return IncDB.efcRequestIndex end,
+                            set = function(_, v) IncDB.efcRequestIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.efcRequest end,
+                            set = function(_, v) IncDB.customMessages.efcRequest = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.efcRequest = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("efcRequest") end,
+                        },
+                    },
+                },
+                fcRequest = {
+                    type = "group", name = "FC Request Message", inline = true, order = 7,
+                    args = {
+                        predefined = {
+                            type = "select", name = "Predefined", order = 1,
+                            values = buttonMessages.fcRequest,
+                            get = function() return IncDB.fcRequestIndex end,
+                            set = function(_, v) IncDB.fcRequestIndex = v; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        custom = {
+                            type = "input", name = "Custom", order = 2,
+                            get = function() return IncDB.customMessages.fcRequest end,
+                            set = function(_, v) IncDB.customMessages.fcRequest = v end,
+                        },
+                        clear = {
+                            type = "execute", name = "Clear", order = 3,
+                            func = function() IncDB.customMessages.fcRequest = ""; LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout") end,
+                        },
+                        preview = {
+                            type = "description", order = 4, fontSize = "medium",
+                            name = function() return addonNamespace.getPreviewText("fcRequest") end,
+                        },
+                    },
+                },
+            },
+        },
 
-    -- Apply the visibility state
-    if minimapSettings.hide then
-        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
-    else
-        LibStub("LibDBIcon-1.0"):Show("IncCallout")
-    end
-end
+        appearanceSettings = {
+            type = "group", name = "Appearance Settings", order = 2,
+            args = {
+                fontColor = {
+                    type = "color", name = "Button Font Color", hasAlpha = true, order = 1,
+                    get = function()
+                        local c = IncDB.fontColor or {r=1,g=1,b=1,a=1}
+                        return c.r, c.g, c.b, c.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        IncDB.fontColor = {r=r, g=g, b=b, a=a}
+                        for _, t in ipairs(buttonTexts) do t:SetTextColor(r,g,b,a) end
+                    end,
+                },
+                buttonColor = {
+                    type = "color", name = "Button Color", hasAlpha = true, order = 2,
+                    get = function()
+                        local c = IncDB.buttonColor or {r=1,g=0,b=0,a=1}
+                        return c.r, c.g, c.b, c.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        IncDB.buttonColor = {r=r, g=g, b=b, a=a}
+                        applyButtonColor()
+                    end,
+                },
+                scaleOption = {
+                    type = "range", name = "GUI Window Scale", min = 0.5, max = 2.0, step = 0.05,
+                    get = function() return IncDB.scale or 1 end,
+                    set = function(_, v) IncDB.scale = v; ScaleGUI() end,
+                },
+                borderStyle = {
+                    type = "select", name = "Border Style", style = "dropdown", order = 3,
+                    values = function()
+                        local v = {}
+                        for i, o in ipairs(borderOptions) do v[i] = o.name end
+                        return v
+                    end,
+                    get = function() return IncDB.selectedBorderIndex or 1 end,
+                    set = function(_, v) IncDB.selectedBorderIndex = v; applyBorderChange(); applyColorChange() end,
+                },
+                backdropColor = {
+                    type = "select", name = "Backdrop Color", style = "dropdown", order = 4,
+                    values = function()
+                        local v = {}
+                        for i, o in ipairs(colorOptions) do v[i] = o.name end
+                        return v
+                    end,
+                    get = function() return IncDB.selectedColorIndex or 1 end,
+                    set = function(_, v) IncDB.selectedColorIndex = v; applyColorChange() end,
+                },
+                statusbarTexture = {
+                    type = "select", name = "Statusbar Texture", order = 5,
+                    dialogControl = "LSM30_Statusbar",
+                    values = LSM:HashTable("statusbar"),
+                    get = function() return IncDB.statusbarTexture or "Blizzard" end,
+                    set = function(_, v) IncDB.statusbarTexture = v; applyButtonColor() end,
+                },
+                lockGUI = {
+                    type = "toggle", name = "Lock GUI Window", order = 6,
+                    get = function() return IncDB.isLocked end,
+                    set = function(_, v) IncDB.isLocked = v end,
+                },
+                logoSelection = {
+                    type = "select", name = "Logo Selection", style = "dropdown", order = 7,
+                    values = {
+                        ["None"]="NONE", ["BearClaw"]="BearClaw", ["BreatheFire"]="BreatheFire",
+                        ["Bloody"]="Bloody", ["Impact"]="Impact", ["Shock"]="Shock",
+                        ["Rifle"]="Rifle", ["Condiment"]="Condiment", ["Duplex"]="Duplex",
+                        ["Eraser"]="Eraser", ["Ogre"]="Ogre", ["SuperSunday"]="SuperSunday",
+                        ["Alligator"]="Alligator", ["GOW"]="GOW", ["Maiden"]="Maiden",
+                        ["Metal"]="Metal", ["SourceCode"]="SourceCode", ["InkFree"]="InkFree",
+                    },
+                    get = function() return IncDB.selectedLogo end,
+                    set = function(_, v) IncDB.selectedLogo = v; IncCallout:SetLogo(v) end,
+                },
+                logoColor = {
+                    type = "color", name = "Logo Color", hasAlpha = true, order = 8,
+                    get = function()
+                        local c = IncDB.logoColor or {r=1,g=1,b=1,a=1}
+                        return c.r, c.g, c.b, c.a
+                    end,
+                    set = function(_, r, g, b, a)
+                        IncDB.logoColor = {r=r, g=g, b=b, a=a}
+                        logo:SetVertexColor(r, g, b, a)
+                    end,
+                },
+                minimapButtonEnable = {
+                    type = "toggle", name = "Enable MiniMap Button", order = 9,
+                    get = function() return not (IncDB.minimap and IncDB.minimap.hide) end,
+                    set = function(_, v) ToggleMiniMapButton(v) end,
+                },
+            },
+        },
 
--- Update MiniMap visibility based on settings
-local function UpdateMiniMapVisibility()
-    local minimapSettings = IncCalloutDB.profiles.Default.minimap
-    if minimapSettings and minimapSettings.hide then
-        LibStub("LibDBIcon-1.0"):Hide("IncCallout")
-    else
-        LibStub("LibDBIcon-1.0"):Show("IncCallout")
-    end
-end
+        mapSettings = {
+            type = "group", name = "Map Settings", order = 3,
+            args = {
+                mapSizeChoice = {
+                    type = "select", name = "Map Size", style = "dropdown", order = 6,
+                    values = function()
+                        local v = {}
+                        for _, o in ipairs(mapSizeOptions) do v[o.value] = o.name end
+                        return v
+                    end,
+                    get = function() return IncCalloutDB.settings and IncCalloutDB.settings.mapScale end,
+                    set = function(_, v)
+                        if IncCalloutDB.settings then IncCalloutDB.settings.mapScale = v end
+                        if addonNamespace.ResizeWorldMap then addonNamespace.ResizeWorldMap() end
+                    end,
+                },
+                resizeInPvPOnly = {
+                    type = "toggle", name = "Resize Map in PvP Only", order = 7,
+                    get = function() return IncCalloutDB.settings and IncCalloutDB.settings.resizeInPvPOnly end,
+                    set = function(_, v)
+                        if IncCalloutDB.settings then IncCalloutDB.settings.resizeInPvPOnly = v end
+                        if addonNamespace.ResizeWorldMap then addonNamespace.ResizeWorldMap() end
+                    end,
+                },
+            },
+        },
 
--- Ensure SavedVariables are loaded and initialized
-local function InitializeAddon()
-    InitializeMiniMapIcon()
-    UpdateMiniMapVisibility()
-end
+        fontSettings = {
+            type = "group", name = "Font Settings", order = 4,
+            args = {
+                font = {
+                    type = "select", name = "Font", order = 1,
+                    dialogControl = "LSM30_Font",
+                    values = LSM:HashTable("font"),
+                    get = function() return IncDB.font or "Friz Quadrata TT" end,
+                    set = function(_, v)
+                        IncDB.font = v
+                        local path = LSM:Fetch("font", v)
+                        local sz = IncDB.fontSize or 14
+                        for _, t in ipairs(buttonTexts) do t:SetFont(path, sz) end
+                    end,
+                },
+                fontSize = {
+                    type = "range", name = "Font Size", min = 8, max = 24, step = 1, order = 2,
+                    get = function() return IncDB.fontSize or 14 end,
+                    set = function(_, v)
+                        IncDB.fontSize = v
+                        local path = LSM:Fetch("font", IncDB.font or "Friz Quadrata TT")
+                        for _, t in ipairs(buttonTexts) do t:SetFont(path, v) end
+                    end,
+                },
+            },
+        },
 
--- Function to handle the All Clear button click event
-local function AllClearButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
-        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
-        return
-    end
-    local message = IncDB.customMessages.allClear ~= "" and IncDB.customMessages.allClear or buttonMessages.allClear[buttonMessageIndices.allClear]
-    message = message .. " at " .. location
-    SendBGMessageSafely(message, "INSTANCE_CHAT")
-end
+        resetSettings = {
+            type = "group", name = "Reset", order = 100,
+            args = {
+                resetToDefaults = {
+                    type = "execute", name = "Reset to Defaults",
+                    desc = "Reset all Incoming-BG settings to their default values.",
+                    confirm = function() return "Are you sure you want to reset Incoming-BG settings to defaults? This cannot be undone." end,
+                    func = function()
+                        if db and type(db.ResetProfile) == "function" then
+                            db:ResetProfile()
+                            IncDB = db.profile
+                            print("|cff00ff00Incoming-BG: Settings reset to defaults.|r")
+                        else
+                            local function deepcopy(orig)
+                                if type(orig) ~= "table" then return orig end
+                                local copy = {}
+                                for k, v in pairs(orig) do copy[k] = deepcopy(v) end
+                                return copy
+                            end
+                            IncDB = IncDB or {}
+                            local newProfile = deepcopy(defaults.profile)
+                            for k in pairs(IncDB) do IncDB[k] = nil end
+                            for k, v in pairs(newProfile) do IncDB[k] = v end
+                            if db and db.profile then db.profile = IncDB end
+                            print("|cff00ff00Incoming-BG: Settings reset to defaults (fallback).|r")
+                        end
+                        pcall(function()
+                            ApplyFontSettings()
+                            applyButtonColor()
+                            applyBorderChange()
+                            applyColorChange()
+                            ScaleGUI()
+                            if IncCallout.SetLogo and IncDB.selectedLogo then IncCallout:SetLogo(IncDB.selectedLogo) end
+                            if InitializeMiniMapIcon then UpdateMiniMapVisibility() end
+                            LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
+                            LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
+                        end)
+                    end,
+                },
+            },
+        },
+    },
+}
 
--- Function to handle the Send More button click event
-local function SendMoreButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
-        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
-        return
-    end
-    local message = IncDB.customMessages.sendMore ~= "" and IncDB.customMessages.sendMore or buttonMessages.sendMore[buttonMessageIndices.sendMore]
-    message = message .. " at " .. location
-    SendBGMessageSafely(message, "INSTANCE_CHAT")
-end
+AceConfig:RegisterOptionsTable("Incoming-BG", options)
+local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
 
--- Function to handle the INC button click event
-local function IncButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
-        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
-        return
-    end
-    local message = IncDB.customMessages.inc ~= "" and IncDB.customMessages.inc or buttonMessages.inc[buttonMessageIndices.inc]
-    message = message .. " at " .. location
-    SendBGMessageSafely(message, "INSTANCE_CHAT")
-end
-
--- Define the OnClick function for EFC
-local function EFCButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local inInstance, instanceType = IsInInstance()
-    local chatType
-
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        chatType = "INSTANCE_CHAT"
-    elseif IsInRaid() then
-        chatType = "RAID"
-    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-        chatType = "PARTY"
-    else
-        print("|cffff0000[IncCallout] You're not in a PvP instance or any group.|r")
-        return
-    end
-
-    local message = IncDB.customMessages.efcRequest ~= "" and IncDB.customMessages.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex]
-    SendBGMessageSafely(message, chatType)
-end
-
--- Define the OnClick function for FC
-local function FCButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local inInstance, instanceType = IsInInstance()
-    local chatType
-
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        chatType = "INSTANCE_CHAT"
-    elseif IsInRaid() then
-        chatType = "RAID"
-    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-        chatType = "PARTY"
-    else
-        print("|cffff0000[IncCallout] You're not in a PvP instance or any group.|r")
-        return
-    end
-
-    local message = IncDB.customMessages.fcRequest ~= "" and IncDB.customMessages.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex]
-    SendBGMessageSafely(message, chatType)
-end
-
--- Function to handle the Heals button click event
-local function HealsButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local location = GetSubZoneText()
-    if not location then
-        print("|cff00ff00[IncCallout] You are not in a Battleground.|r")
-        return
-    end
-    local message = IncDB.customMessages.healRequest ~= "" and IncDB.customMessages.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex]
-    message = message .. " Needed at " .. location
-    SendBGMessageSafely(message, "INSTANCE_CHAT")
-end
-
--- Function to handle the Buff Request button click event
-local function BuffRequestButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-
-    local messageIndex = buttonMessageIndices.buffRequest or 1
-    local message = IncDB.customMessages.buffRequest ~= "" and IncDB.customMessages.buffRequest or buttonMessages.buffRequest[messageIndex]
-    
-    if not message then
-        print("|cffff0000[IncCallout] No buff request message available.|r")
-        return
-    end
-
-    local inInstance, instanceType = IsInInstance()
-    local chatType
-
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        chatType = "INSTANCE_CHAT"
-    elseif IsInRaid() then
-        chatType = "RAID"
-    elseif IsInGroup() then
-        chatType = "PARTY"
-    else
-        print("|cffff0000[IncCallout] You're not in a PvP instance.|r")
-        return
-    end
-
-    SendBGMessageSafely(message, chatType)
-end
-
-local function ShareButtonOnClick()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    local message = "Try Incoming-BG! It adds a GUI for fast battleground calls—just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!"
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-            SendBGMessageSafely(message, "INSTANCE_CHAT")
-        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-            SendBGMessageSafely(message, "PARTY")
-        else
-            SendBGMessageSafely(message, "SAY")
+if Settings then
+    local function RegisterOptionsPanel(panel)
+        if not Settings.GetCategory(panel.name) then
+            local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+            category.ID = panel.name
+            Settings.RegisterAddOnCategory(category)
         end
-    else
-        SendBGMessageSafely(message, "SAY")
     end
+    RegisterOptionsPanel(optionsFrame)
 end
 
-local function ApplyFontSettings()
-    if not IncDB then return end
+-- ============================================================
+-- Build Buttons
+-- ============================================================
 
-    IncDB.font = IncDB.font or "Friz Quadrata TT"  
-    IncDB.fontSize = IncDB.fontSize or 14  
+local button1    = createButton("button1",    20, 22, "1",        {"TOPLEFT",  IncCallout, "TOPLEFT"},  35,  -40, ButtonOnClick)
+local button2    = createButton("button2",    20, 22, "2",        {"LEFT",     button1,    "RIGHT"},    10,    0, ButtonOnClick)
+local button3    = createButton("button3",    20, 22, "3",        {"LEFT",     button2,    "RIGHT"},    10,    0, ButtonOnClick)
+local button4    = createButton("button4",    20, 22, "4",        {"LEFT",     button3,    "RIGHT"},    10,    0, ButtonOnClick)
+local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg",     {"LEFT",     button4,    "RIGHT"},    10,    0, ButtonOnClick)
+local incButton  = createButton("incButton",  95, 22, "Inc",      {"TOP",      button3,    "BOTTOM"},  -45,  -10, IncButtonOnClick)
+local sendMoreButton  = createButton("sendMoreButton",  95, 22, "Send More", {"LEFT",  incButton,      "RIGHT"},  10, 0, SendMoreButtonOnClick)
+local allClearButton  = createButton("allClearButton",  95, 22, "All Clear", {"TOP",   incButton,      "BOTTOM"},  0,-10, AllClearButtonOnClick)
+local healsButton     = createButton("healsButton",     95, 22, "Heals",     {"LEFT",  allClearButton, "RIGHT"},  10, 0, HealsButtonOnClick)
+local efcButton       = createButton("efcButton",       95, 22, "EFC",       {"TOP",   allClearButton, "BOTTOM"},  0,-10, EFCButtonOnClick)
+local fcButton        = createButton("fcButton",        95, 22, "FC",        {"LEFT",  efcButton,      "RIGHT"},  10, 0, FCButtonOnClick)
+local buffButton      = createButton("buffButton",      95, 22, "Buffs",     {"TOP",   efcButton,      "BOTTOM"},  0,-10, BuffRequestButtonOnClick)
+local mapButton       = createButton("mapButton",       95, 22, "Map",       {"LEFT",  buffButton,     "RIGHT"},  10, 0, function()
+    ToggleWorldMap()
+end)
+local healerButton    = createButton("healerButton",    95, 22, "Healers",   {"TOP",   buffButton,     "BOTTOM"},  0,-10, function()
+    ListHealers()
+end)
+local pvpStatsButton  = createButton("pvpStatsButton",  95, 22, "PVP Stats", {"LEFT",  healerButton,   "RIGHT"},  10, 0, function()
+    pvpStatsFrame:Show()
+end)
+local shareButton     = createButton("shareButton",     95, 22, "Share",     {"BOTTOM",IncCallout,     "BOTTOM"},  0, 10, ShareButtonOnClick)
 
-    local fontPath = LSM:Fetch("font", IncDB.font) or STANDARD_TEXT_FONT  
-    local fontSize = IncDB.fontSize
+-- Tooltips
+pvpStatsButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:SetText("PVP Stats Information", nil, nil, nil, nil, true)
+    GameTooltip:AddLine(" \nDisplays the following stats:\n", 1, 1, 1, true)
+    GameTooltip:AddLine("• Honor Points: Your current total.", 1, 0.5, 0, true)
+    GameTooltip:AddLine("• Conquest Points: Your current total.", 1, 0.5, 0, true)
+    GameTooltip:AddLine("• Conquest Cap: Max Conquest you can earn this week.", 1, 0.5, 0, true)
+    GameTooltip:AddLine("• Honor Level: Your current Honor system level.", 1, 0.5, 0, true)
+    GameTooltip:AddLine("• Solo Shuffle Rating: Your current rating.", 1, 0.5, 0, true)
+    GameTooltip:Show()
+end)
+pvpStatsButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    for _, text in ipairs(buttonTexts) do
-        if fontPath and fontSize then
-            text:SetFont(fontPath, fontSize)
-        end
-    end
-  
+shareButton:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_TOP")
+    GameTooltip:SetText("Share Incoming-BG Addon", 1, 1, 1)
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("Let your teammates know about Incoming-BG!", 0, 1, 0, true)
+    GameTooltip:AddLine("• In a BG/Arena: sends to instance/party chat.", 1, 1, 1, true)
+    GameTooltip:AddLine("• Outside PvP: sends in /say.", 1, 1, 1, true)
+    GameTooltip:Show()
+end)
+shareButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+-- PostClick: reapply button color after every click
+for _, button in ipairs(buttons) do
+    button:SetScript("PostClick", function() applyButtonColor() end)
 end
 
--- Create a single frame to handle all events
-local frame = CreateFrame("Frame", "IncCalloutFrame")
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("PLAYER_LOGOUT")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("PLAYER_LEAVING_WORLD")
-frame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
-frame:RegisterEvent("HONOR_XP_UPDATE")
-frame:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
-frame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
-frame:RegisterEvent("PVP_RATED_STATS_UPDATE")
-frame:RegisterEvent("PVP_REWARDS_UPDATE")
-frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
-frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-frame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
-frame:RegisterEvent("PLAYER_REGEN_DISABLED")
-frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-frame:RegisterEvent("COMBAT_RATING_UPDATE")
-frame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
-frame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
-frame:SetScript("OnEvent", EventHandler)
+applyButtonColor()
 
--- Ensure isIconRegistered is initialized
+-- ============================================================
+-- Event Handler (single, named frame — no duplicates)
+-- ============================================================
+
 local isIconRegistered = false
+local db
 
--- Event handler for ADDON_LOADED to initialize settings
 local function OnEvent(self, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == "IncCallout" then
-        -- Initialize AceDB for profile management
-        db = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
+        db    = LibStub("AceDB-3.0"):New("IncCalloutDB", defaults, true)
         IncDB = db.profile or {}
 
-        -- Ensure minimap settings exist in the profile
-        local minimapSettings = IncCalloutDB.profiles.Default.minimap
-        if not minimapSettings then
-            minimapSettings = { minimapPos = 45, hide = false }
-            IncCalloutDB.profiles.Default.minimap = minimapSettings
-        end
-
-        -- Register the MiniMap icon if not already registered
-        if not isIconRegistered then
-        --    icon:Register("IncCallout", IncCalloutLDB, minimapSettings)
-            isIconRegistered = true
-        end
-
-        -- Initialize the MiniMap icon
-        InitializeMiniMapIcon()
-
-        -- Set default values for other settings if not already set
-        if not IncDB then
-            IncDB = {
-                buttonColor = { r = 1, g = 0, b = 0, a = 1 },
-                fontColor = { r = 1, g = 1, b = 1, a = 1 },
-            }
-        end
-
-        -- Apply logo settings
-        if IncCallout.SetLogo then
-            IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw")
-        end
-
-        -- Apply logo color settings
-        if IncDB.logoColor then
-            local color = IncDB.logoColor
-            logo:SetVertexColor(color.r, color.g, color.b, color.a)
-        end
-
-        -- Apply font color settings
-        if IncDB.fontColor then
-            local color = IncDB.fontColor
-            for _, buttonText in ipairs(buttonTexts) do
-                buttonText:SetTextColor(color.r, color.g, color.b, color.a)
+        -- Ensure minimap settings exist
+        if IncCalloutDB.profiles and IncCalloutDB.profiles.Default then
+            if not IncCalloutDB.profiles.Default.minimap then
+                IncCalloutDB.profiles.Default.minimap = { minimapPos = 45, hide = false }
+            end
+            if not isIconRegistered then
+                InitializeMiniMapIcon(IncCalloutDB.profiles.Default.minimap)
+                isIconRegistered = true
             end
         end
 
-        -- Apply UI settings
+        -- Apply saved appearance
+        if IncCallout.SetLogo then IncCallout:SetLogo(IncDB.selectedLogo or "BearClaw") end
+        if IncDB.logoColor then logo:SetVertexColor(IncDB.logoColor.r, IncDB.logoColor.g, IncDB.logoColor.b, IncDB.logoColor.a) end
+        if IncDB.fontColor then
+            for _, t in ipairs(buttonTexts) do
+                t:SetTextColor(IncDB.fontColor.r, IncDB.fontColor.g, IncDB.fontColor.b, IncDB.fontColor.a)
+            end
+        end
         applyBorderChange()
         applyColorChange()
         ApplyFontSettings()
@@ -2374,10 +1639,12 @@ local function OnEvent(self, event, arg1, ...)
         ScaleGUI()
         ApplyFontSettings()
         applyButtonColor()
-
-    elseif event == "PLAYER_LOGOUT" or event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
-        UpdatePvPStatsFrame()
-        UpdatePoints()
+        DelayedSaveAndUpdate()
+        C_Timer.After(2, function()
+            local character = UnitName("player")
+            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
+            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+        end)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         local inInstance, instanceType = IsInInstance()
@@ -2390,150 +1657,98 @@ local function OnEvent(self, event, arg1, ...)
         ScaleGUI()
         ApplyFontSettings()
         applyButtonColor()
+        DelayedSaveAndUpdate()
+        C_Timer.After(2, function()
+            local character = UnitName("player")
+            UIDropDownMenu_SetText(SelectCharacterDropdown, character)
+            UIDropDownMenu_SetSelectedValue(SelectCharacterDropdown, character)
+        end)
 
     elseif event == "PLAYER_LEAVING_WORLD" then
         IncCallout:Hide()
         applyButtonColor()
 
-    elseif event == "CHAT_MSG_INSTANCE_CHAT" then
-        local message = arg1
-        onChatMessage(message)
+    elseif event == "PLAYER_LOGOUT" then
+        UpdatePoints()
 
-    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then        
-        local index = 7  
-        local rating = select(2, GetPersonalRatedInfo(index))  
-        
-        UpdatePvPStatsFrame(rating)
+    elseif event == "CURRENCY_DISPLAY_UPDATE" or event == "HONOR_XP_UPDATE" then
+        UpdatePoints()
+        ApplyFontSettings()
+
+    elseif event == "CHAT_MSG_INSTANCE_CHAT" then
+        -- reserved for future use
+
+    elseif event == "PVP_RATED_STATS_UPDATE" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        local character = UnitName("player")
+        SavePvPStats()
+        UpdateAllStatsFrames(character)
+
+    elseif event == "PVP_REWARDS_UPDATE" or event == "WEEKLY_REWARDS_UPDATE" then
+        local character = UnitName("player")
+        SavePvPStats()
+        UpdateAllStatsFrames(character)
+
+    elseif event == "ZONE_CHANGED_NEW_AREA" then
+        DelayedSaveAndUpdate()
+
+    elseif event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
+        -- reserved
+
     end
 end
 
-frame:SetScript("OnEvent", OnEvent)
+-- Single authoritative event frame
+local mainEventFrame = CreateFrame("Frame", "IncCalloutEventFrame")
+mainEventFrame:RegisterEvent("ADDON_LOADED")
+mainEventFrame:RegisterEvent("PLAYER_LOGIN")
+mainEventFrame:RegisterEvent("PLAYER_LOGOUT")
+mainEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+mainEventFrame:RegisterEvent("PLAYER_LEAVING_WORLD")
+mainEventFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
+mainEventFrame:RegisterEvent("HONOR_XP_UPDATE")
+mainEventFrame:RegisterEvent("CHAT_MSG_INSTANCE_CHAT")
+mainEventFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
+mainEventFrame:RegisterEvent("PVP_RATED_STATS_UPDATE")
+mainEventFrame:RegisterEvent("PVP_REWARDS_UPDATE")
+mainEventFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+mainEventFrame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN")
+mainEventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+mainEventFrame:RegisterEvent("PVP_BRAWL_INFO_UPDATED")
+mainEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+mainEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+mainEventFrame:RegisterEvent("COMBAT_RATING_UPDATE")
+mainEventFrame:RegisterEvent("ARENA_SEASON_WORLD_STATE")
+mainEventFrame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
+mainEventFrame:SetScript("OnEvent", OnEvent)
 
--- Register additional events for pvpStatsFrame
+-- pvpStatsFrame secondary events (display only, no chat)
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")
-
-local button1 = createButton("button1", 20, 22, "1", {"TOPLEFT", IncCallout, "TOPLEFT"}, 35, -40, ButtonOnClick)
-local button2 = createButton("button2", 20, 22, "2", {"LEFT", button1, "RIGHT"}, 10, 0, ButtonOnClick)
-local button3 = createButton("button3", 20, 22, "3", {"LEFT", button2, "RIGHT"}, 10, 0, ButtonOnClick)
-local button4 = createButton("button4", 20, 22, "4", {"LEFT", button3, "RIGHT"}, 10, 0, ButtonOnClick)
-local buttonZerg = createButton("buttonZerg", 40, 22, "Zerg", {"LEFT", button4, "RIGHT"}, 10, 0, ButtonOnClick)
-local incButton = createButton("incButton", 95, 22, "Inc", {"TOP", button3, "BOTTOM"}, -45, -10, IncButtonOnClick)
-local sendMoreButton = createButton("sendMoreButton", 95, 22, "Send More", {"LEFT", incButton, "RIGHT"}, 10, 0, SendMoreButtonOnClick)
-local allClearButton = createButton("allClearButton", 95, 22, "All Clear", {"TOP", incButton, "BOTTOM"}, 0, -10, AllClearButtonOnClick)
-local healsButton = createButton("healsButton", 95, 22, "Heals", {"LEFT", allClearButton, "RIGHT"}, 10, 0, HealsButtonOnClick)
-local efcButton = createButton("efcButton", 95, 22, "EFC", {"TOP", allClearButton, "BOTTOM"}, 0, -10, EFCButtonOnClick)
-local fcButton = createButton("fcButton", 95, 22, "FC", {"LEFT", efcButton, "RIGHT"}, 10, 0, FCButtonOnClick)
-local buffButton = createButton("buffButton", 95, 22, "Buffs", {"TOP", efcButton, "BOTTOM"}, 0, -10, BuffRequestButtonOnClick)
-
-local mapButton = createButton("mapButton", 95, 22, "Map", {"LEFT", buffButton, "RIGHT"}, 10, 0, function()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    ToggleWorldMap()
-end)
-
-local shareButton = createButton("shareButton", 95, 22, "Share", {"BOTTOM", IncCallout, "BOTTOM"}, 0, 10, ShareButtonOnClick)
-
-local healerButton = createButton("healerButton", 95, 22, "Healers", {"TOP", buffButton, "BOTTOM"}, 0, -10, function()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    ListHealers()
-end)
-
-local pvpStatsButton = createButton("pvpStatsButton", 95, 22, "PVP Stats", {"LEFT", healerButton, "RIGHT"}, 10, 0, function()
-    PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
-    pvpStatsFrame:Show()
-end)
-
-
--- Tooltip setup for the pvpStatsButton with Conquest Cap included
-pvpStatsButton:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-    GameTooltip:SetText("PVP Stats Information", nil, nil, nil, nil, true)
-    GameTooltip:AddLine(" \nDisplays the following stats:\n", 1, 1, 1, true)  
-    GameTooltip:AddLine("• Honor Points: ", 1, 0.5, 0, true)  
-    GameTooltip:AddLine("Your current total.", 1, 1, 1, true)  
-    GameTooltip:AddLine("• Conquest Points: ", 1, 0.5, 0, true)
-    GameTooltip:AddLine("Your current total.", 1, 1, 1, true)
-    GameTooltip:AddLine("• Conquest Cap: ", 1, 0.5, 0, true)
-    GameTooltip:AddLine("The maximum Conquest points you can earn this week.", 1, 1, 1, true)
-    GameTooltip:AddLine("• Honor Level: ", 1, 0.5, 0, true)
-    GameTooltip:AddLine("Your current level in the Honor system.", 1, 1, 1, true)   
-    GameTooltip:AddLine("• Solo Shuffle Rating: ", 1, 0.5, 0, true)
-    GameTooltip:AddLine("Your current rating in Solo Shuffle.", 1, 1, 1, true)
-    GameTooltip:Show()
-end)
-
-shareButton:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-    GameTooltip:SetText("Share Incoming-BG Addon", 1, 1, 1)
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Let your teammates know about Incoming-BG!", 0, 1, 0, true)
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("• In a battleground or arena: Sends a recommendation to your team in instance or party chat.", 1, 1, 1, true)
-    GameTooltip:AddLine("• Outside PvP: Sends a message in /say to nearby players.", 1, 1, 1, true)
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Incoming-BG makes calling out important battleground events fast and easy with one-click buttons for INCOMING, SEND MORE, FC, and more.", 0.8, 0.8, 0.8, true)
-    GameTooltip:Show()
-end)
-
-shareButton:SetScript("OnLeave", function(self)
-    GameTooltip:Hide()
-end)
-
-pvpStatsButton:SetScript("OnLeave", function(self)
-    GameTooltip:Hide()
-end)
-
--- Apply the color to all the buttons
-applyButtonColor()
-
--- Set OnClick functions for the buttons
-allClearButton:SetScript("OnClick", AllClearButtonOnClick)
-sendMoreButton:SetScript("OnClick", SendMoreButtonOnClick)
-incButton:SetScript("OnClick", IncButtonOnClick)
-
-
--- Apply the PostClick script to each button
-for _, button in ipairs(buttons) do
-    button:SetScript("PostClick", function()
-        applyButtonColor()
-    end)
-end
-
-local function OnAddonLoaded(self, event, loadedAddonName)
-    if loadedAddonName == addonName then
-        EnsureDBSettings() 
-        RestoreMapPositionAndScale()  
-        
-        if addonNamespace.ResizeWorldMap then
-            addonNamespace.ResizeWorldMap()
-        end
+pvpStatsFrame:SetScript("OnEvent", function(self, event)
+    if pvpStatsFrame:IsShown() then
+        local character = UnitName("player")
+        SavePvPStats()
+        UpdateAllStatsFrames(character)
     end
-end
+end)
 
--- Slash command registration
+-- ============================================================
+-- Slash Commands
+-- ============================================================
+
 SLASH_INC1 = "/inc"
 SlashCmdList["INC"] = function()
-    if IncCallout:IsShown() then
-        IncCallout:Hide()
-    else
-        IncCallout:Show()
-    end
-end
-
-local function IncomingBGMessageCommandHandler(msg)
-    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."
-    local channel = IsInBattleground() and "INSTANCE_CHAT" or "SAY"
-    SendBGMessageSafely(message, channel)
+    if IncCallout:IsShown() then IncCallout:Hide() else IncCallout:Show() end
 end
 
 SLASH_INCOMINGBGMSG1 = "/incmsg"
-SlashCmdList["INCOMINGBGMSG"] = IncomingBGMessageCommandHandler
- 
-IncCallout:SetScript("OnEvent", OnEvent)
- 
--- Register the events
-IncCallout:RegisterEvent("PLAYER_ENTERING_WORLD")
-IncCallout:RegisterEvent("PLAYER_LOGIN")
-IncCallout:RegisterEvent("PLAYER_LOGOUT")
-IncCallout:SetScript("OnEvent", OnEvent)
+SlashCmdList["INCOMINGBGMSG"] = function()
+    local message = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        SendChatMessage(message, "INSTANCE_CHAT")
+    else
+        SendChatMessage(message, "SAY")
+    end
+end

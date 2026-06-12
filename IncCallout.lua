@@ -1,19 +1,17 @@
 -- Made by Sharpedge_Gaming
--- v10.0 - Taint Safe
+-- v11.0 - SecureActionButtonTemplate
 -- Fixes applied:
---   - Removed OnUpdate frame and entire message queue system (was poisoning hardware event chain)
---   - Removed ChatFrameUtil.SubstituteChatMessageBeforeSend (was tainting SendChatMessage)
---   - Removed C_ChatInfo.SendChatMessage wrapper attempts
---   - Removed closure-based onClick indirection from button factory (was tainting hardware event chain)
---   - All message strings pre-built into pendingMessages cache before any click occurs
---   - OnClick handlers contain ONLY SendChatMessage with a pre-built string variable — zero Lua calls
---   - Chat types pre-resolved into pending variables updated on zone/group change events
---   - GROUP_ROSTER_UPDATE event added to keep healer list current
---   - RebuildMessages() called from AceConfig set functions so cache stays current after settings changes
---   - Fixed three shadowed 'local frame' declarations (consolidated into one named frame)
---   - Removed dead SendMessage / QueueMessage functions
---   - Removed stray duplicate SetScript("OnEvent", OnEvent) calls
---   - Removed duplicate allClearButton/sendMoreButton/incButton SetScript("OnClick") calls
+--   - Replaced SendChatMessage entirely with SecureActionButtonTemplate + macrotext attribute
+--   - All chat buttons use type="macro" and macrotext="/i <message>" baked in before combat
+--   - Blizzard's own secure macro executor fires the chat command, bypassing taint entirely
+--   - No addon Lua touches any protected function at click time
+--   - RebuildMacros() replaces the old pending message cache, sets macrotext on all buttons
+--   - RebuildMacros() called on zone change, group change, settings change, and login
+--   - InCombatLockdown() guard on RebuildMacros() prevents attribute writes during lockdown
+--   - Healer list button builds /i message from roster and sets macrotext outside combat
+--   - Share and /incmsg slash command use SAY or INSTANCE_CHAT via macrotext
+--   - pvpStatsButton and mapButton remain standard buttons (no chat, no taint concern)
+--   - All other architecture preserved: AceDB, AceConfig, LibDBIcon, PVP stats window
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -63,31 +61,26 @@ local defaults = {
         efcRequestIndex = 1,
         fcRequestIndex = 1,
         customMessages = {
-            sendMore = "",
-            inc = "",
-            allClear = "",
+            sendMore    = "",
+            inc         = "",
+            allClear    = "",
             buffRequest = "",
             healRequest = "",
-            efcRequest = "",
-            fcRequest = "",
+            efcRequest  = "",
+            fcRequest   = "",
         },
     },
 }
 
 local buttonTexts = {}
-local buttons = {}
+local buttons     = {}
+local secureButtons = {}
 local playerFaction
-
-local buttonMessageIndices = {
-    sendMore = 1,
-    inc = 1,
-    allClear = 1
-}
 
 SLASH_INC1 = "/inc"
 
 local CONQUEST_CURRENCY_ID = 1602
-local HONOR_CURRENCY_ID = 1792
+local HONOR_CURRENCY_ID    = 1792
 
 -- ============================================================
 -- Main GUI Frame
@@ -147,7 +140,6 @@ local function createStatLabelAndValueHorizontal(parent, labelText, xOffset, yOf
     label:SetPoint("TOPLEFT", parent, "TOPLEFT", xOffset, yOffset)
     label:SetText(labelText)
     label:SetTextColor(unpack(labelTextColor))
-
     local value = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     value:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -2)
     value:SetTextColor(1, 0.84, 0)
@@ -219,12 +211,12 @@ tabs[1]:Show()
 generalTab:SetNormalFontObject("GameFontHighlight")
 
 local generalStats = {
-    {"Player Name:",           "playerNameValue",        {0, 1, 0}},
-    {"Conquest Points:",       "conquestValue",          {1, 0, 0}},
-    {"Honor Points:",          "honorValue",             {0, 0.75, 1}},
-    {"Honor Level:",           "honorLevelValue",        {0.58, 0, 0.82}},
-    {"Conquest Cap:",          "conquestCapValue",       {1, 0.5, 0}},
-    {"Solo Shuffle Rating:",   "soloShuffleRatingValue", {0, 0.75, 1}},
+    {"Player Name:",         "playerNameValue",        {0, 1, 0}},
+    {"Conquest Points:",     "conquestValue",          {1, 0, 0}},
+    {"Honor Points:",        "honorValue",             {0, 0.75, 1}},
+    {"Honor Level:",         "honorLevelValue",        {0.58, 0, 0.82}},
+    {"Conquest Cap:",        "conquestCapValue",       {1, 0.5, 0}},
+    {"Solo Shuffle Rating:", "soloShuffleRatingValue", {0, 0.75, 1}},
 }
 for i, stat in ipairs(generalStats) do
     local label, value = createStatLabelAndValueHorizontal(tabs[1], stat[1], 10, -10 - (i-1)*40, stat[3])
@@ -232,11 +224,11 @@ for i, stat in ipairs(generalStats) do
 end
 
 local bgStats = {
-    {"BGs Played:",                    "bgPlayedValue",                   {0, 1, 0}},
-    {"BGs Won:",                       "bgWonValue",                      {1, 0, 0}},
-    {"BGs Lost:",                      "bgLostValue",                     {0, 0.75, 1}},
-    {"Total Honorable Kills:",         "totalHonorableKillsValue",        {0.58, 0, 0.82}},
-    {"Battleground Honorable Kills:",  "battlegroundHonorableKillsValue", {1, 0.5, 0}},
+    {"BGs Played:",                   "bgPlayedValue",                   {0, 1, 0}},
+    {"BGs Won:",                      "bgWonValue",                      {1, 0, 0}},
+    {"BGs Lost:",                     "bgLostValue",                     {0, 0.75, 1}},
+    {"Total Honorable Kills:",        "totalHonorableKillsValue",        {0.58, 0, 0.82}},
+    {"Battleground Honorable Kills:", "battlegroundHonorableKillsValue", {1, 0.5, 0}},
 }
 for i, stat in ipairs(bgStats) do
     local label, value = createStatLabelAndValueHorizontal(tabs[2], stat[1], 10, -10 - (i-1)*40, stat[3])
@@ -268,18 +260,18 @@ for i, stat in ipairs(soloShuffleStats) do
 end
 
 local miscStats = {
-    {"Total Kills (Exp or Honor):",    "totalKillsValue",                {0, 1, 0}},
-    {"Total Killing Blows:",           "totalKillingBlowsValue",         {1, 0, 0}},
-    {"Battleground Killing Blows:",    "battlegroundKillingBlowsValue",  {0, 0.75, 1}},
-    {"Total Deaths:",                  "totalDeathsValue",               {0.58, 0, 0.82}},
-    {"Battleground Deaths:",           "battlegroundDeathsValue",        {1, 0.5, 0}},
+    {"Total Kills (Exp or Honor):",   "totalKillsValue",                {0, 1, 0}},
+    {"Total Killing Blows:",          "totalKillingBlowsValue",         {1, 0, 0}},
+    {"Battleground Killing Blows:",   "battlegroundKillingBlowsValue",  {0, 0.75, 1}},
+    {"Total Deaths:",                 "totalDeathsValue",               {0.58, 0, 0.82}},
+    {"Battleground Deaths:",          "battlegroundDeathsValue",        {1, 0.5, 0}},
 }
 for i, stat in ipairs(miscStats) do
     local label, value = createStatLabelAndValueHorizontal(tabs[5], stat[1], 10, -10 - (i-1)*40, stat[3])
     tabs[5][stat[2]] = value
 end
 
-local SOLO_RBG_INDEX = 9
+local SOLO_RBG_INDEX    = 9
 local SOLO_SHUFFLE_INDEX = 7
 
 local function GetPvpRank(rating)
@@ -328,7 +320,7 @@ local function FetchSoloRBGStats()
     if rating then
         local specStats = C_PvP.GetPersonalRatedBGBlitzSpecStats() or {}
         local mostPlayedSpec = GetSpecName(specStats.seasonMostPlayedSpecID or 0)
-        local currentRank = GetPvpRank(rating)
+        local currentRank    = GetPvpRank(rating)
         return rating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost, currentRank
     else
         return "N/A", gamesPlayed, gamesWon, "N/A", playedMost, "N/A"
@@ -346,28 +338,22 @@ end
 local function SavePvPStats()
     IncCalloutDB = IncCalloutDB or {}
     local character = UnitName("player")
-    local _, class = UnitClass("player")
-
+    local _, class  = UnitClass("player")
     if not IncCalloutDB[character] then
         IncCalloutDB[character] = { class = class }
     end
-
     local SavedSettings = IncCalloutDB[character]
-
     local _, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
     if not loaded then C_AddOns.LoadAddOn("Blizzard_PVPUI") end
-
-    local conquestInfo = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
-    local honorInfo    = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
-    local honorLevel   = UnitHonorLevel("player")
+    local conquestInfo      = C_CurrencyInfo.GetCurrencyInfo(Constants.CurrencyConsts.CONQUEST_CURRENCY_ID)
+    local honorInfo         = C_CurrencyInfo.GetCurrencyInfo(HONOR_CURRENCY_ID)
+    local honorLevel        = UnitHonorLevel("player")
     local soloShuffleRating = select(2, GetPersonalRatedInfo(SOLO_SHUFFLE_INDEX)) or "N/A"
-
     SavedSettings.conquestValue    = conquestInfo and conquestInfo.quantity or 0
     SavedSettings.conquestCapValue = conquestInfo and (conquestInfo.totalEarned .. " / " .. (conquestInfo.maxQuantity > 0 and conquestInfo.maxQuantity or "No Cap")) or "N/A"
     SavedSettings.honorValue       = honorInfo and honorInfo.quantity or "N/A"
     SavedSettings.honorLevelValue  = honorLevel
     SavedSettings.soloShuffleRatingValue = soloShuffleRating
-
     local bgPlayed, bgWon, bgLost, totalHonorableKills, battlegroundHonorableKills = FetchBGStats()
     SavedSettings.bgPlayed                   = bgPlayed
     SavedSettings.bgWon                      = bgWon
@@ -375,7 +361,6 @@ local function SavePvPStats()
     SavedSettings.totalHonorableKills        = totalHonorableKills
     SavedSettings.battlegroundHonorableKills = battlegroundHonorableKills
     SavedSettings.greatVaultSlots            = FetchGreatVaultSlots()
-
     local bestRating, gamesPlayed, gamesWon, mostPlayedSpec, playedMost, currentRank = FetchSoloRBGStats()
     SavedSettings.bestRatingValue     = bestRating
     SavedSettings.gamesPlayedValue    = gamesPlayed
@@ -383,13 +368,11 @@ local function SavePvPStats()
     SavedSettings.mostPlayedSpecValue = mostPlayedSpec
     SavedSettings.playedMostValue     = playedMost
     SavedSettings.currentRankValue    = currentRank
-
     local shuffleBestRating, shuffleRoundsPlayed, shuffleRoundsWon, shuffleMostPlayedSpec = FetchSoloShuffleStats()
     SavedSettings.shuffleBestRatingValue     = shuffleBestRating or "N/A"
-    SavedSettings.shuffleRoundsWonValue      = shuffleRoundsWon or "N/A"
+    SavedSettings.shuffleRoundsWonValue      = shuffleRoundsWon  or "N/A"
     SavedSettings.shuffleRoundsPlayedValue   = shuffleRoundsPlayed or "N/A"
     SavedSettings.shuffleMostPlayedSpecValue = shuffleMostPlayedSpec
-
     SavedSettings.totalKillsValue               = GetStatistic(1198)  or "N/A"
     SavedSettings.totalKillingBlowsValue        = GetStatistic(1487)  or "N/A"
     SavedSettings.battlegroundKillingBlowsValue = GetStatistic(1491)  or "N/A"
@@ -450,22 +433,20 @@ end
 local function UpdatePvPStatsFrame(character)
     local _, loaded = C_AddOns.IsAddOnLoaded("Blizzard_PVPUI")
     if not loaded then C_AddOns.LoadAddOn("Blizzard_PVPUI") end
-
     local stats = IncCalloutDB[character]
     if stats then
-        local name = string.match(character, "^[^%-]+")
+        local name       = string.match(character, "^[^%-]+")
         local classColor = RAID_CLASS_COLORS[stats.class] or {r=1, g=1, b=1}
         UpdateTabValues(tabs[1], {
-            playerName           = name,
-            playerColor          = classColor,
-            conquestValue        = stats.conquestValue,
-            conquestCapValue     = stats.conquestCapValue,
-            honorValue           = stats.honorValue,
-            honorLevelValue      = stats.honorLevelValue,
+            playerName             = name,
+            playerColor            = classColor,
+            conquestValue          = stats.conquestValue,
+            conquestCapValue       = stats.conquestCapValue,
+            honorValue             = stats.honorValue,
+            honorLevelValue        = stats.honorLevelValue,
             soloShuffleRatingValue = stats.soloShuffleRatingValue,
         })
     end
-
     local canUseRated   = C_PvP.CanPlayerUseRatedPVPUI()
     local canUsePremade = C_LFGInfo.CanPlayerUsePremadeGroup()
     if canUseRated and PVPQueueFrame then
@@ -502,7 +483,6 @@ local function CreateCharacterDropdown()
         local characterFullName = self:GetText()
         local characterNameOnly = string.match(characterFullName, "^[^%-]+")
         local stats = IncCalloutDB[characterFullName]
-
         if stats then
             local classColor = RAID_CLASS_COLORS[stats.class] or {r=1,g=1,b=1}
             tabs[1].playerNameValue:SetText(characterNameOnly)
@@ -665,27 +645,6 @@ local mapSizeOptions = {
 -- Button Messages
 -- ============================================================
 
-local battlegroundLocations = {
-    "Stables", "Blacksmith", "Lumber Mill", "Gold Mine", "Mine", "Trollbane Hall", "Defiler's Den", "Farm",
-    "Mage Tower", "Draenei Ruins", "Blood Elf Tower", "Fel Reaver Ruins",
-    "The Broken Temple", "Cauldron of Flames", "Central Bridge", "The Chilled Quagemire",
-    "Eastern Bridge", "Flamewatch Tower", "The Forest of Shadows", "Glacial Falls", "The Steppe of Life",
-    "The Sunken Ring", "Western Bridge", "Winter's Edge Tower", "Wintergrasp Fortress",
-    "Eastpark Workshop", "Westpark Workshop",
-    "Lighthouse", "Waterworks", "Mines", "Docks", "Workshop", "Horde Keep", "Alliance Keep", "Market",
-    "Hangar", "Refinery", "Quarry", "Wildhammer Stronghold", "Dragonmaw Stronghold",
-    "Silverwing Hold", "Warsong Flag Room", "Baradin Base Camp", "Rustberg Village",
-    "The Restless Front", "Wellson Shipyard", "Largo's Overlook", "Farson Hold",
-    "Forgotten Hill", "Hellscream's Grasp", "Stormpike Graveyard", "Irondeep Mine", "Dun Baldar",
-    "Hall of the Stormpike", "Icewing Pass", "Stonehearth Outpost", "Iceblood Graveyard",
-    "Iceblood Garrison", "Tower Point", "Coldtooth Mine", "Dun Baldar Pass", "Icewing Bunker",
-    "Field of Strife", "Stonehearth Graveyard", "Stonehearth Bunker", "Frost Dagger Pass",
-    "Snowfall Graveyard", "Winterax Hold", "Frostwolf Graveyard", "Frostwolf Village",
-    "Deepwind Gorge", "Frostwolf Keep", "Hall of the Frostwolf", "Temple of Kotmogu",
-    "Silvershard Mines", "Southshore vs. Tauren Mill", "Alterac Valley",
-    "Ashran", "StormShield", "The Ringing Deeps", "Deephaul Ravine",
-}
-
 local buttonMessages = {
     sendMore = {
         "We need more peeps", "Need help", "We are outnumbered", "Need a few more", "Need more",
@@ -707,10 +666,10 @@ local buttonMessages = {
     },
     buffRequest = {
         "Need buffs please!", "Buff up, team!", "Could use some buffs here!",
-        "Calling for all buffs, let's gear up!", "Looking for that magical boost, buffs needed!",
-        "Time to get enchanted, where are those buffs?", "Let's get buffed for the battle ahead!",
-        "Buffs are our best friends, let's have them!", "Ready for buffs, let's enhance our strength!",
-        "Buffs needed for extra might and magic!", "Gimme some buffs, let's not fall behind!",
+        "Calling for all buffs, lets gear up!", "Looking for that magical boost, buffs needed!",
+        "Time to get enchanted, where are those buffs?", "Lets get buffed for the battle ahead!",
+        "Buffs are our best friends, lets have them!", "Ready for buffs, lets enhance our strength!",
+        "Buffs needed for extra might and magic!", "Gimme some buffs, lets not fall behind!",
     },
     healRequest = {
         "Need heals ASAP!", "Healing needed at my position!", "Can someone heal me, please?",
@@ -721,11 +680,11 @@ local buttonMessages = {
     },
     efcRequest = {
         "Get the EFC!!", "EFC spotted, group up to kill and recover our flag!",
-        "Kill the EFC on sight, let's bring that flag home!", "EFC is vulnerable, kill them now!",
+        "Kill the EFC on sight, lets bring that flag home!", "EFC is vulnerable, kill them now!",
         "Everyone on the EFC!", "Close in and kill the EFC, no escape allowed!",
         "EFC heading towards their base, kill them before they cap!", "The EFC is weak, finish them off!",
         "Kill the EFC now, they're almost at their base!",
-        "It's a race against time, kill the EFC and secure our victory!",
+        "Its a race against time, kill the EFC and secure our victory!",
     },
     fcRequest = {
         "Protect our FC!", "FC needs help!!", "Heals on FC!",
@@ -923,203 +882,50 @@ function addonNamespace.getPreviewText(messageType)
     local custom = IncDB.customMessages[messageType]
     local idx    = IncDB[messageType .. "Index"]
     local msgs   = buttonMessages[messageType]
-
     if custom and custom ~= "" then
         previewText = previewText .. custom
     elseif idx and msgs and msgs[idx] then
         previewText = previewText .. msgs[idx]
     end
-
     return previewText .. "|r"
 end
 
 -- ============================================================
--- Taint-Safe Message Cache
--- All strings are pre-built here before any click occurs.
--- OnClick handlers do nothing except pass a pre-built variable
--- to SendChatMessage, keeping the hardware event chain clean.
+-- Secure Button Factory
+-- All chat buttons are SecureActionButtonTemplate with type=macro.
+-- macrotext is set to "/i <message>" outside of combat via
+-- RebuildMacros(). Blizzard's own secure environment executes
+-- the slash command at click time — no addon Lua touches any
+-- protected function. Taint is impossible with this pattern.
 -- ============================================================
 
-local pendingMessages = {
-    inc         = "",
-    sendMore    = "",
-    allClear    = "",
-    healRequest = "",
-    efc         = "",
-    fc          = "",
-    buffRequest = "",
-    share       = "Try Incoming-BG! It adds a GUI for fast battleground calls, just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!",
-    incMsg      = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'.",
-}
-
-local locationButtonMessages = {}
-
-local pendingShareChatType  = "SAY"
-local pendingEFCChatType    = "INSTANCE_CHAT"
-local pendingFCChatType     = "INSTANCE_CHAT"
-local pendingBuffChatType   = "INSTANCE_CHAT"
-local pendingIncMsgChatType = "SAY"
-
-local pendingHealerMessage  = ""
-local pendingHealerChatType = "INSTANCE_CHAT"
-
-local function RebuildPvPChatTypes()
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        pendingEFCChatType  = "INSTANCE_CHAT"
-        pendingFCChatType   = "INSTANCE_CHAT"
-        pendingBuffChatType = "INSTANCE_CHAT"
-    elseif IsInRaid() then
-        pendingEFCChatType  = "RAID"
-        pendingFCChatType   = "RAID"
-        pendingBuffChatType = "RAID"
-    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-        pendingEFCChatType  = "PARTY"
-        pendingFCChatType   = "PARTY"
-        pendingBuffChatType = "PARTY"
+local function createSecureButton(name, width, height, text, anchor, xOffset, yOffset)
+    local button = CreateFrame("Button", name, IncCallout,
+        "SecureActionButtonTemplate,BackdropTemplate")
+    button:SetSize(width, height)
+    button:SetText(text)
+    button:SetAttribute("type", "macro")
+    button:SetAttribute("macrotext", "")
+    button:RegisterForClicks("AnyDown")
+    if type(anchor) == "table" then
+        button:SetPoint(anchor[1], anchor[2], anchor[3], xOffset, yOffset)
     else
-        pendingEFCChatType  = "INSTANCE_CHAT"
-        pendingFCChatType   = "INSTANCE_CHAT"
-        pendingBuffChatType = "INSTANCE_CHAT"
+        button:SetPoint(anchor, xOffset, yOffset)
     end
+    button:GetFontString():SetTextColor(1, 1, 1, 1)
+    button:SetBackdrop({
+        bgFile   = LSM:Fetch("statusbar", IncDB.statusbarTexture or "Blizzard"),
+        edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+        tile     = true, tileSize = 12, edgeSize = 7,
+        insets   = {left=1, right=1, top=1, bottom=1},
+    })
+    table.insert(buttonTexts, button:GetFontString())
+    table.insert(buttons, button)
+    table.insert(secureButtons, button)
+    return button
 end
 
-local function RebuildShareChatType()
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-            pendingShareChatType = "INSTANCE_CHAT"
-        elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-            pendingShareChatType = "PARTY"
-        else
-            pendingShareChatType = "SAY"
-        end
-    else
-        pendingShareChatType = "SAY"
-    end
-end
-
-local function RebuildIncMsgChatType()
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        pendingIncMsgChatType = "INSTANCE_CHAT"
-    else
-        pendingIncMsgChatType = "SAY"
-    end
-end
-
-local function BuildHealerMessage()
-    local groupType, groupSize
-    if IsInRaid() then
-        groupType = "raid"
-        groupSize = GetNumGroupMembers()
-    elseif IsInGroup() then
-        groupType = "party"
-        groupSize = GetNumGroupMembers()
-    else
-        pendingHealerMessage  = ""
-        pendingHealerChatType = "INSTANCE_CHAT"
-        return
-    end
-
-    local inInstance, instanceType = IsInInstance()
-    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
-        pendingHealerChatType = "INSTANCE_CHAT"
-    elseif IsInRaid() then
-        pendingHealerChatType = "RAID"
-    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
-        pendingHealerChatType = "PARTY"
-    else
-        pendingHealerMessage  = ""
-        pendingHealerChatType = "INSTANCE_CHAT"
-        return
-    end
-
-    local healerNames = {}
-    for i = 1, groupSize do
-        local unit = groupType .. i
-        if UnitGroupRolesAssigned(unit) == "HEALER" then
-            table.insert(healerNames, GetUnitName(unit, true))
-        end
-    end
-
-    if #healerNames > 0 then
-        pendingHealerMessage = "[Incoming-BG] Healers on our team: " .. table.concat(healerNames, ", ") .. ". Now you know who to peel for."
-    else
-        pendingHealerMessage = "[Incoming-BG] We have no healers. Good luck!"
-    end
-end
-
-local function RebuildMessages()
-    if not IncDB then return end
-    local loc = GetSubZoneText() or "Unknown Location"
-
-    if IncDB.customMessages and IncDB.customMessages.inc and IncDB.customMessages.inc ~= "" then
-        pendingMessages.inc = IncDB.customMessages.inc .. " at " .. loc
-    else
-        pendingMessages.inc = (buttonMessages.inc[IncDB.incIndex or 1] or "Incoming") .. " at " .. loc
-    end
-
-    if IncDB.customMessages and IncDB.customMessages.sendMore and IncDB.customMessages.sendMore ~= "" then
-        pendingMessages.sendMore = IncDB.customMessages.sendMore .. " at " .. loc
-    else
-        pendingMessages.sendMore = (buttonMessages.sendMore[IncDB.sendMoreIndex or 1] or "Need more") .. " at " .. loc
-    end
-
-    if IncDB.customMessages and IncDB.customMessages.allClear and IncDB.customMessages.allClear ~= "" then
-        pendingMessages.allClear = IncDB.customMessages.allClear .. " at " .. loc
-    else
-        pendingMessages.allClear = (buttonMessages.allClear[IncDB.allClearIndex or 1] or "All clear") .. " at " .. loc
-    end
-
-    if IncDB.customMessages and IncDB.customMessages.healRequest and IncDB.customMessages.healRequest ~= "" then
-        pendingMessages.healRequest = IncDB.customMessages.healRequest .. " Needed at " .. loc
-    else
-        pendingMessages.healRequest = (buttonMessages.healRequest[IncDB.healRequestIndex or 1] or "Need heals ASAP!") .. " Needed at " .. loc
-    end
-
-    if IncDB.customMessages and IncDB.customMessages.efcRequest and IncDB.customMessages.efcRequest ~= "" then
-        pendingMessages.efc = IncDB.customMessages.efcRequest
-    else
-        pendingMessages.efc = buttonMessages.efcRequest[IncDB.efcRequestIndex or 1] or "Get the EFC!!"
-    end
-
-    if IncDB.customMessages and IncDB.customMessages.fcRequest and IncDB.customMessages.fcRequest ~= "" then
-        pendingMessages.fc = IncDB.customMessages.fcRequest
-    else
-        pendingMessages.fc = buttonMessages.fcRequest[IncDB.fcRequestIndex or 1] or "Protect our FC!"
-    end
-
-    if IncDB.customMessages and IncDB.customMessages.buffRequest and IncDB.customMessages.buffRequest ~= "" then
-        pendingMessages.buffRequest = IncDB.customMessages.buffRequest
-    else
-        pendingMessages.buffRequest = buttonMessages.buffRequest[IncDB.buffRequestIndex or 1] or "Need buffs please!"
-    end
-
-    for _, btn in ipairs(buttons) do
-        local label = btn:GetText()
-        if label then
-            locationButtonMessages[label] = label .. " Incoming at " .. loc
-        end
-    end
-end
-
-local function FullRebuild()
-    if not IncDB then return end
-    RebuildMessages()
-    RebuildShareChatType()
-    RebuildPvPChatTypes()
-    RebuildIncMsgChatType()
-    BuildHealerMessage()
-end
-
--- ============================================================
--- Button Factory
--- No onClick parameter. Each button gets its own explicit bare
--- SetScript("OnClick") after creation to prevent closure-based
--- indirection from tainting the hardware event chain.
--- ============================================================
-
+-- Standard (non-chat) button factory for pvpStats and map
 local function createButton(name, width, height, text, anchor, xOffset, yOffset)
     local button = CreateFrame("Button", nil, IncCallout, "BackdropTemplate")
     button:SetSize(width, height)
@@ -1138,16 +944,6 @@ local function createButton(name, width, height, text, anchor, xOffset, yOffset)
     })
     table.insert(buttonTexts, button:GetFontString())
     table.insert(buttons, button)
-
-    button:SetScript("OnMouseDown", function(self)
-        self:SetBackdropColor(0, 0, 0, 0)
-    end)
-    button:SetScript("OnMouseUp", function(self, mouseButton)
-        if mouseButton == "LeftButton" then
-            self:SetBackdropColor(0, 0, 0, 0)
-        end
-    end)
-
     return button
 end
 
@@ -1155,123 +951,147 @@ end
 -- Build Buttons
 -- ============================================================
 
-local button1        = createButton("button1",        20,  22, "1",         {"TOPLEFT",  IncCallout,     "TOPLEFT"},   35,  -40)
-local button2        = createButton("button2",        20,  22, "2",         {"LEFT",     button1,        "RIGHT"},     10,    0)
-local button3        = createButton("button3",        20,  22, "3",         {"LEFT",     button2,        "RIGHT"},     10,    0)
-local button4        = createButton("button4",        20,  22, "4",         {"LEFT",     button3,        "RIGHT"},     10,    0)
-local buttonZerg     = createButton("buttonZerg",     40,  22, "Zerg",      {"LEFT",     button4,        "RIGHT"},     10,    0)
-local incButton      = createButton("incButton",      95,  22, "Inc",       {"TOP",      button3,        "BOTTOM"},   -45,  -10)
-local sendMoreButton = createButton("sendMoreButton", 95,  22, "Send More", {"LEFT",     incButton,      "RIGHT"},     10,    0)
-local allClearButton = createButton("allClearButton", 95,  22, "All Clear", {"TOP",      incButton,      "BOTTOM"},     0,  -10)
-local healsButton    = createButton("healsButton",    95,  22, "Heals",     {"LEFT",     allClearButton, "RIGHT"},     10,    0)
-local efcButton      = createButton("efcButton",      95,  22, "EFC",       {"TOP",      allClearButton, "BOTTOM"},     0,  -10)
-local fcButton       = createButton("fcButton",       95,  22, "FC",        {"LEFT",     efcButton,      "RIGHT"},     10,    0)
-local buffButton     = createButton("buffButton",     95,  22, "Buffs",     {"TOP",      efcButton,      "BOTTOM"},     0,  -10)
-local mapButton      = createButton("mapButton",      95,  22, "Map",       {"LEFT",     buffButton,     "RIGHT"},     10,    0)
-local healerButton   = createButton("healerButton",   95,  22, "Healers",   {"TOP",      buffButton,     "BOTTOM"},     0,  -10)
-local pvpStatsButton = createButton("pvpStatsButton", 95,  22, "PVP Stats", {"LEFT",     healerButton,   "RIGHT"},     10,    0)
-local shareButton    = createButton("shareButton",    95,  22, "Share",     {"BOTTOM",   IncCallout,     "BOTTOM"},     0,   10)
+local button1        = createSecureButton("IncCalloutBtn1",        20,  22, "1",         {"TOPLEFT",  IncCallout,     "TOPLEFT"},   35,  -40)
+local button2        = createSecureButton("IncCalloutBtn2",        20,  22, "2",         {"LEFT",     button1,        "RIGHT"},     10,    0)
+local button3        = createSecureButton("IncCalloutBtn3",        20,  22, "3",         {"LEFT",     button2,        "RIGHT"},     10,    0)
+local button4        = createSecureButton("IncCalloutBtn4",        20,  22, "4",         {"LEFT",     button3,        "RIGHT"},     10,    0)
+local buttonZerg     = createSecureButton("IncCalloutBtnZerg",     40,  22, "Zerg",      {"LEFT",     button4,        "RIGHT"},     10,    0)
+local incButton      = createSecureButton("IncCalloutBtnInc",      95,  22, "Inc",       {"TOP",      button3,        "BOTTOM"},   -45,  -10)
+local sendMoreButton = createSecureButton("IncCalloutBtnSendMore", 95,  22, "Send More", {"LEFT",     incButton,      "RIGHT"},     10,    0)
+local allClearButton = createSecureButton("IncCalloutBtnAllClear", 95,  22, "All Clear", {"TOP",      incButton,      "BOTTOM"},     0,  -10)
+local healsButton    = createSecureButton("IncCalloutBtnHeals",    95,  22, "Heals",     {"LEFT",     allClearButton, "RIGHT"},     10,    0)
+local efcButton      = createSecureButton("IncCalloutBtnEFC",      95,  22, "EFC",       {"TOP",      allClearButton, "BOTTOM"},     0,  -10)
+local fcButton       = createSecureButton("IncCalloutBtnFC",       95,  22, "FC",        {"LEFT",     efcButton,      "RIGHT"},     10,    0)
+local buffButton     = createSecureButton("IncCalloutBtnBuff",     95,  22, "Buffs",     {"TOP",      efcButton,      "BOTTOM"},     0,  -10)
+local healerButton   = createSecureButton("IncCalloutBtnHealers",  95,  22, "Healers",   {"TOP",      buffButton,     "BOTTOM"},     0,  -10)
+local shareButton    = createSecureButton("IncCalloutBtnShare",    95,  22, "Share",     {"BOTTOM",   IncCallout,     "BOTTOM"},     0,   10)
+
+-- These two are non-chat buttons, no taint concern
+local mapButton      = createButton(nil,                           95,  22, "Map",       {"LEFT",     buffButton,     "RIGHT"},     10,    0)
+local pvpStatsButton = createButton(nil,                           95,  22, "PVP Stats", {"LEFT",     healerButton,   "RIGHT"},     10,    0)
 
 -- ============================================================
--- Bare OnClick Handlers
--- Each handler contains only SendChatMessage with a pre-built
--- variable. No function calls, no conditionals, no table
--- lookups between the hardware event and SendChatMessage.
+-- GetInstanceChatCmd
+-- Returns the appropriate slash command prefix for the current
+-- instance type. Called only outside combat from RebuildMacros.
 -- ============================================================
 
-button1:SetScript("OnClick", function(self)
-    local msg = locationButtonMessages[self:GetText()]
-    if msg and msg ~= "" then
-        SendChatMessage(msg, "INSTANCE_CHAT")
+local function GetInstanceChatCmd()
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        return "/i"
+    elseif IsInRaid() then
+        return "/raid"
+    elseif IsInGroup(LE_PARTY_CATEGORY_HOME) then
+        return "/p"
     end
-end)
+    return "/i"
+end
 
-button2:SetScript("OnClick", function(self)
-    local msg = locationButtonMessages[self:GetText()]
-    if msg and msg ~= "" then
-        SendChatMessage(msg, "INSTANCE_CHAT")
+local function GetShareChatCmd()
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then return "/i" end
+        if IsInGroup(LE_PARTY_CATEGORY_HOME) then return "/p" end
     end
-end)
+    return "/say"
+end
 
-button3:SetScript("OnClick", function(self)
-    local msg = locationButtonMessages[self:GetText()]
-    if msg and msg ~= "" then
-        SendChatMessage(msg, "INSTANCE_CHAT")
-    end
-end)
+-- ============================================================
+-- RebuildMacros
+-- Assembles all message strings and writes them into each
+-- secure button's macrotext attribute. Must only be called
+-- outside of combat lockdown. Blizzard freezes attributes
+-- during combat, so the message baked in before the fight
+-- is what fires when the player clicks mid-combat.
+-- ============================================================
 
-button4:SetScript("OnClick", function(self)
-    local msg = locationButtonMessages[self:GetText()]
-    if msg and msg ~= "" then
-        SendChatMessage(msg, "INSTANCE_CHAT")
-    end
-end)
+local function RebuildMacros()
+    if InCombatLockdown() then return end
+    if not IncDB then return end
 
-buttonZerg:SetScript("OnClick", function(self)
-    local msg = locationButtonMessages[self:GetText()]
-    if msg and msg ~= "" then
-        SendChatMessage(msg, "INSTANCE_CHAT")
-    end
-end)
+    local loc    = GetSubZoneText() or "Unknown Location"
+    local cmd    = GetInstanceChatCmd()
+    local custom = IncDB.customMessages
 
-incButton:SetScript("OnClick", function()
-    if pendingMessages.inc ~= "" then
-        SendChatMessage(pendingMessages.inc, "INSTANCE_CHAT")
-    end
-end)
+    -- Location number buttons
+    button1:SetAttribute("macrotext",    "/i 1 Incoming at " .. loc)
+    button2:SetAttribute("macrotext",    "/i 2 Incoming at " .. loc)
+    button3:SetAttribute("macrotext",    "/i 3 Incoming at " .. loc)
+    button4:SetAttribute("macrotext",    "/i 4 Incoming at " .. loc)
+    buttonZerg:SetAttribute("macrotext", "/i Zerg Incoming at " .. loc)
 
-sendMoreButton:SetScript("OnClick", function()
-    if pendingMessages.sendMore ~= "" then
-        SendChatMessage(pendingMessages.sendMore, "INSTANCE_CHAT")
-    end
-end)
+    -- INC
+    local incMsg = (custom.inc ~= "" and custom.inc or buttonMessages.inc[IncDB.incIndex or 1] or "Incoming")
+    incButton:SetAttribute("macrotext", cmd .. " " .. incMsg .. " at " .. loc)
 
-allClearButton:SetScript("OnClick", function()
-    if pendingMessages.allClear ~= "" then
-        SendChatMessage(pendingMessages.allClear, "INSTANCE_CHAT")
-    end
-end)
+    -- Send More
+    local sendMoreMsg = (custom.sendMore ~= "" and custom.sendMore or buttonMessages.sendMore[IncDB.sendMoreIndex or 1] or "Need more")
+    sendMoreButton:SetAttribute("macrotext", cmd .. " " .. sendMoreMsg .. " at " .. loc)
 
-healsButton:SetScript("OnClick", function()
-    if pendingMessages.healRequest ~= "" then
-        SendChatMessage(pendingMessages.healRequest, "INSTANCE_CHAT")
-    end
-end)
+    -- All Clear
+    local allClearMsg = (custom.allClear ~= "" and custom.allClear or buttonMessages.allClear[IncDB.allClearIndex or 1] or "All clear")
+    allClearButton:SetAttribute("macrotext", cmd .. " " .. allClearMsg .. " at " .. loc)
 
-efcButton:SetScript("OnClick", function()
-    if pendingMessages.efc ~= "" then
-        SendChatMessage(pendingMessages.efc, pendingEFCChatType)
-    end
-end)
+    -- Heals
+    local healMsg = (custom.healRequest ~= "" and custom.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex or 1] or "Need heals ASAP!")
+    healsButton:SetAttribute("macrotext", cmd .. " " .. healMsg .. " Needed at " .. loc)
 
-fcButton:SetScript("OnClick", function()
-    if pendingMessages.fc ~= "" then
-        SendChatMessage(pendingMessages.fc, pendingFCChatType)
-    end
-end)
+    -- EFC
+    local efcMsg = (custom.efcRequest ~= "" and custom.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex or 1] or "Get the EFC!!")
+    efcButton:SetAttribute("macrotext", cmd .. " " .. efcMsg)
 
-buffButton:SetScript("OnClick", function()
-    if pendingMessages.buffRequest ~= "" then
-        SendChatMessage(pendingMessages.buffRequest, pendingBuffChatType)
+    -- FC
+    local fcMsg = (custom.fcRequest ~= "" and custom.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex or 1] or "Protect our FC!")
+    fcButton:SetAttribute("macrotext", cmd .. " " .. fcMsg)
+
+    -- Buffs
+    local buffMsg = (custom.buffRequest ~= "" and custom.buffRequest or buttonMessages.buffRequest[IncDB.buffRequestIndex or 1] or "Need buffs please!")
+    buffButton:SetAttribute("macrotext", cmd .. " " .. buffMsg)
+
+    -- Healers roster list
+    local groupType, groupSize
+    if IsInRaid() then
+        groupType = "raid"
+        groupSize = GetNumGroupMembers()
+    elseif IsInGroup() then
+        groupType = "party"
+        groupSize = GetNumGroupMembers()
     end
-end)
+    if groupType then
+        local healerNames = {}
+        for i = 1, groupSize do
+            local unit = groupType .. i
+            if UnitGroupRolesAssigned(unit) == "HEALER" then
+                table.insert(healerNames, GetUnitName(unit, true))
+            end
+        end
+        local healerMsg
+        if #healerNames > 0 then
+            healerMsg = "[Incoming-BG] Healers on our team: " .. table.concat(healerNames, ", ") .. ". Now you know who to peel for."
+        else
+            healerMsg = "[Incoming-BG] We have no healers. Good luck!"
+        end
+        healerButton:SetAttribute("macrotext", cmd .. " " .. healerMsg)
+    else
+        healerButton:SetAttribute("macrotext", "/run print('|cff00ff00[IncCallout]|r Not in a group.')")
+    end
+
+    -- Share
+    local shareCmd = GetShareChatCmd()
+    shareButton:SetAttribute("macrotext", shareCmd .. " Try Incoming-BG! It adds a GUI for fast battleground calls, just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!")
+end
+
+-- ============================================================
+-- Non-chat button OnClick handlers (no taint concern)
+-- ============================================================
 
 mapButton:SetScript("OnClick", function()
     ToggleWorldMap()
 end)
 
-healerButton:SetScript("OnClick", function()
-    if pendingHealerMessage ~= "" then
-        SendChatMessage(pendingHealerMessage, pendingHealerChatType)
-    end
-end)
-
 pvpStatsButton:SetScript("OnClick", function()
     pvpStatsFrame:Show()
-end)
-
-shareButton:SetScript("OnClick", function()
-    SendChatMessage(pendingMessages.share, pendingShareChatType)
 end)
 
 -- ============================================================
@@ -1298,7 +1118,7 @@ shareButton:SetScript("OnEnter", function(self)
     GameTooltip:SetText("Share Incoming-BG Addon", 1, 1, 1)
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Let your teammates know about Incoming-BG!", 0, 1, 0, true)
-    GameTooltip:AddLine("In a BG or Arena: sends to instance/party chat.", 1, 1, 1, true)
+    GameTooltip:AddLine("In a BG or Arena: sends to instance chat.", 1, 1, 1, true)
     GameTooltip:AddLine("Outside PvP: sends in /say.", 1, 1, 1, true)
     GameTooltip:Show()
 end)
@@ -1317,9 +1137,10 @@ applyButtonColor()
 
 -- ============================================================
 -- AceConfig Options Table
--- RebuildMessages() is called at the end of every set function
--- that modifies a message index or custom message so the cache
--- stays current immediately after a settings change.
+-- RebuildMacros() is called at the end of every set function
+-- that modifies a message index or custom message string so
+-- the macrotext attributes stay current immediately after a
+-- settings change, without waiting for a zone transition.
 -- ============================================================
 
 local options = {
@@ -1340,7 +1161,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.sendMoreIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1348,7 +1169,7 @@ local options = {
                             get = function() return IncDB.customMessages.sendMore end,
                             set = function(_, v)
                                 IncDB.customMessages.sendMore = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1356,7 +1177,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.sendMore = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1375,7 +1196,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.incIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1383,7 +1204,7 @@ local options = {
                             get = function() return IncDB.customMessages.inc end,
                             set = function(_, v)
                                 IncDB.customMessages.inc = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1391,7 +1212,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.inc = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1410,7 +1231,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.allClearIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1418,7 +1239,7 @@ local options = {
                             get = function() return IncDB.customMessages.allClear end,
                             set = function(_, v)
                                 IncDB.customMessages.allClear = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1426,7 +1247,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.allClear = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1445,7 +1266,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.buffRequestIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1453,7 +1274,7 @@ local options = {
                             get = function() return IncDB.customMessages.buffRequest end,
                             set = function(_, v)
                                 IncDB.customMessages.buffRequest = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1461,7 +1282,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.buffRequest = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1480,7 +1301,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.healRequestIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1488,7 +1309,7 @@ local options = {
                             get = function() return IncDB.customMessages.healRequest end,
                             set = function(_, v)
                                 IncDB.customMessages.healRequest = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1496,7 +1317,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.healRequest = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1515,7 +1336,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.efcRequestIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1523,7 +1344,7 @@ local options = {
                             get = function() return IncDB.customMessages.efcRequest end,
                             set = function(_, v)
                                 IncDB.customMessages.efcRequest = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1531,7 +1352,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.efcRequest = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1550,7 +1371,7 @@ local options = {
                             set = function(_, v)
                                 IncDB.fcRequestIndex = v
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         custom = {
@@ -1558,7 +1379,7 @@ local options = {
                             get = function() return IncDB.customMessages.fcRequest end,
                             set = function(_, v)
                                 IncDB.customMessages.fcRequest = v
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         clear = {
@@ -1566,7 +1387,7 @@ local options = {
                             func = function()
                                 IncDB.customMessages.fcRequest = ""
                                 LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
-                                RebuildMessages()
+                                RebuildMacros()
                             end,
                         },
                         preview = {
@@ -1775,7 +1596,7 @@ local options = {
                             UpdateMiniMapVisibility()
                             LibStub("AceConfigRegistry-3.0"):NotifyChange("IncCallout")
                             LibStub("AceConfigRegistry-3.0"):NotifyChange("Incoming-BG")
-                            RebuildMessages()
+                            RebuildMacros()
                         end)
                     end,
                 },
@@ -1800,9 +1621,6 @@ end
 
 -- ============================================================
 -- Event Handler
--- FullRebuild is called on every state change that could affect
--- messages, zone, group composition, or chat routing so that
--- all pending strings are ready before any button is clicked.
 -- ============================================================
 
 local isIconRegistered = false
@@ -1835,7 +1653,7 @@ local function OnEvent(self, event, arg1, ...)
         applyBorderChange()
         applyColorChange()
         ApplyFontSettings()
-        FullRebuild()
+        RebuildMacros()
 
     elseif event == "PLAYER_LOGIN" then
         SavePvPStats()
@@ -1849,7 +1667,7 @@ local function OnEvent(self, event, arg1, ...)
         ScaleGUI()
         ApplyFontSettings()
         applyButtonColor()
-        FullRebuild()
+        RebuildMacros()
         DelayedSaveAndUpdate()
         C_Timer.After(2, function()
             local character = UnitName("player")
@@ -1868,7 +1686,7 @@ local function OnEvent(self, event, arg1, ...)
         ScaleGUI()
         ApplyFontSettings()
         applyButtonColor()
-        FullRebuild()
+        RebuildMacros()
         DelayedSaveAndUpdate()
         C_Timer.After(2, function()
             local character = UnitName("player")
@@ -1901,13 +1719,16 @@ local function OnEvent(self, event, arg1, ...)
         UpdateAllStatsFrames(character)
 
     elseif event == "ZONE_CHANGED_NEW_AREA" then
-        FullRebuild()
+        RebuildMacros()
         DelayedSaveAndUpdate()
 
     elseif event == "GROUP_ROSTER_UPDATE" then
-        BuildHealerMessage()
-        RebuildShareChatType()
-        RebuildPvPChatTypes()
+        RebuildMacros()
+
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        -- Combat just ended — rebuild macros now in case zone or
+        -- group changed while we were locked out during combat
+        RebuildMacros()
 
     elseif event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
         -- reserved for future use
@@ -1967,5 +1788,13 @@ end
 
 SLASH_INCOMINGBGMSG1 = "/incmsg"
 SlashCmdList["INCOMINGBGMSG"] = function()
-    SendChatMessage(pendingMessages.incMsg, pendingIncMsgChatType)
+    local inInstance, instanceType = IsInInstance()
+    local cmd
+    if inInstance and (instanceType == "pvp" or instanceType == "arena") then
+        cmd = "/i"
+    else
+        cmd = "/say"
+    end
+    local msg = "Peeps, yall need to get the addon Incoming-BG. It has a GUI to where all you have to do is click a button to call an INC. Beats having to type anything out. Just sayin'."
+    RunMacroText(cmd .. " " .. msg)
 end

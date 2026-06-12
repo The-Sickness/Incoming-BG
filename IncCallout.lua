@@ -848,6 +848,30 @@ local function UpdatePoints()
 end
 
 -- ============================================================
+-- Settings Category Resolver
+-- Called at click time so the category lookup happens after
+-- Blizzard has fully registered all addon panels on login.
+-- ============================================================
+
+local function ResolveIncCalloutCategoryID()
+    if Settings and Settings.GetCategory then
+        local cat = Settings.GetCategory("Incoming-BG")
+        if cat and type(cat.ID) == "number" then
+            return cat.ID
+        end
+        local addons = Settings.GetCategory("AddOns")
+        if addons and Settings.GetSubcategories then
+            for _, sub in ipairs(Settings.GetSubcategories(addons) or {}) do
+                if sub and sub.Name == "Incoming-BG" and type(sub.ID) == "number" then
+                    return sub.ID
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- ============================================================
 -- LibDataBroker Object
 -- ============================================================
 
@@ -859,10 +883,15 @@ local IncCalloutLDB = LibStub("LibDataBroker-1.1"):NewDataObject("Incoming-BG", 
         if button == "LeftButton" then
             if IncCallout:IsShown() then IncCallout:Hide() else IncCallout:Show() end
         else
-            if Settings and Settings.OpenToCategory then
-                Settings.OpenToCategory("Incoming-BG")
+            local catID = ResolveIncCalloutCategoryID()
+            if Settings and Settings.OpenToCategory and catID then
+                Settings.OpenToCategory(catID)
+            elseif AceConfigDialog and AceConfigDialog.Open then
+                AceConfigDialog:Open("Incoming-BG")
+            elseif InterfaceOptionsFrame_OpenToCategory then
+                InterfaceOptionsFrame_OpenToCategory(optionsFrame)
             else
-                print("|cffff0000Options frame function not available|r")
+                print("|cffff0000[IncCallout]|r Settings panel unavailable.")
             end
         end
     end,
@@ -1607,16 +1636,11 @@ local options = {
 
 AceConfig:RegisterOptionsTable("Incoming-BG", options)
 local optionsFrame = AceConfigDialog:AddToBlizOptions("Incoming-BG", "Incoming-BG")
+optionsFrame.name = "Incoming-BG"
 
-if Settings then
-    local function RegisterOptionsPanel(panel)
-        if not Settings.GetCategory(panel.name) then
-            local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-            category.ID = panel.name
-            Settings.RegisterAddOnCategory(category)
-        end
-    end
-    RegisterOptionsPanel(optionsFrame)
+if Settings and Settings.RegisterCanvasLayoutCategory then
+    local cat = Settings.RegisterCanvasLayoutCategory(optionsFrame, "Incoming-BG", "Incoming-BG")
+    Settings.RegisterAddOnCategory(cat)
 end
 
 -- ============================================================

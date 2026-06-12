@@ -1743,7 +1743,7 @@ local function OnEvent(self, event, arg1, ...)
         UpdateAllStatsFrames(character)
 
     elseif event == "ZONE_CHANGED_NEW_AREA" then
-        RebuildMacros()
+        C_Timer.After(0.5, RebuildMacros)
         DelayedSaveAndUpdate()
 
     elseif event == "GROUP_ROSTER_UPDATE" then

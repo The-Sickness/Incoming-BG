@@ -1,17 +1,6 @@
 -- Made by Sharpedge_Gaming
--- v11.0 - SecureActionButtonTemplate
--- Fixes applied:
---   - Replaced SendChatMessage entirely with SecureActionButtonTemplate + macrotext attribute
---   - All chat buttons use type="macro" and macrotext="/i <message>" baked in before combat
---   - Blizzard's own secure macro executor fires the chat command, bypassing taint entirely
---   - No addon Lua touches any protected function at click time
---   - RebuildMacros() replaces the old pending message cache, sets macrotext on all buttons
---   - RebuildMacros() called on zone change, group change, settings change, and login
---   - InCombatLockdown() guard on RebuildMacros() prevents attribute writes during lockdown
---   - Healer list button builds /i message from roster and sets macrotext outside combat
---   - Share and /incmsg slash command use SAY or INSTANCE_CHAT via macrotext
---   - pvpStatsButton and mapButton remain standard buttons (no chat, no taint concern)
---   - All other architecture preserved: AceDB, AceConfig, LibDBIcon, PVP stats window
+-- v9.8
+
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -920,7 +909,7 @@ function addonNamespace.getPreviewText(messageType)
 end
 
 -- ============================================================
--- Secure Button Factory
+-- Secure Button Fix
 -- All chat buttons are SecureActionButtonTemplate with type=macro.
 -- macrotext is set to "/i <message>" outside of combat via
 -- RebuildMacros(). Blizzard's own secure environment executes
@@ -934,7 +923,7 @@ local function createSecureButton(name, width, height, text, anchor, xOffset, yO
     button:SetSize(width, height)
     button:SetText(text)
     button:SetAttribute("type", "macro")
-    button:SetAttribute("macrotext", "")
+    button:SetAttribute("macrotext", "/i Incoming")
     button:RegisterForClicks("AnyDown")
     if type(anchor) == "table" then
         button:SetPoint(anchor[1], anchor[2], anchor[3], xOffset, yOffset)
@@ -1112,7 +1101,7 @@ local function RebuildMacros()
 end
 
 -- ============================================================
--- Non-chat button OnClick handlers (no taint concern)
+-- Non-chat button OnClick handlers 
 -- ============================================================
 
 mapButton:SetScript("OnClick", function()
@@ -1711,6 +1700,7 @@ local function OnEvent(self, event, arg1, ...)
         ApplyFontSettings()
         applyButtonColor()
         RebuildMacros()
+        C_Timer.After(2, RebuildMacros)
         DelayedSaveAndUpdate()
         C_Timer.After(2, function()
             local character = UnitName("player")
@@ -1743,7 +1733,8 @@ local function OnEvent(self, event, arg1, ...)
         UpdateAllStatsFrames(character)
 
     elseif event == "ZONE_CHANGED_NEW_AREA" then
-        C_Timer.After(0.5, RebuildMacros)
+        C_Timer.After(1.5, RebuildMacros)
+        C_Timer.After(3.0, RebuildMacros)
         DelayedSaveAndUpdate()
 
     elseif event == "GROUP_ROSTER_UPDATE" then
@@ -1755,12 +1746,12 @@ local function OnEvent(self, event, arg1, ...)
         RebuildMacros()
 
     elseif event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
-        -- reserved for future use
+       
 
     end
 end
 
--- Single authoritative event frame
+--  event frame
 local mainEventFrame = CreateFrame("Frame", "IncCalloutEventFrame")
 mainEventFrame:RegisterEvent("ADDON_LOADED")
 mainEventFrame:RegisterEvent("PLAYER_LOGIN")
@@ -1785,7 +1776,7 @@ mainEventFrame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
 mainEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 mainEventFrame:SetScript("OnEvent", OnEvent)
 
--- pvpStatsFrame secondary events (display only, no chat)
+-- pvpStatsFrame secondary events 
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")

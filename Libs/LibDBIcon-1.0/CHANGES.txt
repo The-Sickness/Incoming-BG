@@ -1,8 +1,8 @@
 ------------------------------------------------------------------------
-r133 | funkehdude | 2024-02-11 18:29:36 +0000 (Sun, 11 Feb 2024) | 1 line
+r157 | funkehdude | 2026-06-15 23:02:54 +0000 (Mon, 15 Jun 2026) | 1 line
 Changed paths:
-   M /trunk/LibDBIcon-1.0_Vanilla.toc
+   M /trunk/LibDBIcon-1.0.toc
 
-bump toc
+Bump toc
 ------------------------------------------------------------------------
 

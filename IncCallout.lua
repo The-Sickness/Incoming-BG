@@ -1,6 +1,5 @@
 -- Made by Sharpedge_Gaming
--- v9.8
-
+-- v10.0
 
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
     print("Incoming-BG is now running in Retail")
@@ -8,7 +7,6 @@ elseif WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then
     print("Incoming-BG is now running in (Cata)")
 end
 
--- Load embedded libraries
 local LibStub = LibStub or _G.LibStub
 local AceDB = LibStub:GetLibrary("AceDB-3.0")
 local AceAddon = LibStub:GetLibrary("AceAddon-3.0")
@@ -49,6 +47,7 @@ local defaults = {
         healRequestIndex = 1,
         efcRequestIndex = 1,
         fcRequestIndex = 1,
+        forceEnglish = false,
         customMessages = {
             sendMore    = "",
             inc         = "",
@@ -72,6 +71,316 @@ local CONQUEST_CURRENCY_ID = 1602
 local HONOR_CURRENCY_ID    = 1792
 
 -- ============================================================
+-- Localized subzone name -> English name lookup table
+-- Used when forceEnglish is enabled. Maps what GetSubZoneText()
+-- returns on a non-English client to the English equivalent.
+-- Covers all major BG capture points across all supported locales:
+-- frFR, deDE, esES, esMX, itIT, ptBR, ruRU, zhCN, zhTW, koKR, ukUA
+-- Falls back to the original string if no mapping found.
+-- ============================================================
+local localeToEnglish = {
+
+    -- ==================== ARATHI BASIN ====================
+    -- Stables
+    ["Écuries"]           = "Stables",     -- frFR
+    ["Ställe"]            = "Stables",     -- deDE
+    ["Establos"]          = "Stables",     -- esES/esMX
+    ["Stalle"]            = "Stables",     -- itIT
+    ["Estábulos"]         = "Stables",     -- ptBR
+    ["Конюшня"]           = "Stables",     -- ruRU
+    ["马厩"]              = "Stables",     -- zhCN
+    ["馬廄"]              = "Stables",     -- zhTW
+    ["마구간"]            = "Stables",     -- koKR
+    ["Стайня"]            = "Stables",     -- ukUA
+
+    -- Blacksmith
+    ["Forge"]             = "Blacksmith",  -- frFR
+    ["Schmiede"]          = "Blacksmith",  -- deDE
+    ["Herrería"]          = "Blacksmith",  -- esES/esMX
+    ["Fucina"]            = "Blacksmith",  -- itIT
+    ["Ferraria"]          = "Blacksmith",  -- ptBR
+    ["Кузница"]           = "Blacksmith",  -- ruRU
+    ["铁匠铺"]            = "Blacksmith",  -- zhCN
+    ["鐵匠舖"]            = "Blacksmith",  -- zhTW
+    ["대장간"]            = "Blacksmith",  -- koKR
+    ["Кузня"]             = "Blacksmith",  -- ukUA
+
+    -- Lumber Mill
+    ["Scierie"]           = "Lumber Mill", -- frFR
+    ["Sägewerk"]          = "Lumber Mill", -- deDE
+    ["Aserradero"]        = "Lumber Mill", -- esES/esMX
+    ["Segheria"]          = "Lumber Mill", -- itIT
+    ["Serraria"]          = "Lumber Mill", -- ptBR
+    ["Лесопилка"]         = "Lumber Mill", -- ruRU
+    ["伐木场"]            = "Lumber Mill", -- zhCN
+    ["伐木場"]            = "Lumber Mill", -- zhTW
+    ["제재소"]            = "Lumber Mill", -- koKR
+    ["Лісопильня"]        = "Lumber Mill", -- ukUA
+
+    -- Farm
+    ["Ferme"]             = "Farm",        -- frFR
+    ["Gehöft"]            = "Farm",        -- deDE
+    ["Granja"]            = "Farm",        -- esES/esMX
+    ["Fattoria"]          = "Farm",        -- itIT
+    ["Fazenda"]           = "Farm",        -- ptBR
+    ["Ферма"]             = "Farm",        -- ruRU
+    ["农场"]              = "Farm",        -- zhCN
+    ["農場"]              = "Farm",        -- zhTW
+    ["농장"]              = "Farm",        -- koKR
+    ["Ферма"]             = "Farm",        -- ukUA (same as ruRU, table key must be unique so ruRU wins; ukUA uses same word)
+
+    -- Gold Mine
+    ["Mine d'or"]         = "Gold Mine",   -- frFR
+    ["Goldmine"]          = "Gold Mine",   -- deDE
+    ["Mina de oro"]       = "Gold Mine",   -- esES/esMX
+    ["Miniera d'oro"]     = "Gold Mine",   -- itIT
+    ["Mina de Ouro"]      = "Gold Mine",   -- ptBR
+    ["Золотая шахта"]     = "Gold Mine",   -- ruRU
+    ["金矿"]              = "Gold Mine",   -- zhCN
+    ["金礦"]              = "Gold Mine",   -- zhTW
+    ["금광"]              = "Gold Mine",   -- koKR
+    ["Золота шахта"]      = "Gold Mine",   -- ukUA
+
+    -- ==================== BATTLE FOR GILNEAS ====================
+    -- Waterworks
+    ["Aqueduc"]           = "Waterworks",  -- frFR
+    ["Wasserwerk"]        = "Waterworks",  -- deDE
+    ["Acueducto"]         = "Waterworks",  -- esES/esMX
+    ["Acquedotto"]        = "Waterworks",  -- itIT
+    ["Aqueduto"]          = "Waterworks",  -- ptBR
+    ["Водопровод"]        = "Waterworks",  -- ruRU
+    ["水利工程"]          = "Waterworks",  -- zhCN
+    ["水利工程"]          = "Waterworks",  -- zhTW
+    ["수도 시설"]         = "Waterworks",  -- koKR
+    ["Водогін"]           = "Waterworks",  -- ukUA
+
+    -- Mine
+    ["Mine"]              = "Mine",        -- frFR (same as EN, no mapping needed but harmless)
+    ["Mina"]              = "Mine",        -- esES/esMX/ptBR
+    ["Miniera"]           = "Mine",        -- itIT
+    ["Шахта"]             = "Mine",        -- ruRU
+    ["矿山"]              = "Mine",        -- zhCN
+    ["礦山"]              = "Mine",        -- zhTW
+    ["광산"]              = "Mine",        -- koKR
+    ["Шахта"]             = "Mine",        -- ukUA
+
+    -- Lighthouse
+    ["Phare"]             = "Lighthouse",  -- frFR
+    ["Leuchtturm"]        = "Lighthouse",  -- deDE
+    ["Faro"]              = "Lighthouse",  -- esES/esMX/itIT
+    ["Farol"]             = "Lighthouse",  -- ptBR
+    ["Маяк"]              = "Lighthouse",  -- ruRU
+    ["灯塔"]              = "Lighthouse",  -- zhCN
+    ["燈塔"]              = "Lighthouse",  -- zhTW
+    ["등대"]              = "Lighthouse",  -- koKR
+    ["Маяк"]              = "Lighthouse",  -- ukUA
+
+    -- ==================== EYE OF THE STORM ====================
+    -- Mage Tower
+    ["Tour des mages"]    = "Mage Tower",          -- frFR
+    ["Magierturm"]        = "Mage Tower",          -- deDE
+    ["Torre de los magos"] = "Mage Tower",         -- esES/esMX
+    ["Torre dei Maghi"]   = "Mage Tower",          -- itIT
+    ["Torre dos Magos"]   = "Mage Tower",          -- ptBR
+    ["Башня магов"]       = "Mage Tower",          -- ruRU
+    ["法师塔"]            = "Mage Tower",          -- zhCN
+    ["法師塔"]            = "Mage Tower",          -- zhTW
+    ["마법사 탑"]         = "Mage Tower",          -- koKR
+    ["Вежа магів"]        = "Mage Tower",          -- ukUA
+
+    -- Fel Reaver Ruins
+    ["Ruines du Déchiqueteur vil"]  = "Fel Reaver Ruins", -- frFR
+    ["Ruinen des Unheilsreißers"]   = "Fel Reaver Ruins", -- deDE
+    ["Ruinas del Segador Vil"]      = "Fel Reaver Ruins", -- esES/esMX
+    ["Rovine del Distruttore Vile"] = "Fel Reaver Ruins", -- itIT
+    ["Ruínas do Destruidor Vil"]    = "Fel Reaver Ruins", -- ptBR
+    ["Руины Скверного Пожирателя"]  = "Fel Reaver Ruins", -- ruRU
+    ["邪能收割者废墟"]               = "Fel Reaver Ruins", -- zhCN
+    ["邪能收割者廢墟"]               = "Fel Reaver Ruins", -- zhTW
+    ["사악한 파괴자 폐허"]           = "Fel Reaver Ruins", -- koKR
+    ["Руїни Скверного Пожирача"]    = "Fel Reaver Ruins", -- ukUA
+
+    -- Blood Elf Tower
+    ["Tour des Elfes de sang"]   = "Blood Elf Tower", -- frFR
+    ["Blutelfenturm"]            = "Blood Elf Tower", -- deDE
+    ["Torre de los Elfos de Sangre"] = "Blood Elf Tower", -- esES/esMX
+    ["Torre degli Elfi del Sangue"]  = "Blood Elf Tower", -- itIT
+    ["Torre dos Elfos Sangrentos"]   = "Blood Elf Tower", -- ptBR
+    ["Башня эльфов крови"]       = "Blood Elf Tower", -- ruRU
+    ["血精灵塔"]                  = "Blood Elf Tower", -- zhCN
+    ["血精靈塔"]                  = "Blood Elf Tower", -- zhTW
+    ["블러드 엘프 탑"]            = "Blood Elf Tower", -- koKR
+    ["Вежа ельфів крові"]        = "Blood Elf Tower", -- ukUA
+
+    -- Draenei Ruins
+    ["Ruines draeneï"]           = "Draenei Ruins", -- frFR
+    ["Draeneiruinen"]            = "Draenei Ruins", -- deDE
+    ["Ruinas Draenei"]           = "Draenei Ruins", -- esES/esMX
+    ["Rovine Draenei"]           = "Draenei Ruins", -- itIT
+    ["Ruínas Draenei"]           = "Draenei Ruins", -- ptBR
+    ["Руины дреней"]             = "Draenei Ruins", -- ruRU
+    ["德莱尼废墟"]                = "Draenei Ruins", -- zhCN
+    ["德萊尼廢墟"]                = "Draenei Ruins", -- zhTW
+    ["드레나이 폐허"]             = "Draenei Ruins", -- koKR
+    ["Руїни дреней"]             = "Draenei Ruins", -- ukUA
+
+    -- ==================== DEEPWIND GORGE ====================
+    -- Mine (shared key with Battle for Gilneas above -- already handled)
+    -- Cart (Deepwind Gorge has "Mines" and "Market" and "Temple")
+    ["Marché"]            = "Market",      -- frFR
+    ["Markt"]             = "Market",      -- deDE
+    ["Mercado"]           = "Market",      -- esES/esMX/ptBR
+    ["Mercato"]           = "Market",      -- itIT
+    ["Рынок"]             = "Market",      -- ruRU
+    ["集市"]              = "Market",      -- zhCN
+    ["集市"]              = "Market",      -- zhTW (same)
+    ["시장"]              = "Market",      -- koKR
+    ["Ринок"]             = "Market",      -- ukUA
+
+    ["Temple"]            = "Temple",      -- same in most locales
+    ["Tempel"]            = "Temple",      -- deDE
+    ["Templo"]            = "Temple",      -- esES/esMX/ptBR/itIT
+    ["Храм"]              = "Temple",      -- ruRU
+    ["神庙"]              = "Temple",      -- zhCN
+    ["神廟"]              = "Temple",      -- zhTW
+    ["사원"]              = "Temple",      -- koKR
+    ["Храм"]              = "Temple",      -- ukUA
+
+    -- ==================== TWIN PEAKS ====================
+    -- Wildhammer Stronghold / Dragonmaw Pass (not typical subzones mid-BG, skip)
+
+    -- ==================== SILVERSHARD MINES ====================
+    -- Lava Falls
+    ["Chutes de lave"]       = "Lava Falls",   -- frFR
+    ["Lavafälle"]            = "Lava Falls",   -- deDE
+    ["Cataratas de Lava"]    = "Lava Falls",   -- esES/esMX
+    ["Cascate di Lava"]      = "Lava Falls",   -- itIT
+    ["Quedas de Lava"]       = "Lava Falls",   -- ptBR
+    ["Лавовые водопады"]     = "Lava Falls",   -- ruRU
+    ["熔岩瀑布"]             = "Lava Falls",   -- zhCN
+    ["熔岩瀑布"]             = "Lava Falls",   -- zhTW
+    ["용암 폭포"]            = "Lava Falls",   -- koKR
+    ["Лавові водоспади"]     = "Lava Falls",   -- ukUA
+
+    -- The Waterfall
+    ["La cascade"]           = "The Waterfall", -- frFR
+    ["Der Wasserfall"]       = "The Waterfall", -- deDE
+    ["La Cascada"]           = "The Waterfall", -- esES/esMX
+    ["La Cascata"]           = "The Waterfall", -- itIT
+    ["A Cachoeira"]          = "The Waterfall", -- ptBR
+    ["Водопад"]              = "The Waterfall", -- ruRU
+    ["瀑布"]                 = "The Waterfall", -- zhCN
+    ["瀑布"]                 = "The Waterfall", -- zhTW
+    ["폭포"]                 = "The Waterfall", -- koKR
+    ["Водоспад"]             = "The Waterfall", -- ukUA
+
+    -- The Diamond Mine
+    ["La mine de diamants"]  = "The Diamond Mine", -- frFR
+    ["Die Diamantmine"]      = "The Diamond Mine", -- deDE
+    ["La Mina de Diamantes"] = "The Diamond Mine", -- esES/esMX
+    ["La Miniera di Diamanti"] = "The Diamond Mine", -- itIT
+    ["A Mina de Diamantes"]  = "The Diamond Mine", -- ptBR
+    ["Алмазная шахта"]       = "The Diamond Mine", -- ruRU
+    ["钻石矿"]               = "The Diamond Mine", -- zhCN
+    ["鑽石礦"]               = "The Diamond Mine", -- zhTW
+    ["다이아몬드 광산"]      = "The Diamond Mine", -- koKR
+    ["Алмазна шахта"]        = "The Diamond Mine", -- ukUA
+
+    -- ==================== TEMPLE OF KOTMOGU ====================
+    -- Orb of Power positions (Center / Side) -- typically no subzone names mid-combat
+
+    -- ==================== SEETHING SHORE ====================
+    -- Azerite deposit nodes (no fixed named subzones)
+
+    -- ==================== ALTERAC VALLEY ====================
+    -- Key locations
+    ["Cimetière de Froidloup"]     = "Frostwolf Graveyard",    -- frFR
+    ["Wolfsrudel-Friedhof"]        = "Frostwolf Graveyard",    -- deDE
+    ["Cementerio Lobo Gélido"]     = "Frostwolf Graveyard",    -- esES/esMX
+    ["Cimitero Lupo Gelido"]       = "Frostwolf Graveyard",    -- itIT
+    ["Cemitério Uivoneve"]         = "Frostwolf Graveyard",    -- ptBR
+    ["Кладбище Морозных волков"]   = "Frostwolf Graveyard",    -- ruRU
+    ["霜狼墓地"]                   = "Frostwolf Graveyard",    -- zhCN
+    ["霜狼墓地"]                   = "Frostwolf Graveyard",    -- zhTW
+    ["서리늑대 묘지"]              = "Frostwolf Graveyard",    -- koKR
+    ["Цвинтар Морозних вовків"]    = "Frostwolf Graveyard",    -- ukUA
+
+    ["Tour de Garde de Pierre-tempête"] = "Stormpike Guard Post", -- frFR
+    ["Sturmlanze-Wachposten"]           = "Stormpike Guard Post", -- deDE
+    ["Puesto de Guardia Lanzatormenta"] = "Stormpike Guard Post", -- esES/esMX
+    ["Posto di Guardia Picca della Tempesta"] = "Stormpike Guard Post", -- itIT
+    ["Posto de Guarda Lançatempestade"] = "Stormpike Guard Post", -- ptBR
+    ["Сторожевой пост Грозокопья"]      = "Stormpike Guard Post", -- ruRU
+    ["风暴长矛哨所"]                    = "Stormpike Guard Post", -- zhCN
+    ["風暴長矛哨所"]                    = "Stormpike Guard Post", -- zhTW
+    ["폭풍창 수비대 초소"]              = "Stormpike Guard Post", -- koKR
+    ["Вартовий пост Грозоспису"]        = "Stormpike Guard Post", -- ukUA
+
+    -- ==================== ISLE OF CONQUEST ====================
+    ["Hangar"]            = "Hangar",       -- same most locales
+    ["Dock"]              = "Docks",        -- same most locales
+    ["Quais"]             = "Docks",        -- frFR
+    ["Anlegestellen"]     = "Docks",        -- deDE
+    ["Muelles"]           = "Docks",        -- esES/esMX
+    ["Moli"]              = "Docks",        -- itIT
+    ["Docas"]             = "Docks",        -- ptBR
+    ["Доки"]              = "Docks",        -- ruRU
+    ["码头"]              = "Docks",        -- zhCN
+    ["碼頭"]              = "Docks",        -- zhTW
+    ["선착장"]            = "Docks",        -- koKR
+    ["Доки"]              = "Docks",        -- ukUA
+
+    ["Atelier"]           = "Workshop",     -- frFR
+    ["Werkstatt"]         = "Workshop",     -- deDE
+    ["Taller"]            = "Workshop",     -- esES/esMX
+    ["Officina"]          = "Workshop",     -- itIT
+    ["Oficina"]           = "Workshop",     -- ptBR
+    ["Мастерская"]        = "Workshop",     -- ruRU
+    ["工坊"]              = "Workshop",     -- zhCN
+    ["工坊"]              = "Workshop",     -- zhTW
+    ["작업장"]            = "Workshop",     -- koKR
+    ["Майстерня"]         = "Workshop",     -- ukUA
+
+    ["Refinery"]          = "Refinery",     -- EN same
+    ["Raffinerie"]        = "Refinery",     -- frFR/deDE
+    ["Refinería"]         = "Refinery",     -- esES/esMX
+    ["Raffineria"]        = "Refinery",     -- itIT
+    ["Refinaria"]         = "Refinery",     -- ptBR
+    ["Нефтеперегонный завод"] = "Refinery", -- ruRU
+    ["炼油厂"]            = "Refinery",     -- zhCN
+    ["煉油廠"]            = "Refinery",     -- zhTW
+    ["정제소"]            = "Refinery",     -- koKR
+    ["Нафтопереробний завод"] = "Refinery", -- ukUA
+
+    ["Quart. général"]    = "Keep",         -- frFR (Quartier général)
+    ["Festung"]           = "Keep",         -- deDE
+    ["Fortaleza"]         = "Keep",         -- esES/esMX
+    ["Fortezza"]          = "Keep",         -- itIT
+    ["Fortaleza"]         = "Keep",         -- ptBR (same key as esES -- last one wins, same EN value)
+    ["Крепость"]          = "Keep",         -- ruRU
+    ["要塞"]              = "Keep",         -- zhCN
+    ["要塞"]              = "Keep",         -- zhTW
+    ["요새"]              = "Keep",         -- koKR
+    ["Фортеця"]           = "Keep",         -- ukUA
+
+    -- ==================== STRAND OF THE ANCIENTS ====================
+    ["Chambre des Anciens"] = "Chamber of Ancients", -- frFR
+    ["Kammer der Alten"]    = "Chamber of Ancients", -- deDE
+    ["Cámara de los Ancestros"] = "Chamber of Ancients", -- esES/esMX
+    ["Camera degli Antichi"]    = "Chamber of Ancients", -- itIT
+    ["Câmara dos Ancestrais"]   = "Chamber of Ancients", -- ptBR
+    ["Палата Древних"]          = "Chamber of Ancients", -- ruRU
+    ["远古者密室"]               = "Chamber of Ancients", -- zhCN
+    ["遠古者密室"]               = "Chamber of Ancients", -- zhTW
+    ["고대인의 방"]              = "Chamber of Ancients", -- koKR
+    ["Покої Стародавніх"]       = "Chamber of Ancients", -- ukUA
+
+    -- ==================== RATED BG / MISC ====================
+    -- Warsong Gulch has no mid-BG subzone names worth mapping
+    -- Arathi Blizzard / Winter Arathi shares AB names above
+}
+
+-- ============================================================
 -- Main GUI Frame
 -- ============================================================
 
@@ -82,9 +391,7 @@ IncCallout:SetMovable(true)
 IncCallout:EnableMouse(true)
 IncCallout:RegisterForDrag("LeftButton")
 IncCallout:SetScript("OnDragStart", function(self)
-    if not IncDB.isLocked then
-        self:StartMoving()
-    end
+    if not IncDB.isLocked then self:StartMoving() end
 end)
 IncCallout:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
@@ -102,9 +409,7 @@ closeButton:SetScript("OnEnter", function(self)
     GameTooltip:SetText("Close the Window", nil, nil, nil, nil, true)
     GameTooltip:Show()
 end)
-closeButton:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
+closeButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
 -- ============================================================
 -- PVP Stats Window
@@ -138,9 +443,7 @@ end
 local tabs = {}
 
 local function HideAllTabs()
-    for _, tabFrame in pairs(tabs) do
-        tabFrame:Hide()
-    end
+    for _, tabFrame in pairs(tabs) do tabFrame:Hide() end
 end
 
 local tabFrame = CreateFrame("Frame", nil, pvpStatsFrame)
@@ -506,9 +809,7 @@ local function CreateCharacterDropdown()
             tabs[1].playerNameValue:SetTextColor(1,1,1)
             for _, tab in ipairs(tabs) do
                 for k, v in pairs(tab) do
-                    if type(v) == "table" and v.SetText then
-                        v:SetText("N/A")
-                    end
+                    if type(v) == "table" and v.SetText then v:SetText("N/A") end
                 end
             end
         end
@@ -838,8 +1139,6 @@ end
 
 -- ============================================================
 -- Settings Category Resolver
--- Called at click time so the category lookup happens after
--- Blizzard has fully registered all addon panels on login.
 -- ============================================================
 
 local function ResolveIncCalloutCategoryID()
@@ -909,12 +1208,23 @@ function addonNamespace.getPreviewText(messageType)
 end
 
 -- ============================================================
+-- GetLocationText
+-- Returns the current subzone name, translated to English if
+-- the forceEnglish option is enabled and a mapping exists.
+-- Falls back to the localized name if no mapping is found.
+-- ============================================================
+
+local function GetLocationText()
+    local loc = GetSubZoneText() or "Unknown Location"
+    if loc == "" then loc = "Unknown Location" end
+    if IncDB and IncDB.forceEnglish and loc ~= "Unknown Location" then
+        return localeToEnglish[loc] or loc
+    end
+    return loc
+end
+
+-- ============================================================
 -- Secure Button Fix
--- All chat buttons are SecureActionButtonTemplate with type=macro.
--- macrotext is set to "/i <message>" outside of combat via
--- RebuildMacros(). Blizzard's own secure environment executes
--- the slash command at click time — no addon Lua touches any
--- protected function. Taint is impossible with this pattern.
 -- ============================================================
 
 local function createSecureButton(name, width, height, text, anchor, xOffset, yOffset)
@@ -943,7 +1253,6 @@ local function createSecureButton(name, width, height, text, anchor, xOffset, yO
     return button
 end
 
--- Standard (non-chat) button factory for pvpStats and map
 local function createButton(name, width, height, text, anchor, xOffset, yOffset)
     local button = CreateFrame("Button", nil, IncCallout, "BackdropTemplate")
     button:SetSize(width, height)
@@ -984,14 +1293,11 @@ local buffButton     = createSecureButton("IncCalloutBtnBuff",     95,  22, "Buf
 local healerButton   = createSecureButton("IncCalloutBtnHealers",  95,  22, "Healers",   {"TOP",      buffButton,     "BOTTOM"},     0,  -10)
 local shareButton    = createSecureButton("IncCalloutBtnShare",    95,  22, "Share",     {"BOTTOM",   IncCallout,     "BOTTOM"},     0,   10)
 
--- These two are non-chat buttons, no taint concern
 local mapButton      = createButton(nil,                           95,  22, "Map",       {"LEFT",     buffButton,     "RIGHT"},     10,    0)
 local pvpStatsButton = createButton(nil,                           95,  22, "PVP Stats", {"LEFT",     healerButton,   "RIGHT"},     10,    0)
 
 -- ============================================================
--- GetInstanceChatCmd
--- Returns the appropriate slash command prefix for the current
--- instance type. Called only outside combat from RebuildMacros.
+-- GetInstanceChatCmd / GetShareChatCmd
 -- ============================================================
 
 local function GetInstanceChatCmd()
@@ -1017,57 +1323,43 @@ end
 
 -- ============================================================
 -- RebuildMacros
--- Assembles all message strings and writes them into each
--- secure button's macrotext attribute. Must only be called
--- outside of combat lockdown. Blizzard freezes attributes
--- during combat, so the message baked in before the fight
--- is what fires when the player clicks mid-combat.
 -- ============================================================
 
 local function RebuildMacros()
     if InCombatLockdown() then return end
     if not IncDB then return end
 
-    local loc    = GetSubZoneText() or "Unknown Location"
+    local loc    = GetLocationText()
     local cmd    = GetInstanceChatCmd()
     local custom = IncDB.customMessages
 
-    -- Location number buttons
     button1:SetAttribute("macrotext",    "/i 1 Incoming at " .. loc)
     button2:SetAttribute("macrotext",    "/i 2 Incoming at " .. loc)
     button3:SetAttribute("macrotext",    "/i 3 Incoming at " .. loc)
     button4:SetAttribute("macrotext",    "/i 4 Incoming at " .. loc)
     buttonZerg:SetAttribute("macrotext", "/i Zerg Incoming at " .. loc)
 
-    -- INC
     local incMsg = (custom.inc ~= "" and custom.inc or buttonMessages.inc[IncDB.incIndex or 1] or "Incoming")
     incButton:SetAttribute("macrotext", cmd .. " " .. incMsg .. " at " .. loc)
 
-    -- Send More
     local sendMoreMsg = (custom.sendMore ~= "" and custom.sendMore or buttonMessages.sendMore[IncDB.sendMoreIndex or 1] or "Need more")
     sendMoreButton:SetAttribute("macrotext", cmd .. " " .. sendMoreMsg .. " at " .. loc)
 
-    -- All Clear
     local allClearMsg = (custom.allClear ~= "" and custom.allClear or buttonMessages.allClear[IncDB.allClearIndex or 1] or "All clear")
     allClearButton:SetAttribute("macrotext", cmd .. " " .. allClearMsg .. " at " .. loc)
 
-    -- Heals
     local healMsg = (custom.healRequest ~= "" and custom.healRequest or buttonMessages.healRequest[IncDB.healRequestIndex or 1] or "Need heals ASAP!")
     healsButton:SetAttribute("macrotext", cmd .. " " .. healMsg .. " Needed at " .. loc)
 
-    -- EFC
     local efcMsg = (custom.efcRequest ~= "" and custom.efcRequest or buttonMessages.efcRequest[IncDB.efcRequestIndex or 1] or "Get the EFC!!")
     efcButton:SetAttribute("macrotext", cmd .. " " .. efcMsg)
 
-    -- FC
     local fcMsg = (custom.fcRequest ~= "" and custom.fcRequest or buttonMessages.fcRequest[IncDB.fcRequestIndex or 1] or "Protect our FC!")
     fcButton:SetAttribute("macrotext", cmd .. " " .. fcMsg)
 
-    -- Buffs
     local buffMsg = (custom.buffRequest ~= "" and custom.buffRequest or buttonMessages.buffRequest[IncDB.buffRequestIndex or 1] or "Need buffs please!")
     buffButton:SetAttribute("macrotext", cmd .. " " .. buffMsg)
 
-    -- Healers roster list
     local groupType, groupSize
     if IsInRaid() then
         groupType = "raid"
@@ -1095,22 +1387,16 @@ local function RebuildMacros()
         healerButton:SetAttribute("macrotext", "/run print('|cff00ff00[IncCallout]|r Not in a group.')")
     end
 
-    -- Share
     local shareCmd = GetShareChatCmd()
     shareButton:SetAttribute("macrotext", shareCmd .. " Try Incoming-BG! It adds a GUI for fast battleground calls, just click a button for INC, Send More, FC, and more. No typing needed. Get it and help your team!")
 end
 
 -- ============================================================
--- Non-chat button OnClick handlers 
+-- Non-chat button OnClick handlers
 -- ============================================================
 
-mapButton:SetScript("OnClick", function()
-    ToggleWorldMap()
-end)
-
-pvpStatsButton:SetScript("OnClick", function()
-    pvpStatsFrame:Show()
-end)
+mapButton:SetScript("OnClick", function() ToggleWorldMap() end)
+pvpStatsButton:SetScript("OnClick", function() pvpStatsFrame:Show() end)
 
 -- ============================================================
 -- Tooltips
@@ -1127,9 +1413,7 @@ pvpStatsButton:SetScript("OnEnter", function(self)
     GameTooltip:AddLine("Solo Shuffle Rating: Your current rating.", 1, 0.5, 0, true)
     GameTooltip:Show()
 end)
-pvpStatsButton:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
+pvpStatsButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
 shareButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -1140,25 +1424,16 @@ shareButton:SetScript("OnEnter", function(self)
     GameTooltip:AddLine("Outside PvP: sends in /say.", 1, 1, 1, true)
     GameTooltip:Show()
 end)
-shareButton:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
+shareButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
--- PostClick: reapply button color after every click
 for _, button in ipairs(buttons) do
-    button:SetScript("PostClick", function()
-        applyButtonColor()
-    end)
+    button:SetScript("PostClick", function() applyButtonColor() end)
 end
 
 applyButtonColor()
 
 -- ============================================================
 -- AceConfig Options Table
--- RebuildMacros() is called at the end of every set function
--- that modifies a message index or custom message string so
--- the macrotext attributes stay current immediately after a
--- settings change, without waiting for a zone transition.
 -- ============================================================
 
 local options = {
@@ -1168,6 +1443,18 @@ local options = {
         messageSettings = {
             type = "group", name = "Message Settings", order = 1,
             args = {
+                forceEnglish = {
+                    type = "toggle",
+                    name = "Force English Location Names",
+                    desc = "Send base and location names in English regardless of your client language. Useful in international battlegrounds where teammates may not know the translated names.",
+                    width = "full",
+                    order = 0,
+                    get = function() return IncDB.forceEnglish end,
+                    set = function(_, v)
+                        IncDB.forceEnglish = v
+                        RebuildMacros()
+                    end,
+                },
                 sendMore = {
                     type = "group", name = "Send More Message", inline = true, order = 1,
                     args = {
@@ -1741,17 +2028,14 @@ local function OnEvent(self, event, arg1, ...)
         RebuildMacros()
 
     elseif event == "PLAYER_REGEN_ENABLED" then
-        -- Combat just ended — rebuild macros now in case zone or
-        -- group changed while we were locked out during combat
         RebuildMacros()
 
     elseif event == "CHAT_MSG_COMBAT_HONOR_GAIN" then
-       
+        -- reserved for future use
 
     end
 end
 
---  event frame
 local mainEventFrame = CreateFrame("Frame", "IncCalloutEventFrame")
 mainEventFrame:RegisterEvent("ADDON_LOADED")
 mainEventFrame:RegisterEvent("PLAYER_LOGIN")
@@ -1776,7 +2060,6 @@ mainEventFrame:RegisterEvent("PLAYER_PVP_RANK_CHANGED")
 mainEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 mainEventFrame:SetScript("OnEvent", OnEvent)
 
--- pvpStatsFrame secondary events 
 pvpStatsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 pvpStatsFrame:RegisterEvent("CURRENCY_DISPLAY_UPDATE")
 pvpStatsFrame:RegisterEvent("WEEKLY_REWARDS_UPDATE")

@@ -1,78 +1,171 @@
-Incoming-BG: Master Your Communication in WoW PvP
+<div align="center">
 
-Elevate Your PvP Experience with Incoming-BG. Crafted meticulously by me, Incoming-BG is your premier addon for mastering the battlegrounds in World of Warcraft. Whether you're defending the honor of the Alliance in Stormwind or launching an assault in Orgrimmar, Incoming-BG transforms your gameplay into a strategic, well-communicated victory. Unlike similar add-ons, this one is not lightweight and is always up-to-date.
+<h1>⚔️ Incoming-BG</h1>
 
-Comprehensive Features:
+<p><strong>Master your communication in WoW PvP.</strong><br>
+A full-featured battleground addon with live stats, 68 preset callouts, multi-character tracking, and deep UI customization.</p>
 
-Centralized PvP Stats Dashboard Keep vital PvP statistics at your fingertips. This dedicated window displays Honor Points, Conquest Points, Honor Level, and Solo Shuffle Rating, all updated live as you engage in combat. The addition of a new character dropdown feature enhances this functionality by allowing you to switch between different characters and specs seamlessly, viewing specific PvP stats without the need to log out. Perfect for those who want to track their progress across multiple characters without pausing the action. Please keep in mind that you MUST log into whatever character stats you want to look at, at least once. That way their info is stored in the saved variables.
+![Version](https://img.shields.io/badge/version-6.9-gold?style=flat-square&color=c8a032)
+![Game](https://img.shields.io/badge/WoW-Retail-blue?style=flat-square&color=3a6bbf)
+![Messages](https://img.shields.io/badge/preset_messages-68-blue?style=flat-square&color=3a6bbf)
+![Status](https://img.shields.io/badge/status-up_to_date-green?style=flat-square&color=2e7d32)
 
-One-Click Accessibility Integrated directly into the Incoming-BG’s main user interface, a new, easily accessible button allows you to swiftly pull up your PvP stats overview. This feature ensures that you’re always informed and ready, even mid-battle.
+</div>
 
-Refined User Interface Design With a focus on usability, the new interface design strips away any unnecessary elements. The result is a clean, minimalist layout that not only looks good but enhances your gameplay by reducing distractions.
+---
 
-Real-Time Stat Updates As you earn points and climb the ranks, the addon window dynamically updates. Watch your statistics change in real time, reflecting your on-field successes instantaneously.
+## 📖 Overview
 
-Extensive Message Options Choose from an arsenal of 68 preset messages, designed to cover every conceivable battleground scenario. Preview your message before sending to ensure clarity and precision.
+Incoming-BG is purpose-built for players who want comprehensive battleground tools without compromise. Unlike lightweight alternatives, it is always maintained and packs everything into one addon: a live PvP stats dashboard, an extensive callout library, per-character stat tracking across alts, and granular UI customization.
 
-Custom Messages Players can now create their own custom messages for 'Send More', 'INC', 'All Clear', 'Need Heals', 'EFC', and 'FC' messages. Each custom message has a preview feature to show how it will look in chat. Custom messages can be individually cleared using the new 'Clear' button next to each custom message input field.
+Whether you are holding the Blacksmith at Arathi Basin or chasing the EFC through Twin Peaks, Incoming-BG keeps your team informed and your stats up to date.
 
-WARNING: Ensure that your custom messages comply with the game's Terms of Service (TOC). I am not responsible for any violations of the TOC, and I will not be held responsible for any consequences resulting from such violations.
+---
 
-Adaptive Map Integration Customize your tactical view with 10 different map sizes. Whether you need a broad overview or a detailed close-up of a specific area, adjust your map dynamically to suit the encounter’s demands.
+## ✨ Features
 
-Deep Customization Tools Tailor the Incoming-BG interface to fit your personal or team style:
+<details>
+<summary><strong>📊 Live PvP Stats Dashboard</strong></summary>
+<br>
 
-Borders & Backgrounds: Choose from a variety of designs—from sleek and modern to rugged and bold. Button Textures: Choose from 32 different textures for your buttons. Fonts & Colors: Experiment with an array of fonts and color palettes to find what best suits the intensity of PvP encounters or matches your existing UI. Size Adjustments: Modify font and button sizes for optimal readability and aesthetic preference. New Weekly Conquest Tracker A newly added feature to track your weekly Conquest cap and progress dynamically, reflecting current objectives and caps set by the game.
+A dedicated stats window displays Honor Points, Conquest Points, Honor Level, and Solo Shuffle Rating — all updated live as you play. Use the character dropdown to switch between alts and view their stored stats without logging out.
 
-New EFC and FC Buttons Enhanced communication with 10 preset messages for the Enemy Flag Carrier and 5 for our Flag Carrier, facilitating critical battlefield communications.
+> **Note:** You must log into each character at least once for their data to be stored in the addon database.
 
-New Solo Shuffle Rating Tracking Introducing a dynamic feature to track your Solo Shuffle rating specific to each specialization. The PvP Stats window now includes a dropdown to select between different characters, enhancing its utility by allowing you to view and compare stats across your alts without needing to log in and out. (Please keep in mind that the way the API fetches arena data may result in having to do a /reload to update.)
+</details>
 
-Customizable Button Textures We're excited to introduce a new feature that allows players to customize their button textures! You can now choose from up to 32 different button textures to personalize your PvP experience. Whether you prefer a sleek, modern look or a classic, traditional design, there's a texture to match your style.
+<details>
+<summary><strong>💬 68 Preset Messages + Custom Callouts</strong></summary>
+<br>
 
-New Features and Changes in PvP Stats Window General Tab
+Choose from 68 preset messages covering every battleground scenario. Preview any message before sending for clarity and precision.
 
-Player Name: Displays the name of the currently selected player. Conquest Points: Shows the current number of Conquest Points the player has earned. Honor Points: Indicates the current number of Honor Points the player has earned. Honor Level: Displays the player's current Honor Level. Conquest Cap: Shows the player's current progress towards the Conquest Cap. Solo Shuffle Rating: Indicates the player's rating in Solo Shuffle.
+You can also write your own custom callouts for:
 
-BG’s (Battlegrounds) Tab
+- `INC` — Incoming
+- `Send More` — Request reinforcements
+- `All Clear` — Location secured
+- `Need Heals` — Call for healers
+- `EFC` — Enemy flag carrier position
+- `FC` — Friendly flag carrier position
 
-BGs Played: Displays the total number of battlegrounds played. BGs Won: Shows the total number of battlegrounds won. BGs Lost: Indicates the total number of battlegrounds lost. Total Honorable Kills: Displays the total number of honorable kills achieved by the player. Battleground Honorable Kills: Shows the number of honorable kills achieved specifically in battlegrounds.
+Each custom message has a live preview and a one-click clear button.
 
-Solo RBG Tab (previously Blitz Tab)
+> ⚠️ **Important:** Custom messages must comply with the WoW Terms of Service. The addon author is not responsible for any violations.
 
-Best Rating: Displays the player's highest rating achieved in Solo RBG. Games Won: Indicates the number of Solo RBG games won by the player. Games Played: Shows the total number of Solo RBG games played by the player. Most Played Spec: Displays the specialization most frequently used by the player in Solo RBG. Played Most: Shows the statistic related to the most played aspect by the player in Solo RBG.
+</details>
 
-Solo Shuffle Tab
+<details>
+<summary><strong>🚩 EFC and FC Buttons</strong></summary>
+<br>
 
-Best Rating: Displays the player's best rating achieved in Solo Shuffle for the current season. Rounds Won: Indicates the number of Solo Shuffle rounds won in the current season. Rounds Played: Shows the total number of Solo Shuffle rounds played in the current season. Most Played (Spec): Displays the player's most played specialization in Solo Shuffle for the current season.
+Dedicated flag carrier communication with:
 
-Misc Tab
+- **10 preset messages** for the Enemy Flag Carrier
+- **5 preset messages** for your Flag Carrier
 
-Total Kills (Exp or Honor): Displays the total number of kills that grant experience or honor. Total Killing Blows: Shows the total number of killing blows. Battleground Killing Blows: Indicates the number of killing blows achieved in battlegrounds. Total Deaths: Displays the total number of deaths. Battleground Deaths: Shows the total number of deaths in battlegrounds.
+</details>
 
-How the Character Dropdown Works The character dropdown menu is designed to allow you to switch between different characters and view their respective PvP stats without having to log into each one separately. Here's how it works:
+<details>
+<summary><strong>🗓️ Weekly Conquest Tracker</strong></summary>
+<br>
 
-Initialization When the addon is loaded, the dropdown menu is initialized with a list of characters stored in the IncCalloutDB database. Each character is listed with their full name (including realm).
+Tracks your weekly Conquest cap and progress dynamically, always reflecting current objectives and caps set by the game.
 
-OnClick Event When a character is selected from the dropdown, the OnClick function is triggered. This function:
+</details>
 
-Sets the selected character as the active one in the dropdown menu. Updates the displayed stats for the newly selected character by fetching the relevant data from the IncCalloutDB database. Highlights the selected character's tab to indicate the active selection. Data Fetching The stats for the selected character are fetched from the IncCalloutDB database. This database stores various PvP statistics for each character, including Conquest Points, Honor Points, Solo Shuffle Rating, and more.
+<details>
+<summary><strong>🗺️ Adaptive Map (10 Sizes)</strong></summary>
+<br>
 
-Display Update The fetched data is then used to update the corresponding UI elements in the various tabs (General, BG's, Blitz, Solo Shuffle, and Misc). Each tab displays specific stats relevant to its category.
+Adjust your tactical map to any of 10 sizes on the fly — from a broad overview to a close-up of a specific objective area.
 
-Event Handling The addon includes event handlers that listen for various game events, such as entering the world, changing zones, and receiving PvP rewards. When these events occur, the addon updates the stored stats and refreshes the display to ensure the information is always current.
+</details>
 
-By using the dropdown menu, you can quickly switch between characters and view up-to-date PvP statistics without needing to log in and out of each character. This feature enhances the convenience and usability of the addon, allowing you to manage and monitor the PvP progress of multiple characters seamlessly.
+<details>
+<summary><strong>🎨 Deep UI Customization</strong></summary>
+<br>
 
-Update to version 6.9 of Incoming-BG today and enjoy a more personalized and visually appealing PvP experience!
+Tailor every part of the Incoming-BG interface to match your style:
 
-For more additional fonts please go SharedMediaAdditionalFonts, it will add many more fonts to the dropdown that you can choose from.
+| Option | Details |
+|---|---|
+| Button textures | 32 choices |
+| Borders and backgrounds | Multiple styles from sleek to bold |
+| Fonts and colors | Wide selection of fonts and color palettes |
+| Size adjustments | Control font and button sizes independently |
 
-For more additional textures please go to SharedMedia, it will add more textures to the dropdown.
+For even more fonts, install **SharedMediaAdditionalFonts**.  
+For more textures, install **SharedMedia**.
 
-Detailed Node Coverage: Incoming-BG provides strategic insights into each battleground’s critical areas, meticulously covering all key locations to ensure superior strategic planning:
+</details>
 
-Arathi Basin: Stables, Blacksmith, Lumber Mill, Gold Mine, Farm Alterac Valley: Stormpike Graveyard, Irondeep Mine, Dun Baldar, Hall of the Stormpike, Icewing Pass, Stonehearth Outpost, Iceblood Graveyard, Iceblood Garrison, Tower Point, Coldtooth Mine, Dun Baldar Pass, Icewing Bunker, Field of Strife, Stonehearth Graveyard, Stonehearth Bunker, Frost Dagger Pass, Snowfall Graveyard, Winterax Hold, Frostwolf Graveyard, Frostwolf Village, Frostwolf Keep, Hall of the Frostwolf Eye of the Storm: Mage Tower, Draenei Ruins, Blood Elf Tower, Fel Reaver Ruins Battle for Gilneas: Lighthouse, Waterworks, Mines Isle of Conquest: Docks, Workshop, Hangar, Refinery, Quarry Twin Peaks: Wildhammer Stronghold, Dragonmaw Stronghold Warsong Gulch: Silverwing Hold, Warsong Flag Room Wintergrasp: The Broken Temple, Cauldron of Flames, Central Bridge, The Chilled Quagemire, Eastern Bridge, Flamewatch Tower, The Forest of Shadows, Glacial Falls, The Steppe of Life, The Sunken Ring, Western Bridge, Winter's Edge Tower, Wintergrasp Fortress, Eastpark Workshop, Westpark Workshop Deepwind Gorge: Market, Horde Keep, Alliance Keep Silvershard Mines: Lava Crater, Topaz Quarry, Diamond Mine Temple of Kotmogu: Generally the whole area is treated as a node for orb control. Ashran: Emberfall Tower, Volrath's Advance, Archmage Overwatch, Tremblade's Vanguard Southshore vs. Tarren Mill: Not typically a node-based battleground but includes major town areas: Southshore and Tarren Mill. Stormshield: Part of Ashran, serving as the Alliance base. Step Into Strategy with Incoming-BG: In WoW PvP, the thin line between triumph and defeat hinges on your ability to communicate clearly and respond swiftly. With Incoming-BG, empower your team with streamlined communication tools, real-time data, and customizable features that bring tactical advantage to your fingertips.
-Southshore vs. Tarren Mill: Not typically a node-based battleground but includes major town areas: Southshore and Tarren Mill.
-Stormshield: Part of Ashran, serving as the Alliance base.
-Step Into Strategy with Incoming-BG: In WoW PvP, the thin line between triumph and defeat hinges on your ability to communicate clearly and respond swiftly. With Incoming-BG, empower your team with streamlined communication tools, real-time data, and customizable features that bring tactical advantage to your fingertips.
+---
+
+## 📈 PvP Stats Window
+
+The stats window is organized into five tabs. Use the character dropdown at the top to switch between alts.
+
+> **Note:** Arena data may require a `/reload` to update due to how the API fetches rating data.
+
+| Tab | What It Shows |
+|---|---|
+| **General** | Player name, Conquest Points, Honor Points, Honor Level, Conquest Cap progress, Solo Shuffle Rating |
+| **Battlegrounds** | BGs played / won / lost, total honorable kills, BG honorable kills |
+| **Solo RBG** | Best rating, games won, games played, most played spec |
+| **Solo Shuffle** | Best rating (current season), rounds won, rounds played, most played spec |
+| **Misc** | Total kills, total killing blows, BG killing blows, total deaths, BG deaths |
+
+---
+
+## 🗺️ Battleground Node Coverage
+
+<details>
+<summary><strong>View all covered battlegrounds</strong></summary>
+<br>
+
+| Battleground | Covered Nodes |
+|---|---|
+| **Arathi Basin** | Stables, Blacksmith, Lumber Mill, Gold Mine, Farm |
+| **Alterac Valley** | Stormpike GY, Irondeep Mine, Dun Baldar, Icewing Pass, Stonehearth Outpost, Iceblood GY, Iceblood Garrison, Tower Point, Coldtooth Mine, Dun Baldar Pass, Icewing Bunker, Field of Strife, Stonehearth GY, Stonehearth Bunker, Frost Dagger Pass, Snowfall GY, Winterax Hold, Frostwolf GY, Frostwolf Village, Frostwolf Keep, Hall of the Frostwolf |
+| **Eye of the Storm** | Mage Tower, Draenei Ruins, Blood Elf Tower, Fel Reaver Ruins |
+| **Battle for Gilneas** | Lighthouse, Waterworks, Mines |
+| **Isle of Conquest** | Docks, Workshop, Hangar, Refinery, Quarry |
+| **Twin Peaks** | Wildhammer Stronghold, Dragonmaw Stronghold |
+| **Warsong Gulch** | Silverwing Hold, Warsong Flag Room |
+| **Wintergrasp** | Broken Temple, Cauldron of Flames, Central Bridge, Chilled Quagmire, Eastern Bridge, Flamewatch Tower, Forest of Shadows, Glacial Falls, Steppe of Life, Sunken Ring, Western Bridge, Winter's Edge Tower, Wintergrasp Fortress, Eastpark Workshop, Westpark Workshop |
+| **Deepwind Gorge** | Market, Horde Keep, Alliance Keep |
+| **Silvershard Mines** | Lava Crater, Topaz Quarry, Diamond Mine |
+| **Temple of Kotmogu** | Full orb control area |
+| **Ashran** | Emberfall Tower, Volrath's Advance, Archmage Overwatch, Tremblade's Vanguard |
+| **Southshore vs Tarren Mill** | Southshore, Tarren Mill |
+| **Stormshield** | Alliance base (Ashran) |
+
+</details>
+
+---
+
+## 🔧 How the Character Dropdown Works
+
+When the addon loads, the dropdown is populated from all characters stored in the `IncCalloutDB` database. Selecting a character triggers a stat fetch and refreshes all five tabs instantly.
+
+The addon also listens for in-game events like zone changes and PvP reward triggers to keep stored stats current automatically.
+
+> **Reminder:** A character must be logged into at least once before their stats appear in the dropdown.
+
+---
+
+## 📦 Recommended Companions
+
+| Addon | What It Adds |
+|---|---|
+| **SharedMediaAdditionalFonts** | More fonts for the Incoming-BG font dropdown |
+| **SharedMedia** | More textures for the button and border dropdowns |
+
+---
+
+<div align="center">
+
+*In WoW PvP, the thin line between triumph and defeat hinges on your ability to communicate clearly and respond swiftly. Incoming-BG puts that edge in your hands.*
+
+</div>
